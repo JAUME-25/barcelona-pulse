@@ -1,0 +1,452 @@
+/*
+ * «Reproducir»: selector de modo, reproductor bajo el mapa y relojes de la semana.
+ * Móvil primero: el reproductor va entre el mapa y la leyenda. En escritorio flota abajo, a la
+ * derecha del panel, y deja sitio a la atribución del mapa base.
+ */
+
+.mode-switch {
+  display: inline-flex;
+  gap: 2px;
+  margin-top: 14px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-solid);
+}
+
+.mode-switch button {
+  min-height: 34px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-2);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mode-switch button[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--panel-solid);
+}
+
+/* Controles */
+.play-button {
+  display: inline-grid;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  cursor: pointer;
+}
+
+.step-button {
+  flex: none;
+  min-height: 36px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: transparent;
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.step-button:hover:not(:disabled) {
+  background: var(--panel-2);
+}
+
+.play-button:disabled,
+.step-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.speed-select__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.speed-select select {
+  min-height: 34px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel-solid);
+  font-size: 0.9375rem;
+}
+
+/* Momento y recuentos */
+.replay-clock {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  line-height: 1;
+}
+
+.replay-clock__time {
+  font-size: 2.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.replay-clock__day {
+  margin-top: 6px;
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+}
+
+.replay-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 16px;
+  align-items: baseline;
+  margin: 0;
+  padding: 0;
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+  list-style: none;
+}
+
+.replay-counts li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.replay-counts strong {
+  color: var(--ink);
+  font-size: 1.375rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.replay-counts__coverage {
+  font-size: 0.875rem;
+}
+
+/* Reproductor */
+.replay-deck {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'transport'
+    'clock'
+    'counts'
+    'track'
+    'days';
+  gap: 12px;
+  padding: 14px 16px 12px;
+  border-top: 1px solid var(--line);
+  background: var(--panel-solid);
+}
+
+.replay-deck__transport {
+  display: flex;
+  grid-area: transport;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.replay-deck__buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.replay-deck .replay-clock {
+  grid-area: clock;
+}
+
+.replay-deck .replay-counts {
+  grid-area: counts;
+}
+
+.replay-deck .week-dials {
+  grid-area: days;
+}
+
+.replay-deck__track {
+  position: relative;
+  grid-area: track;
+  height: 104px;
+  touch-action: none;
+  cursor: col-resize;
+}
+
+.replay-deck__wave {
+  position: absolute;
+  top: 6px;
+  left: 0;
+  width: 100%;
+  height: 72px;
+  overflow: visible;
+}
+
+.replay-deck__empty {
+  fill: color-mix(in srgb, var(--cat-empty) 72%, transparent);
+}
+
+.replay-deck__full {
+  fill: color-mix(in srgb, var(--cat-full) 72%, transparent);
+}
+
+.replay-deck__axis {
+  stroke: color-mix(in srgb, var(--ink) 40%, transparent);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.replay-deck__axis--gap {
+  stroke: var(--cat-unknown);
+  stroke-dasharray: 4 4;
+  stroke-width: 1.5;
+}
+
+.replay-deck__label,
+.replay-deck__scale {
+  position: absolute;
+  z-index: 1;
+  font-size: 0.75rem;
+  line-height: 1;
+  pointer-events: none;
+  text-shadow:
+    0 0 3px var(--panel-solid),
+    0 0 3px var(--panel-solid);
+}
+
+.replay-deck__label {
+  left: 0;
+  font-weight: 600;
+}
+
+/* Rojo y violeta aclarados y con halo: la etiqueta puede quedar encima de su propia área. */
+.replay-deck__label--empty {
+  top: 6px;
+  color: #ff8a98;
+}
+
+.replay-deck__label--full {
+  top: 66px;
+  color: #d9b8ff;
+}
+
+.replay-deck__scale {
+  top: 6px;
+  right: 0;
+  color: var(--ink-2);
+}
+
+.replay-deck__coverage {
+  position: absolute;
+  top: 82px;
+  right: 0;
+  left: 0;
+  height: 3px;
+}
+
+.replay-deck__run {
+  position: absolute;
+  top: 0;
+  min-width: 2px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.replay-deck__run--complete {
+  background: color-mix(in srgb, var(--ink-2) 40%, transparent);
+}
+
+.replay-deck__run--partial {
+  background: repeating-linear-gradient(90deg, var(--cat-unknown) 0 3px, transparent 3px 6px);
+}
+
+.replay-deck__run--none {
+  height: 0;
+  border-top: 2px dashed var(--cat-unknown);
+}
+
+.replay-deck__hours {
+  position: absolute;
+  top: 90px;
+  right: 0;
+  left: 0;
+  height: 14px;
+  color: var(--ink-2);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.replay-deck__hours span {
+  position: absolute;
+  transform: translateX(-50%);
+}
+
+.replay-deck__hours span:first-child {
+  transform: none;
+}
+
+.replay-deck__head {
+  position: absolute;
+  top: 0;
+  bottom: 18px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px rgba(11, 20, 34, 0.55);
+  pointer-events: none;
+}
+
+.replay-deck__head::before {
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--panel-solid);
+  border-radius: 50%;
+  background: var(--accent);
+  content: '';
+  transform: translateX(-50%);
+}
+
+/* Relojes de la semana: misma escala y colores en todos */
+.week-dials {
+  display: flex;
+  gap: 2px;
+  justify-content: space-between;
+}
+
+.week-dials__day {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 4px 2px 3px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 0.75rem;
+  line-height: 1.15;
+  cursor: pointer;
+}
+
+.week-dials__day:hover {
+  background: var(--panel-2);
+}
+
+.week-dials__day[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--panel-2);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.week-dial {
+  width: 100%;
+  max-width: 44px;
+  height: auto;
+}
+
+.week-dial__ring {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 30%, transparent);
+  stroke-width: 1;
+}
+
+.week-dial__gap {
+  fill: none;
+  stroke: var(--cat-unknown);
+  stroke-dasharray: 2 2;
+  stroke-width: 1;
+}
+
+/* Trazo del mismo color: cierra las juntas entre sectores contiguos. */
+.week-dial__empty {
+  fill: var(--cat-empty);
+  stroke: var(--cat-empty);
+  stroke-width: 0.4;
+}
+
+.week-dial__full {
+  fill: var(--cat-full);
+  stroke: var(--cat-full);
+  stroke-width: 0.4;
+}
+
+@media (min-width: 768px) {
+  .replay-deck {
+    position: absolute;
+    right: 16px;
+    bottom: 40px;
+    left: 452px;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'transport clock'
+      'transport counts'
+      'track track'
+      'days days';
+    gap: 10px 24px;
+    padding: 14px 22px 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--panel);
+    backdrop-filter: blur(12px);
+    box-shadow: var(--panel-shadow);
+  }
+
+  .replay-deck__transport {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-self: start;
+  }
+
+  .week-dials__day {
+    flex: none;
+    width: 50px;
+  }
+
+  /* La leyenda sube por encima del reproductor y se compacta. */
+  .app[data-mode='replay'] .map-legend {
+    bottom: calc(52px + var(--replay-deck-height, 300px));
+  }
+
+  .app[data-mode='replay'] .availability-filter__help {
+    display: none;
+  }
+
+  .app[data-mode='replay'] .availability-filter__item {
+    min-height: 34px;
+  }
+}
+
+/* Escritorio ancho: los relojes de la semana suben junto al momento. */
+@media (min-width: 1200px) {
+  .replay-deck {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'transport clock days'
+      'transport counts days'
+      'track track track';
+  }
+
+  .replay-deck .week-dials {
+    align-self: start;
+  }
+}

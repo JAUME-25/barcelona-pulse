@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { StationItem } from '../api/client';
+import { ReplayDeck } from '../features/history/ReplayDeck';
+import { ModeSwitch, type Mode } from '../features/history/ReplayParts';
+import { useReplay } from '../features/history/useReplay';
 import { AvailabilityFilter } from '../features/stations/AvailabilityFilter';
 import {
   AVAILABILITY_ORDER,
@@ -19,22 +22,21 @@ import {
   useStations,
 } from '../features/stations/useStationData';
 import { plural } from '../shared/format';
+import { readParam, writeParam } from '../shared/url';
 import './App.css';
 
 const STATION_PARAM = 'estacion';
 const SOURCE_PARAM = 'fuente';
+const MODE_PARAM = 'modo';
+const REPLAY_MODE = 'reproducir';
 const NO_STATIONS: readonly StationItem[] = [];
 
-function readParam(name: string): string | null {
-  return new URLSearchParams(window.location.search).get(name);
-}
-
-function writeParam(name: string, value: string | null): void {
-  const url = new URL(window.location.href);
-  if (value === null) url.searchParams.delete(name);
-  else url.searchParams.set(name, value);
-  window.history.replaceState(null, '', url);
-}
+/**
+ * Lo que tapan los controles sobre el mapa en escritorio, para que el encuadre inicial use solo
+ * la parte que se ve: la leyenda a la derecha y, al reproducir, el reproductor abajo.
+ */
+const EXPLORE_FRAME = { right: 312, bottom: 48 };
+const REPLAY_FRAME = { right: 312, bottom: 330 };
 
 const readStationParam = () => readParam(STATION_PARAM);
 const writeStationParam = (value: string | null) => {
@@ -78,10 +80,30 @@ export function App() {
   const source =
     sources.find((s) => s.id === chosenSourceId) ?? pickDefaultSource(sources) ?? undefined;
   const sourceId = source?.id ?? null;
-  const { state: stationsState, retry: retryStations } = useStations(
-    sourceId,
-    instantFor(source, now),
+
+  const [mode, setMode] = useState<Mode>(() =>
+    readParam(MODE_PARAM) === REPLAY_MODE ? 'replay' : 'explore',
   );
+  const [initialMoment] = useState(() => ({ day: readParam('dia'), time: readParam('hora') }));
+  // Solo se reproduce una fuente con datos; sin ellos, la vista es la de explorar.
+  const replaying = mode === 'replay' && (source?.period ?? null) !== null;
+  // Si no llega el estado de las estaciones, la reproducción se para.
+  const stationsFailedRef = useRef(false);
+  const replay = useReplay(
+    replaying ? source : undefined,
+    initialMoment.day,
+    initialMoment.time,
+    stationsFailedRef,
+  );
+
+  const {
+    state: stationsState,
+    previous: previousStations,
+    retry: retryStations,
+  } = useStations(sourceId, (replaying ? replay.point?.at : undefined) ?? instantFor(source, now));
+  useEffect(() => {
+    stationsFailedRef.current = stationsState.status === 'error';
+  });
 
   const [query, setQuery] = useState('');
   const [visible, setVisible] = useState<ReadonlySet<Availability>>(
@@ -97,7 +119,14 @@ export function App() {
   const [selectedByUser, setSelectedByUser] = useState(false);
   const bodyRef = useRef<HTMLElement>(null);
 
-  const response = stationsState.status === 'ready' ? stationsState.data : null;
+  // Al reproducir, mientras llega el momento siguiente se sigue viendo el anterior de la misma
+  // fuente: el mapa no parpadea en cada paso.
+  const response =
+    stationsState.status === 'ready'
+      ? stationsState.data
+      : replaying && previousStations?.source.id === sourceId
+        ? previousStations
+        : null;
   const all = response?.stations ?? NO_STATIONS;
   const counts = useMemo(() => countByAvailability(all), [all]);
   const filtered = useMemo(() => filterStations(all, query, visible), [all, query, visible]);
@@ -150,6 +179,11 @@ export function App() {
   const resetFilters = () => {
     setQuery('');
     setVisible(new Set(AVAILABILITY_ORDER));
+  };
+
+  const changeMode = (next: Mode) => {
+    setMode(next);
+    writeParam(MODE_PARAM, next === 'replay' ? REPLAY_MODE : null);
   };
 
   const mapUnavailable = mapStatus.kind === 'failed' || mapStatus.kind === 'unsupported';
@@ -244,6 +278,7 @@ export function App() {
       className="app"
       data-map={mapUnavailable ? 'unavailable' : 'available'}
       data-map-status={mapStatus.kind}
+      data-mode={replaying ? 'replay' : 'explore'}
     >
       <header className="panel-head">
         <div className="brand">
@@ -253,6 +288,7 @@ export function App() {
             <p className="brand__tagline">Estaciones de Bicing en el mapa</p>
           </div>
         </div>
+        <ModeSwitch mode={replaying ? 'replay' : 'explore'} onChange={changeMode} />
         {sources.length > 1 && (
           <label className="source-picker">
             Fuente
@@ -272,19 +308,21 @@ export function App() {
             </select>
           </label>
         )}
-        {response !== null && <SourceNotice response={response} />}
+        {response !== null && <SourceNotice response={response} compact={replaying} />}
       </header>
 
       <div className="map-area">
         <StationMap
           stations={filtered}
           frame={all}
-          frameKey={sourceId ?? ''}
+          frameKey={`${sourceId ?? ''}:${replaying ? 'replay' : 'explore'}`}
+          framePadding={replaying ? REPLAY_FRAME : EXPLORE_FRAME}
           selectedId={selectedId}
           onSelect={select}
           onStatusChange={setMapStatus}
         />
         <MapStatusMessage status={mapStatus} />
+        {replaying && <ReplayDeck replay={replay} />}
         {response !== null && (
           <div className="map-legend">
             <AvailabilityFilter counts={counts} visible={visible} onToggle={toggleCategory} />

@@ -68,6 +68,11 @@ En este equipo no hay SDK de .NET instalado: todo lo de .NET va por el contenedo
   lo vigila.
 - Un `MAX(observed_at)` sobre el join de observaciones y estaciones recorre todo el histórico
   (~100 ms con una semana): usa `StationQueries.LatestObservationAsync`, que va por estación.
+- Cada fotograma de «Reproducir» es una petición a `/api/stations`, y la API admite 120 por
+  minuto e IP: no subas el ritmo de `useReplay` sin un endpoint de fotogramas. Las capturas
+  seguidas también lo agotan (sale «Too Many Requests»): espera un minuto.
+- El navegador integrado de Claude no pinta WebGL si su ventana no está al frente: el mapa se
+  revisa con las capturas de Playwright (`e2e/*.capture.ts`).
 - SharpCompress 1.0.0: `SevenZipArchive.Open(...)` (la documentación de `master` dice
   `OpenArchive`) y no escribe 7z. Los fixtures del histórico se generan con
   `node scripts/make-bicing-archive-fixtures.mjs` usando bsdtar.

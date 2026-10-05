@@ -36,6 +36,33 @@ Cian (`--coverage-1` a `--coverage-4`: `#0f3b47`, `#16707f`, `#26a9b8`, `#7fe3ea
 de estación lo usa, para que un escenario hipotético (B4) nunca se confunda con una observación.
 Las estaciones hipotéticas tendrán además su propia forma.
 
+## Reproducir
+
+Elegido el 6 de octubre de 2026 entre tres propuestas (Pletina, Marea y Rellotge): la base es
+Pletina, con los relojes de la semana y los pasos de 5 minutos de Rellotge.
+
+- Distribución de Explorar: estaciones a la izquierda y el reproductor abajo, sobre el mapa. Se
+  puede consultar una estación mientras se ve cómo cambia durante el día.
+- El reproductor tiene: −5 min, reproducir y +5 min, la velocidad, la hora grande con la fecha
+  completa (con el año: es un día del pasado), los recuentos del momento y los relojes de la
+  semana.
+- La pista es la forma del día: estaciones sin bicis hacia arriba (rojo) y llenas hacia abajo
+  (violeta), con la misma escala, que se indica. Debajo, una franja con las estaciones con dato:
+  continua si informan casi todas y rayada si falta parte.
+- Una hora sin datos se dibuja con el eje discontinuo y sin área: sin datos no es cero.
+- Relojes de 24 horas, uno por día: dentro las vacías, fuera las llenas, por horas y con la
+  misma escala en toda la semana para que se puedan comparar. El día elegido lleva borde ámbar.
+  Las bandas son sectores contiguos: barras sueltas parecían un trazo discontinuo, que aquí
+  significa «sin datos».
+- En escritorio la leyenda sube por encima del reproductor y se compacta; en móvil, el
+  reproductor va entre el mapa y la leyenda.
+
+## Encuadre
+
+Al abrir, las estaciones ocupan la parte del mapa que no tapan el panel, la leyenda y, al
+reproducir, el reproductor. `fitBounds` no tiene en cuenta la cámara inclinada y dejaba mucho
+municipio vecino y mar: después se ajusta con dónde caen las estaciones en pantalla.
+
 ## Mapa base
 
 El estilo `dark` de OpenFreeMap se transforma al cargarlo (`features/stations/basemap.ts`):

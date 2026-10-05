@@ -41,19 +41,24 @@ Actualizado el 5 de octubre de 2026.
    lo conocido completa la historia de versiones en vez de rechazarla.
 2. **Hecho.** Línea temporal: `GET /api/sources/{id}/timeline` con estaciones con dato y sumas
    por paso, misma regla que el mapa, máximo 7 días y caché por ingesta (ADR 0009).
-3. **Siguiente.** Interfaz de «Reproducir»: tres direcciones para elegir antes de construirla.
-   Requisitos: control accesible con teclado, pasos de 5 y 15 min, reproducción con pausa, sin
-   animación si se pide movimiento reducido, peticiones viejas canceladas al moverse; medir
-   antes de decidir si hace falta un endpoint de «fotogramas».
-4. **En parte.** Pruebas: rejilla en días de 23 y 25 h, huecos que dejan estaciones sin dato y
-   cada paso igual al mapa en ese instante. Faltan las de la interfaz.
+3. **Hecho.** Interfaz de «Reproducir» (`?modo=reproducir&dia=…&hora=…`), elegida entre tres
+   propuestas (`docs/design.md`). Pista y relojes con teclado, ratón y pasos de 5 min; la
+   reproducción para si no llega el estado de las estaciones. Medido: cada fotograma es una
+   petición a `/api/stations` y a velocidad alta se pasaba del límite de 120 por minuto (429).
+   Ahora el ritmo es fijo (un fotograma cada 0,7 s, 88 peticiones en un minuto, ningún 429) y la
+   velocidad decide cuánto avanza el reloj (5, 15 o 30 min).
+4. **Hecho.** Pruebas: rejilla en días de 23 y 25 h, huecos que dejan estaciones sin dato, cada
+   paso igual al mapa en ese instante, horas de Barcelona en el navegador, interfaz (unitarias,
+   de componentes y de humo en escritorio y móvil).
 5. **Por decidir.** Retención: un año entero serían ~57 millones de filas y ~11 GB. Decidir qué
    periodos se guardan antes de importar más de unas semanas.
 6. **Pendiente.** Días que se pueden reproducir. El periodo de una fuente va de su primera a su
    última observación, y una estación que publica el mismo `last_reported` desde el 12-6-2025
    lo estira hasta entonces (el dato es correcto: por eso sale «sin dato reciente»). Los días
    reproducibles deben salir de lo importado (la ventana de cada ingesta), no del mínimo y el
-   máximo.
+   máximo. Mientras, la web ofrece los últimos 7 días del periodo.
+7. **Propuesta.** Endpoint de «fotogramas» (una hora de pasos en una petición, cacheable porque
+   el pasado no cambia): reproducción a pasos de 5 min más rápida sin acercarse al límite.
 
 ## Backlog
 

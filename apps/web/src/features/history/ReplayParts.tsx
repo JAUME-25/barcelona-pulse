@@ -1,0 +1,135 @@
+import type { TimelinePoint } from '../../api/client';
+import { OctagonGlyph } from '../stations/OctagonGlyph';
+import { formatLocalDay, localClock } from './time';
+import { DAY_STEP_MINUTES, SPEED_LABEL, SPEEDS, type Replay, type Speed } from './useReplay';
+import './replay.css';
+
+export type Mode = 'explore' | 'replay';
+
+export function ModeSwitch({ mode, onChange }: { mode: Mode; onChange: (mode: Mode) => void }) {
+  return (
+    <div className="mode-switch" role="group" aria-label="Modo">
+      <button
+        type="button"
+        aria-pressed={mode === 'explore'}
+        onClick={() => {
+          onChange('explore');
+        }}
+      >
+        Explorar
+      </button>
+      <button
+        type="button"
+        aria-pressed={mode === 'replay'}
+        onClick={() => {
+          onChange('replay');
+        }}
+      >
+        Reproducir
+      </button>
+    </div>
+  );
+}
+
+export function PlayButton({ replay }: { replay: Replay }) {
+  const label = replay.playing ? 'Pausar' : 'Reproducir el día';
+  return (
+    <button
+      type="button"
+      className="play-button"
+      aria-label={label}
+      title={label}
+      disabled={replay.points.length === 0}
+      onClick={replay.togglePlay}
+    >
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+        {replay.playing ? (
+          <path d="M6.5 5h4v14h-4zM13.5 5h4v14h-4z" fill="currentColor" />
+        ) : (
+          <path d="M8 4.8v14.4L19.2 12z" fill="currentColor" />
+        )}
+      </svg>
+    </button>
+  );
+}
+
+/** Un paso atrás o adelante: para examinar un cambio concreto. */
+export function StepButton({ replay, direction }: { replay: Replay; direction: -1 | 1 }) {
+  const minutes = String(DAY_STEP_MINUTES);
+  const label = direction < 0 ? `${minutes} minutos antes` : `${minutes} minutos después`;
+  const atEdge = direction < 0 ? replay.index <= 0 : replay.index >= replay.points.length - 1;
+  return (
+    <button
+      type="button"
+      className="step-button"
+      aria-label={label}
+      title={label}
+      disabled={replay.points.length === 0 || atEdge}
+      onClick={() => {
+        replay.seek(replay.index + direction);
+      }}
+    >
+      {direction < 0 ? `−${minutes} min` : `+${minutes} min`}
+    </button>
+  );
+}
+
+export function SpeedSelect({ replay }: { replay: Replay }) {
+  return (
+    <label className="speed-select">
+      <span className="speed-select__label">Velocidad</span>
+      <select
+        value={replay.speed}
+        onChange={(e) => {
+          replay.setSpeed(e.target.value as Speed);
+        }}
+      >
+        {SPEEDS.map((s) => (
+          <option key={s} value={s}>
+            {SPEED_LABEL[s]}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+export function Clock({ replay }: { replay: Replay }) {
+  const { point, day } = replay;
+  return (
+    <p className="replay-clock">
+      <time className="replay-clock__time" dateTime={point?.at}>
+        {point === undefined ? '--:--' : localClock(point.at)}
+      </time>
+      <span className="replay-clock__day">{day === null ? '' : formatLocalDay(day)}</span>
+    </p>
+  );
+}
+
+export function Counts({ point }: { point: TimelinePoint | undefined }) {
+  if (point === undefined) {
+    return <p className="replay-counts replay-counts--note">Cargando el día…</p>;
+  }
+  if (point.stationsWithData === 0) {
+    return (
+      <p className="replay-counts replay-counts--note">
+        Sin datos en este momento: ninguna estación había informado.
+      </p>
+    );
+  }
+  return (
+    <ul className="replay-counts">
+      <li>
+        <OctagonGlyph category="empty" size={16} />
+        <strong>{point.stationsEmpty}</strong> sin bicis
+      </li>
+      <li>
+        <OctagonGlyph category="full" size={16} />
+        <strong>{point.stationsFull}</strong> llenas
+      </li>
+      <li className="replay-counts__coverage">
+        {point.stationsWithData} de {point.stationsKnown} con dato
+      </li>
+    </ul>
+  );
+}

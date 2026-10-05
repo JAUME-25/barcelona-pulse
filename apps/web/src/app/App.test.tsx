@@ -2,7 +2,7 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event';
 import { useEffect } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { StationItem } from '../api/client';
+import type { StationItem, TimelinePoint, TimelineResponse } from '../api/client';
 import {
   demoSource,
   observedResponse,
@@ -73,16 +73,46 @@ const stations = [
 
 const requests: URL[] = [];
 
-function mockApi(handler: (path: string) => Response) {
+function mockApi(handler: (path: string, url: URL) => Response) {
   requests.length = 0;
   vi.stubGlobal(
     'fetch',
     vi.fn((input: Request) => {
       const url = new URL(input.url);
       requests.push(url);
-      return Promise.resolve(handler(url.pathname));
+      return Promise.resolve(handler(url.pathname, url));
     }),
   );
+}
+
+/** Línea temporal de la demo: 3 estaciones con dato de 07:00 a 10:30 (hora de Barcelona). */
+function timelineFor(url: URL): TimelineResponse {
+  const from = Date.parse(url.searchParams.get('from') ?? '');
+  const to = Date.parse(url.searchParams.get('to') ?? '');
+  const step = Number(url.searchParams.get('step')) * 60_000;
+  const points: TimelinePoint[] = [];
+  for (let t = from; t <= to; t += step) {
+    const withData =
+      t >= Date.parse('2026-03-10T06:00:00Z') && t <= Date.parse('2026-03-10T09:30:00Z');
+    points.push({
+      at: new Date(t).toISOString().replace('.000Z', '+00:00'),
+      stationsKnown: 3,
+      stationsWithData: withData ? 3 : 0,
+      stationsCounted: withData ? 2 : 0,
+      stationsEmpty: withData ? 1 : 0,
+      stationsFull: 0,
+      bikesAvailable: withData ? 20 : null,
+      docksAvailable: withData ? 30 : null,
+    });
+  }
+  return {
+    source: stationsResponse([]).source,
+    from: new Date(from).toISOString(),
+    to: new Date(to).toISOString(),
+    stepMinutes: step / 60_000,
+    toleranceMinutes: 30,
+    points,
+  };
 }
 
 function json(body: unknown, status = 200): Response {
@@ -233,6 +263,44 @@ describe('App', () => {
     const stationsRequest = requests.find((u) => u.pathname === '/api/stations');
     expect(stationsRequest?.searchParams.get('source')).toBe('demo');
     expect(stationsRequest?.searchParams.has('at')).toBe(false);
+  });
+
+  it('al reproducir, el reloj, los recuentos y el mapa van al mismo instante', async () => {
+    mockApi((path, url) => {
+      if (path === '/api/sources') return json([demoSource]);
+      if (path === '/api/sources/demo/timeline') return json(timelineFor(url));
+      return json(stationsResponse(stations));
+    });
+    const user = userEvent.setup();
+    window.history.replaceState(null, '', '/?fuente=demo&modo=reproducir&hora=08:30');
+    renderApp();
+
+    const slider = await screen.findByRole('slider', { name: 'Momento del día' });
+    await waitFor(() => {
+      expect(slider.getAttribute('aria-valuetext')).toBe(
+        '08:30, martes, 10 de marzo de 2026. 1 sin bicis, 0 llenas, 3 de 3 con dato.',
+      );
+    });
+    const stationsAt = () =>
+      requests.filter((u) => u.pathname === '/api/stations').map((u) => u.searchParams.get('at'));
+    await waitFor(() => {
+      expect(stationsAt()).toContain('2026-03-10T07:30:00+00:00');
+    });
+
+    await user.click(screen.getByRole('button', { name: '5 minutos después' }));
+    expect(slider.getAttribute('aria-valuetext')).toMatch(/^08:35,/);
+    await waitFor(() => {
+      expect(stationsAt()).toContain('2026-03-10T07:35:00+00:00');
+    });
+
+    // Antes de los datos no hay ceros: el momento dice que no hay datos.
+    slider.focus();
+    await user.keyboard('{Home}');
+    expect(slider.getAttribute('aria-valuetext')).toBe(
+      '00:00, martes, 10 de marzo de 2026. Sin datos.',
+    );
+    expect(screen.getByText(/Sin datos en este momento/)).toBeTruthy();
+    expect(new URLSearchParams(window.location.search).get('hora')).toBe('00:00');
   });
 
   it('sin fuentes cargadas indica cómo importar la demo', async () => {

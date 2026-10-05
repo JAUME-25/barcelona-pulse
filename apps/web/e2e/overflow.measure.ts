@@ -8,6 +8,8 @@ for (const width of [320, 375]) {
       '?fuente=bicing-bcn',
       '?fuente=bicing-bcn&estacion=1',
       '?fuente=demo&estacion=demo-008',
+      '?fuente=bicing-bcn&modo=reproducir&dia=2026-08-20&hora=08:30',
+      '?fuente=demo&modo=reproducir',
     ]) {
       await page.goto(`/${query}`);
       await page.locator('[data-map-status]').waitFor();
@@ -15,6 +17,13 @@ for (const width of [320, 375]) {
         .getByText(/estaciones/)
         .first()
         .waitFor();
+      if (query.includes('modo=reproducir')) {
+        // El reproductor llega con la línea temporal: se mide ya pintado.
+        await expect(page.getByRole('slider', { name: 'Momento del día' })).toHaveAttribute(
+          'aria-valuetext',
+          /con dato|Sin datos/,
+        );
+      }
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
       );

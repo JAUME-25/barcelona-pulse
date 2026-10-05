@@ -13,7 +13,8 @@ está desplegada. Detalle en [docs/roadmap.md](docs/roadmap.md).
 - **API** ASP.NET Core sobre .NET 10 con PostgreSQL 18 y PostGIS 3.6: fuentes de datos,
   estaciones y su estado en un instante, y la línea temporal de un periodo, con OpenAPI.
 - **Ingesta** por línea de comandos, idempotente y con registro de cada ejecución.
-- **Web** React + MapLibre: mapa, leyenda que también filtra, lista accesible y detalle.
+- **Web** React + MapLibre: mapa, leyenda que también filtra, lista accesible y detalle; modo
+  «Reproducir» para recorrer un día del histórico paso a paso, con los huecos a la vista.
 - **Diseño «Fanals»**: Barcelona de noche, con estados que se distinguen por forma, color y
   número. Ver [docs/design.md](docs/design.md).
 
@@ -55,7 +56,8 @@ docker compose run --rm api ingest bicing-archive --from 2026-08-17 --to 2026-08
 ```
 
 Con datos reales, la web los muestra por defecto. La URL admite `?fuente=demo` o
-`?fuente=bicing-bcn`, `&estacion=<id de origen>` y `#mapa=zoom/lat/lon/rumbo/inclinación`.
+`?fuente=bicing-bcn`, `&estacion=<id de origen>` y `#mapa=zoom/lat/lon/rumbo/inclinación`. Para
+reproducir un día: `&modo=reproducir&dia=2026-08-20&hora=08:30` (hora de Barcelona).
 
 ## Pruebas
 

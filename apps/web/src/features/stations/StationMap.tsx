@@ -36,6 +36,8 @@ interface StationMapProps {
   /** Todas las estaciones de la fuente: el encuadre inicial las abarca. */
   frame: readonly StationItem[];
   frameKey: string;
+  /** Margen extra que tapan otros controles sobre el mapa (solo escritorio). */
+  framePadding?: { right: number; bottom: number } | undefined;
   selectedId: number | null;
   onSelect: (id: number) => void;
   onStatusChange: (status: MapStatus) => void;
@@ -71,6 +73,54 @@ const ICON_SIZE: ExpressionSpecification = [
   17.5,
   1.25,
 ];
+
+const MAX_FIT_ZOOM = 14;
+
+interface Padding {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+/**
+ * Encuadra las estaciones en la parte del mapa que no tapan los paneles. fitBounds calcula sin
+ * la inclinación de la cámara y dejaba mucho margen (municipios vecinos y mar): después se
+ * ajusta con dónde caen de verdad las estaciones en pantalla. Dos pasadas bastan.
+ */
+function frameStations(map: MapLibreMap, stations: readonly StationItem[], padding: Padding) {
+  const bounds = new LngLatBounds();
+  for (const s of stations) bounds.extend([s.longitude, s.latitude]);
+  map.fitBounds(bounds, { padding, animate: false, maxZoom: MAX_FIT_ZOOM });
+
+  const { clientWidth, clientHeight } = map.getContainer();
+  const areaWidth = clientWidth - padding.left - padding.right;
+  const areaHeight = clientHeight - padding.top - padding.bottom;
+  if (areaWidth <= 0 || areaHeight <= 0) return;
+  const target: [number, number] = [padding.left + areaWidth / 2, padding.top + areaHeight / 2];
+
+  for (let pass = 0; pass < 2; pass++) {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const s of stations) {
+      const p = map.project([s.longitude, s.latitude]);
+      minX = Math.min(minX, p.x);
+      minY = Math.min(minY, p.y);
+      maxX = Math.max(maxX, p.x);
+      maxY = Math.max(maxY, p.y);
+    }
+    const width = maxX - minX;
+    const height = maxY - minY;
+    if (!(width > 0 && height > 0)) return;
+    map.panBy([(minX + maxX) / 2 - target[0], (minY + maxY) / 2 - target[1]], {
+      animate: false,
+    });
+    const zoom = map.getZoom() + Math.log2(Math.min(areaWidth / width, areaHeight / height));
+    map.zoomTo(Math.min(zoom, MAX_FIT_ZOOM), { animate: false, around: map.unproject(target) });
+  }
+}
 
 function hasCameraInUrl(): boolean {
   return new URLSearchParams(window.location.hash.slice(1)).has(CAMERA_HASH);
@@ -196,10 +246,13 @@ export function StationMap({
   stations,
   frame,
   frameKey,
+  framePadding,
   selectedId,
   onSelect,
   onStatusChange,
 }: StationMapProps) {
+  const padRight = framePadding?.right ?? 48;
+  const padBottom = framePadding?.bottom ?? 48;
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const loadedRef = useRef(false);
@@ -323,15 +376,13 @@ export function StationMap({
       fittedKeyRef.current = frameKey;
       return;
     }
-    const bounds = new LngLatBounds();
-    for (const s of frame) bounds.extend([s.longitude, s.latitude]);
     const floatingPanel = window.innerWidth >= 768;
     const padding = floatingPanel
-      ? { top: 48, right: 48, bottom: 48, left: FLOATING_PANEL_PX }
-      : 32;
-    map.fitBounds(bounds, { padding, animate: false, maxZoom: 14 });
+      ? { top: 48, right: padRight, bottom: padBottom, left: FLOATING_PANEL_PX }
+      : { top: 24, right: 24, bottom: 24, left: 24 };
+    frameStations(map, frame, padding);
     fittedKeyRef.current = frameKey;
-  }, [frame, frameKey, mapReady]);
+  }, [frame, frameKey, mapReady, padRight, padBottom]);
 
   // Selección: resalta y, si queda fuera de la vista, centra la estación.
   useEffect(() => {

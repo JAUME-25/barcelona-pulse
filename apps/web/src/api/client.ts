@@ -8,6 +8,8 @@ export type StationItem = components['schemas']['StationItem'];
 export type StationState = components['schemas']['StationState'];
 export type SourceKind = components['schemas']['SourceKind'];
 export type InstantBasis = components['schemas']['InstantBasis'];
+export type TimelineResponse = components['schemas']['TimelineResponse'];
+export type TimelinePoint = components['schemas']['TimelinePoint'];
 
 // Vacío en desarrollo: Vite reenvía /api a la API local. En producción, la URL pública de la API.
 const baseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '';
@@ -35,6 +37,12 @@ interface ProblemLike {
 }
 
 export function toApiError(error: unknown, response: Response | undefined): ApiError {
+  if (response?.status === 429) {
+    return new ApiError(
+      'La API ha recibido demasiadas peticiones seguidas. Espera un minuto y vuelve a intentarlo.',
+      429,
+    );
+  }
   const problem = (error ?? {}) as ProblemLike;
   const detail = problem.detail ?? problem.title;
   return new ApiError(

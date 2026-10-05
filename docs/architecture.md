@@ -29,8 +29,8 @@ que solo reenvían llamadas.
 Previsto: `Features/Scenarios` (B4), en su propia carpeta.
 
 La web (`apps/web`) sigue la misma idea: `features/stations` con el mapa, la lista, el detalle y
-las reglas de presentación; `api` con el cliente tipado; `app` con la composición y el tema
-visual (`theme.ts`).
+las reglas de presentación; `features/history` con el modo «Reproducir»; `api` con el cliente
+tipado; `app` con la composición y el tema visual (`theme.ts`).
 
 ## Flujo de una consulta
 
@@ -47,6 +47,9 @@ visual (`theme.ts`).
 5. Para reproducir un periodo, `GET /api/sources/{id}/timeline` aplica la misma regla en una
    rejilla de pasos y devuelve, en cada uno, cuántas estaciones tienen dato y cuántas bicis
    suman. Los huecos se ven como pasos con menos estaciones con dato (ADR 0009).
+6. Al reproducir, la web pide el día cada 5 min y la semana por horas, y en cada fotograma
+   `GET /api/stations?at=…` con el instante del paso. Mientras llega, sigue viendo el anterior
+   de la misma fuente. El ritmo es fijo (0,7 s) para no pasar del límite de peticiones.
 
 ## Ingesta
 

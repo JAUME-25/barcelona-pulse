@@ -86,3 +86,27 @@ test('con el detalle abierto, la búsqueda y la leyenda siguen visibles', async 
   await expect(page.getByText('2 de 46 estaciones')).toBeVisible();
   await expect(page.getByRole('heading', { level: 2, name: 'Liceu' })).toHaveCount(0);
 });
+
+test('reproducir la demo: momento en hora de Barcelona, pasos de 5 min y horas sin datos', async ({
+  page,
+}) => {
+  await openWithoutBasemap(page, '&modo=reproducir&hora=08:30');
+
+  // 07:30 UTC son las 08:30 en Barcelona, aunque el navegador esté en Nueva York.
+  const slider = page.getByRole('slider', { name: 'Momento del día' });
+  await expect(slider).toHaveAttribute('aria-valuetext', /^08:30, martes, 10 de marzo de 2026\./);
+  await expect(page.getByRole('button', { name: 'mar 10' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+
+  await page.getByRole('button', { name: '5 minutos después' }).click();
+  await expect(slider).toHaveAttribute('aria-valuetext', /^08:35,/);
+  await expect(page.getByText('46 estaciones')).toBeVisible();
+
+  await slider.focus();
+  await page.keyboard.press('Home');
+  await expect(slider).toHaveAttribute('aria-valuetext', /^00:00, .*Sin datos\.$/);
+  await expect(page.getByText(/Sin datos en este momento/)).toBeVisible();
+  expect(new URL(page.url()).searchParams.get('hora')).toBe('00:00');
+});

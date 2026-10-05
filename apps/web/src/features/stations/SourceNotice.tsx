@@ -17,7 +17,14 @@ function Moment({ label, iso }: { label: string; iso: string }) {
  * Procedencia siempre visible: qué fuente es, si los datos son reales y de qué momento.
  * «En directo» no se usa: queda reservado a una integración con frescura comprobada.
  */
-export function SourceNotice({ response }: { response: StationsResponse }) {
+export function SourceNotice({
+  response,
+  compact = false,
+}: {
+  response: StationsResponse;
+  /** Sin el momento: al reproducir, lo enseña el control de tiempo. */
+  compact?: boolean;
+}) {
   const { source } = response;
 
   if (source.kind === 'synthetic') {
@@ -27,7 +34,7 @@ export function SourceNotice({ response }: { response: StationsResponse }) {
           <span className="source-notice__badge">Demo</span>
           Datos inventados para probar la aplicación. No es la disponibilidad real de Bicing.
         </p>
-        <Moment label="Momento mostrado" iso={response.at} />
+        {!compact && <Moment label="Momento mostrado" iso={response.at} />}
       </div>
     );
   }
@@ -46,7 +53,7 @@ export function SourceNotice({ response }: { response: StationsResponse }) {
         <span className="source-notice__badge source-notice__badge--real">Datos reales</span>
         {historical ? 'Es un momento del pasado, no el estado actual.' : `${source.name}.`}
       </p>
-      {historical ? (
+      {compact ? null : historical ? (
         <Moment label="Momento mostrado" iso={response.at} />
       ) : latest === undefined ? (
         <p className="source-notice__moment">Sin observaciones en este momento.</p>

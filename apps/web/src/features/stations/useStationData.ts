@@ -5,6 +5,7 @@ import {
   toApiError,
   type SourceSummary,
   type StationsResponse,
+  type TimelineResponse,
 } from '../../api/client';
 
 export type Remote<T> =
@@ -25,11 +26,13 @@ function asApiError(error: unknown): ApiError {
 /**
  * Pide `load` cada vez que cambia `key` y cancela la petición anterior: su respuesta
  * ya no vale. Mientras el resultado guardado sea de otra clave, el estado es «cargando».
+ * `previous` es el último resultado bueno, sea de la clave que sea: quien lo use comprueba
+ * que sigue valiendo (por ejemplo, que es de la misma fuente).
  */
 function useRemote<T>(
   key: string | null,
   load: (signal: AbortSignal) => Promise<T>,
-): { state: Remote<T>; retry: () => void } {
+): { state: Remote<T>; previous: T | undefined; retry: () => void } {
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<Keyed<T> | null>(null);
   const requestKey = key === null ? null : `${key}#${String(attempt)}`;
@@ -58,7 +61,8 @@ function useRemote<T>(
 
   const state: Remote<T> =
     result !== null && result.key === requestKey ? result.value : { status: 'loading' };
-  return { state, retry };
+  const previous = result?.value.status === 'ready' ? result.value.data : undefined;
+  return { state, previous, retry };
 }
 
 /**
@@ -87,6 +91,30 @@ export function instantFor(source: SourceSummary | undefined, now: number): stri
   if (source?.kind !== 'observed' || source.period === null) return undefined;
   const age = now - Date.parse(source.period.to);
   return age > source.toleranceMinutes * 60_000 ? source.period.to : undefined;
+}
+
+export interface TimelineRange {
+  from: string;
+  to: string;
+  stepMinutes: number;
+}
+
+export function useTimeline(sourceId: string | null, range: TimelineRange | null) {
+  const key =
+    sourceId === null || range === null
+      ? null
+      : `${sourceId}:${range.from}:${range.to}:${String(range.stepMinutes)}`;
+  return useRemote<TimelineResponse>(key, async (signal) => {
+    const { data, error, response } = await api.GET('/api/sources/{id}/timeline', {
+      params: {
+        path: { id: sourceId ?? '' },
+        query: { from: range?.from, to: range?.to, step: range?.stepMinutes },
+      },
+      signal,
+    });
+    if (data === undefined) throw toApiError(error, response);
+    return data;
+  });
 }
 
 export function useStations(sourceId: string | null, at?: string) {
