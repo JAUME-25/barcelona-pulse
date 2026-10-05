@@ -19,6 +19,8 @@ function state(partial: Partial<StationState>): StationState {
     docksAvailable: 10,
     bikesDisabled: 0,
     docksDisabled: 0,
+    isRenting: true,
+    isReturning: true,
     qualityFlags: [],
     ...partial,
   };
@@ -40,6 +42,12 @@ describe('availabilityOf', () => {
       'outOfService',
     );
     expect(availabilityOf(state({ status: 'maintenance' }))).toBe('outOfService');
+  });
+
+  it('sin prestar ni admitir devoluciones cuenta como fuera de servicio; con uno de los dos, no', () => {
+    expect(availabilityOf(state({ isRenting: false, isReturning: false }))).toBe('outOfService');
+    expect(availabilityOf(state({ isRenting: false, isReturning: true }))).toBe('available');
+    expect(availabilityOf(state({ isRenting: null, isReturning: null }))).toBe('available');
   });
 
   it('clasifica por bicis y anclajes', () => {

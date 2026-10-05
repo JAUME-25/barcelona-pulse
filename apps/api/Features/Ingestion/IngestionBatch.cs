@@ -34,7 +34,9 @@ public sealed record NormalizedStation(
     double Longitude,
     double Latitude,
     int? Capacity,
-    DateTimeOffset SeenAt);
+    DateTimeOffset SeenAt,
+    string? District = null,
+    string? Neighbourhood = null);
 
 /// <summary>Instantes siempre en UTC. Recuentos nulos = no informados.</summary>
 public sealed record NormalizedObservation(
@@ -46,7 +48,9 @@ public sealed record NormalizedObservation(
     int? EbikesAvailable,
     int? DocksAvailable,
     int? BikesDisabled,
-    int? DocksDisabled);
+    int? DocksDisabled,
+    bool? IsRenting = null,
+    bool? IsReturning = null);
 
 public sealed record RejectedRecord(string RecordKind, string RecordRef, string Reason, string? Detail = null);
 

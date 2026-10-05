@@ -3,7 +3,13 @@ import userEvent from '@testing-library/user-event';
 import { useEffect } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { StationItem } from '../api/client';
-import { demoSource, stationFixture, stationsResponse } from '../test/fixtures';
+import {
+  demoSource,
+  observedResponse,
+  observedSource,
+  stationFixture,
+  stationsResponse,
+} from '../test/fixtures';
 import { App } from './App';
 
 // MapLibre necesita WebGL: en jsdom se sustituye por un mapa mínimo que expone sus
@@ -65,10 +71,17 @@ const stations = [
   }),
 ];
 
+const requests: URL[] = [];
+
 function mockApi(handler: (path: string) => Response) {
+  requests.length = 0;
   vi.stubGlobal(
     'fetch',
-    vi.fn((input: Request) => Promise.resolve(handler(new URL(input.url).pathname))),
+    vi.fn((input: Request) => {
+      const url = new URL(input.url);
+      requests.push(url);
+      return Promise.resolve(handler(url.pathname));
+    }),
   );
 }
 
@@ -177,6 +190,49 @@ describe('App', () => {
     await waitFor(() => {
       expect(screen.getByText('3 estaciones')).toBeTruthy();
     });
+  });
+
+  it('el histórico real se muestra en su último momento y avisa de que no es el estado actual', async () => {
+    const real = [
+      stationFixture({
+        id: 21,
+        sourceStationId: '1',
+        name: 'GRAN VIA CORTS CATALANES, 760',
+        district: 'Eixample',
+        neighbourhood: 'el Fort Pienc',
+        state: { lastObservedAt: '2026-08-20T21:54:08+00:00', isRenting: false },
+      }),
+    ];
+    mockApi((path) =>
+      json(path === '/api/sources' ? [demoSource, observedSource] : observedResponse(real)),
+    );
+    window.history.replaceState(null, '', '/?estacion=1');
+    renderApp();
+
+    expect(await screen.findByText('Datos reales')).toBeTruthy();
+    expect(screen.getByText(/Es un momento del pasado, no el estado actual./)).toBeTruthy();
+    expect(document.querySelector('.source-notice__time')?.textContent).toMatch(
+      /20 de agosto de 2026.*23:55/,
+    );
+    const stationsRequest = requests.find((u) => u.pathname === '/api/stations');
+    expect(stationsRequest?.searchParams.get('source')).toBe('bicing-bcn');
+    expect(stationsRequest?.searchParams.get('at')).toBe('2026-08-20T21:55:02+00:00');
+
+    expect(screen.getByText('el Fort Pienc, Eixample')).toBeTruthy();
+    expect(screen.getByText(/no permite coger bicis/)).toBeTruthy();
+  });
+
+  it('la fuente se puede fijar por la URL', async () => {
+    mockApi((path) =>
+      json(path === '/api/sources' ? [demoSource, observedSource] : stationsResponse(stations)),
+    );
+    window.history.replaceState(null, '', '/?fuente=demo');
+    renderApp();
+
+    expect(await screen.findByText(/Datos inventados/)).toBeTruthy();
+    const stationsRequest = requests.find((u) => u.pathname === '/api/stations');
+    expect(stationsRequest?.searchParams.get('source')).toBe('demo');
+    expect(stationsRequest?.searchParams.has('at')).toBe(false);
   });
 
   it('sin fuentes cargadas indica cómo importar la demo', async () => {

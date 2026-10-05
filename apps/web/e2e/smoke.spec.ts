@@ -2,9 +2,10 @@ import { expect, test, type Page } from '@playwright/test';
 
 // Flujo principal sin depender de teselas públicas: se bloquea el mapa base y la
 // aplicación debe seguir siendo usable con la lista. El mapa conectado se revisa aparte.
-async function openWithoutBasemap(page: Page, path = '/') {
+// Siempre la demo: sus datos son fijos. Los datos reales dependen de lo importado en local.
+async function openWithoutBasemap(page: Page, query = '') {
   await page.route('https://tiles.openfreemap.org/**', (route) => route.abort());
-  await page.goto(path);
+  await page.goto(`/?fuente=demo${query}`);
 }
 
 test('muestra la demo como datos inventados y con su momento en hora de Barcelona', async ({
@@ -47,7 +48,7 @@ test('seleccionar desde la lista abre el detalle, cambia la URL y volver devuelv
 test('un enlace directo a una estación sin dato reciente explica por qué es desconocida', async ({
   page,
 }) => {
-  await openWithoutBasemap(page, '/?estacion=demo-024');
+  await openWithoutBasemap(page, '&estacion=demo-024');
 
   await expect(page.getByRole('heading', { level: 2, name: 'Pl. de Lesseps' })).toBeVisible();
   await expect(page.locator('.station-detail__status')).toHaveText('Sin dato reciente');
@@ -75,7 +76,7 @@ test('los filtros de la leyenda y la búsqueda acotan la lista', async ({ page }
 });
 
 test('con el detalle abierto, la búsqueda y la leyenda siguen visibles', async ({ page }) => {
-  await openWithoutBasemap(page, '/?estacion=demo-008');
+  await openWithoutBasemap(page, '&estacion=demo-008');
 
   await expect(page.getByRole('heading', { level: 2, name: 'Liceu' })).toBeVisible();
   await expect(page.getByLabel('Buscar estación')).toBeVisible();

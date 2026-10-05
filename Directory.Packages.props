@@ -11,6 +11,8 @@
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL.NetTopologySuite" Version="10.0.3" />
     <PackageVersion Include="EFCore.NamingConventions" Version="10.0.1" />
+    <!-- Lectura de los .7z del histórico de Bicing (solo lectura; MIT). -->
+    <PackageVersion Include="SharpCompress" Version="1.0.0" />
     <!-- Pruebas -->
     <PackageVersion Include="xunit.v3.mtp-v2" Version="4.0.1" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.12" />

@@ -35,6 +35,7 @@ procedencia visible de los datos. Estado y siguiente paso: `docs/roadmap.md`.
 ```bash
 docker compose up -d --build api                                   # PostGIS + migraciones + API
 docker compose run --rm api ingest demo                            # importar el demo (idempotente)
+docker compose run --rm api ingest bicing-archive --day 2026-08-20  # un día real del histórico
 docker compose run --rm -e BP_REQUIRE_DB=true sdk dotnet test      # pruebas de backend
 docker compose run --rm --no-deps sdk dotnet format BarcelonaPulse.slnx --verify-no-changes
 npm --prefix apps/web run dev                                      # web en http://localhost:5173
@@ -58,6 +59,14 @@ En este equipo no hay SDK de .NET instalado: todo lo de .NET va por el contenedo
 - TypeScript 5.9 a propósito: typescript-eslint y openapi-typescript aún no admiten TS 7.
 - No edites archivos con `sed` o heredocs si llevan `${...}`, comillas invertidas o barras: usa
   Edit o Write.
+- La consulta del estado en un instante es SQL explícito (ADR 0008): EF la traducía con
+  `ROW_NUMBER()` sobre todo el histórico. Si cambian columnas de `station_observations`, revísala.
+- `returning` es palabra reservada de PostgreSQL: no la uses como alias.
+- SharpCompress 1.0.0: `SevenZipArchive.Open(...)` (la documentación de `master` dice
+  `OpenArchive`) y no escribe 7z. Los fixtures del histórico se generan con
+  `node scripts/make-bicing-archive-fixtures.mjs` usando bsdtar.
+- Importar un día real descarga ~25 MB del portal de Open Data BCN: no lo metas en pruebas ni
+  en CI; para eso están los fixtures.
 
 ## Diseño
 

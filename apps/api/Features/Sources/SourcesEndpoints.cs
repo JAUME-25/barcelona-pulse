@@ -26,6 +26,7 @@ public sealed record LastIngestionSummary(
     IngestionStatus Status,
     int ObservationsAccepted,
     int ObservationsDuplicate,
+    int ObservationsConflicting,
     int ObservationsRejected);
 
 public static class SourcesEndpoints
@@ -60,7 +61,7 @@ public static class SourcesEndpoints
                 .Where(r => r.SourceId == s.Id)
                 .OrderByDescending(r => r.StartedAt)
                 .Select(r => new LastIngestionSummary(r.StartedAt, r.FinishedAt, r.Status,
-                    r.ObservationsAccepted, r.ObservationsDuplicate, r.ObservationsRejected))
+                    r.ObservationsAccepted, r.ObservationsDuplicate, r.ObservationsConflicting, r.ObservationsRejected))
                 .FirstOrDefaultAsync(ct);
 
             result.Add(new SourceSummary(s.Id, s.Kind, s.Name, s.Attribution, s.License, s.Url,

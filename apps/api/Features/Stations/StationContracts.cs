@@ -52,6 +52,8 @@ public sealed record StationState(
     int? DocksAvailable,
     int? BikesDisabled,
     int? DocksDisabled,
+    bool? IsRenting,
+    bool? IsReturning,
     IReadOnlyList<string> QualityFlags);
 
 /// <summary>Estación con sus atributos vigentes en el instante consultado.</summary>
@@ -59,6 +61,8 @@ public sealed record StationState(
 /// <param name="SourceStationId">Identificador tal como lo publica la fuente.</param>
 /// <param name="Name">Nombre publicado por la fuente.</param>
 /// <param name="Address">Dirección, si la fuente la publica.</param>
+/// <param name="District">Distrito, si la fuente lo publica.</param>
+/// <param name="Neighbourhood">Barrio, si la fuente lo publica.</param>
 /// <param name="Longitude">Longitud WGS84.</param>
 /// <param name="Latitude">Latitud WGS84.</param>
 /// <param name="Capacity">Capacidad publicada; nula si la fuente no la da.</param>
@@ -72,6 +76,8 @@ public sealed record StationItem(
     string SourceStationId,
     string Name,
     string? Address,
+    string? District,
+    string? Neighbourhood,
     double Longitude,
     double Latitude,
     int? Capacity,
@@ -90,6 +96,8 @@ public sealed record StationsResponse(
 public sealed record StationVersionItem(
     string Name,
     string? Address,
+    string? District,
+    string? Neighbourhood,
     double Longitude,
     double Latitude,
     int? Capacity,

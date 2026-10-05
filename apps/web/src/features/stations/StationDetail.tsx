@@ -80,6 +80,12 @@ export function StationDetail({ station, response, onBack, focusOnOpen }: Statio
       <h2 id="station-detail-name" className="station-detail__name" tabIndex={-1} ref={headingRef}>
         {station.name}
       </h2>
+      {station.neighbourhood !== null && (
+        <p className="station-detail__area">
+          {station.neighbourhood}
+          {station.district !== null && `, ${station.district}`}
+        </p>
+      )}
       <p className="station-detail__status">
         <OctagonGlyph category={category} size={26} />
         <span>
@@ -121,6 +127,17 @@ export function StationDetail({ station, response, onBack, focusOnOpen }: Statio
         <p className="station-detail__explain">
           La estación no está operativa. Las cifras son las que publica, pero puede que no se puedan
           coger ni devolver bicis.
+        </p>
+      )}
+
+      {current && category !== 'outOfService' && state.isRenting === false && (
+        <p className="station-detail__explain">
+          En este momento la estación no permite coger bicis, aunque tenga.
+        </p>
+      )}
+      {current && category !== 'outOfService' && state.isReturning === false && (
+        <p className="station-detail__explain">
+          En este momento la estación no admite devoluciones, aunque tenga anclajes libres.
         </p>
       )}
 

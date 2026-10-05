@@ -32,6 +32,10 @@ public sealed class IngestionRun
     public int ObservationsReceived { get; set; }
     public int ObservationsAccepted { get; set; }
     public int ObservationsDuplicate { get; set; }
+
+    /// <summary>Misma estación e instante que otra ya vista, pero con valores distintos. Se conserva la primera.</summary>
+    public int ObservationsConflicting { get; set; }
+
     public int ObservationsRejected { get; set; }
     public string? Error { get; set; }
 }
@@ -40,7 +44,8 @@ public enum IngestionStatus
 {
     Running,
     Succeeded,
-    SucceededWithRejections,
+    /// <summary>Terminada, pero con registros rechazados o en conflicto (ver recuentos).</summary>
+    SucceededWithIssues,
     Failed,
 }
 

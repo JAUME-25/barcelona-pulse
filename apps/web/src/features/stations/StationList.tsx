@@ -16,6 +16,12 @@ function summary(station: StationItem): string {
   if (station.state.freshness === 'stale' && last !== null) {
     return `${label} desde las ${formatTime(last)}`;
   }
+  if (category !== 'outOfService' && station.state.isRenting === false) {
+    return `${label}, sin préstamo`;
+  }
+  if (category !== 'outOfService' && station.state.isReturning === false) {
+    return `${label}, sin devoluciones`;
+  }
   return label;
 }
 

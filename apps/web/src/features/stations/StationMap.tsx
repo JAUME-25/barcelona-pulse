@@ -54,16 +54,18 @@ const MAX_BOUNDS: [[number, number], [number, number]] = [
 /** Ancho del panel flotante en escritorio, para que el encuadre no quede debajo. */
 const FLOATING_PANEL_PX = 460;
 
+// Pequeños a escala de ciudad (unas 540 estaciones reales se solapan) y grandes a nivel de
+// calle, donde llevan el número dentro.
 const ICON_SIZE: ExpressionSpecification = [
   'interpolate',
   ['linear'],
   ['zoom'],
   11,
-  0.55,
+  0.38,
   12.5,
-  0.68,
+  0.5,
   14,
-  0.88,
+  0.82,
   16,
   1.12,
   17.5,

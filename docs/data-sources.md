@@ -9,9 +9,9 @@ prueba que funcione: todo lo de aquí se ha pedido de verdad.
 
 | Fuente | Acceso hoy | Uso previsto |
 | --- | --- | --- |
-| Bicing tiempo real, Open Data BCN (JSON) | **Requiere token personal.** Sin él: 302 a `/tokens`. | B2, cuando Jaume tenga el token. |
-| Bicing histórico mensual, Open Data BCN (.7z con CSV) | Público. 2019-03 a 2026-08, con huecos. | B2 (una muestra real) y B3. |
-| Información de estaciones histórica (.7z) | Público. Columnas sin comprobar. | B2/B3, para ubicaciones y capacidades. |
+| Bicing tiempo real, Open Data BCN (JSON) | **Requiere token personal.** Sin él: 302 a `/tokens`. | Pendiente de token. |
+| Bicing histórico mensual, Open Data BCN (.7z con CSV) | Público. 2019-03 a 2026-08, con huecos. | **En uso** (B2): `ingest bicing-archive --day`. B3 para periodos. |
+| Información de estaciones histórica (.7z) | Público. Columnas comprobadas (B2). | **En uso**: ubicación, capacidad, distrito y barrio con versiones. |
 | GBFS del operador (`barcelona.publicbikesystem.net`) | Público y sin autenticación. **Sin licencia publicada.** | Ninguno hasta aclarar condiciones. |
 | datos.gob.es | Solo metadatos; remite a Open Data BCN; desactualizado (último mes listado: 2026-04). | Ninguno. |
 | API antigua `api.bsmsa.eu` | 503 «API blocked». | Ninguno. |
@@ -73,6 +73,25 @@ Pendiente de comprobar con un token válido: formato real, versión GBFS, si tra
 - Calidad observada: del 1 al 5 de agosto de 2026 casi no hay instantáneas (2 a 10 por día) y no
   figura en la lista de huecos conocidos del dataset. La estación 366 lleva `last_reported` de
   junio de 2025 en el archivo y en el feed actual del operador.
+
+**Comprobado al construir el adaptador (B2, agosto de 2026):**
+
+- Información: una fila por estación **en cada instantánea** (3 987 120 filas, 870 MB
+  descomprimido para metadatos que casi no cambian). Columnas: `station_id, external_id, name,
+  physical_configuration, lat, lon, altitude, address, cross_street, post_code, capacity,
+  is_charging_station, short_name, nearby_distance, x_ride_code_support, rental_uris,
+  last_updated, ttl`. `cross_street` trae distrito y barrio («02-Eixample/05-el Fort Pienc»).
+  `post_code` viene como número y pierde el cero inicial (`8013`): no se usa.
+- Estados: `IN_SERVICE`, `MAINTENANCE` y `NOT_IN_SERVICE`. Las 16 939 filas con `is_renting=0`
+  y `is_returning=0` coinciden exactamente con los dos estados no operativos. Hay 75 filas en
+  servicio que admiten devolver pero no prestar.
+- 544 estaciones en el mes. Reportan cada ~6 min: mediana 361 s, p99 375 s entre reportes
+  distintos. De ahí la tolerancia de 15 min de la fuente `bicing-bcn`.
+- Un día (20-8-2026): 155 364 filas de estado, 154 389 observaciones distintas, 773 repeticiones
+  idénticas y **202 conflictos**: misma estación y mismo `last_reported` con cifras distintas en
+  instantáneas sucesivas. Se conserva la primera y se cuentan.
+- Los .7z son sólidos (LZMA); SharpCompress 1.0 los lee en streaming: los dos de agosto (256 y
+  870 MB descomprimidos) en 1–2 s cada uno, con menos de 40 MB de memoria.
 
 ## GBFS del operador (candidato aparte)
 

@@ -1,6 +1,9 @@
+using System.Text;
 using BarcelonaPulse.Api.Features.Sources;
 using BarcelonaPulse.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using NpgsqlTypes;
 
 namespace BarcelonaPulse.Api.Features.Stations;
 
@@ -39,6 +42,32 @@ public static class StationQueries
     }
 
     /// <summary>
+    /// SQL explícito a propósito (ADR 0005): por cada versión vigente en @at, la última
+    /// observación ≤ @at con LATERAL … LIMIT 1, que baja por el índice único
+    /// (station_id, observed_at). La traducción de EF usaba ROW_NUMBER() sobre todas las
+    /// observaciones de todas las fuentes y crecía con el histórico (100 ms con un día).
+    /// </summary>
+    private const string StatesSql = """
+        SELECT v.station_id, s.source_station_id, v.name, v.address, v.district, v.neighbourhood,
+               ST_X(v.location), ST_Y(v.location), v.capacity,
+               v.valid_from IS NULL AND v.first_seen_at > @at,
+               o.observed_at, o.status, o.bikes_available, o.mechanical_bikes_available, o.ebikes_available,
+               o.docks_available, o.bikes_disabled, o.docks_disabled, o.is_renting, o.is_returning, o.quality_flags
+        FROM station_versions v
+        JOIN stations s ON s.id = v.station_id
+        LEFT JOIN LATERAL (
+            SELECT *
+            FROM station_observations so
+            WHERE so.station_id = v.station_id AND so.observed_at <= @at
+            ORDER BY so.observed_at DESC
+            LIMIT 1
+        ) o ON true
+        WHERE s.source_id = @source
+          AND (v.valid_from IS NULL OR v.valid_from <= @at)
+          AND (v.valid_to IS NULL OR v.valid_to > @at)
+        """;
+
+    /// <summary>
     /// Estaciones con la versión vigente en <paramref name="at"/> y su última observación
     /// con instante ≤ <paramref name="at"/>. Devuelve hasta <paramref name="limit"/> + 1 filas
     /// para poder indicar truncado.
@@ -47,47 +76,86 @@ public static class StationQueries
         PulseDbContext db, DataSource source, DateTimeOffset at, BoundingBox? bbox, long? stationId, int limit,
         CancellationToken ct)
     {
-        var versions = db.StationVersions.AsNoTracking()
-            .Where(v => v.Station.SourceId == source.Id
-                        && (v.ValidFrom == null || v.ValidFrom <= at)
-                        && (v.ValidTo == null || v.ValidTo > at));
+        var sql = new StringBuilder(StatesSql);
+        var parameters = new List<NpgsqlParameter>
+        {
+            new("at", NpgsqlDbType.TimestampTz) { Value = at.ToUniversalTime() },
+            new("source", NpgsqlDbType.Varchar) { Value = source.Id },
+            new("limit", NpgsqlDbType.Integer) { Value = limit + 1 },
+        };
 
         if (bbox is { } b)
         {
             // ST_Intersects usa el índice GiST de location; incluye los puntos del borde.
-            var rectangle = Geo.Rectangle(b.MinLon, b.MinLat, b.MaxLon, b.MaxLat);
-            versions = versions.Where(v => v.Location.Intersects(rectangle));
+            sql.AppendLine("  AND ST_Intersects(v.location, ST_MakeEnvelope(@min_lon, @min_lat, @max_lon, @max_lat, 4326))");
+            parameters.Add(new("min_lon", NpgsqlDbType.Double) { Value = b.MinLon });
+            parameters.Add(new("min_lat", NpgsqlDbType.Double) { Value = b.MinLat });
+            parameters.Add(new("max_lon", NpgsqlDbType.Double) { Value = b.MaxLon });
+            parameters.Add(new("max_lat", NpgsqlDbType.Double) { Value = b.MaxLat });
         }
 
         if (stationId is { } id)
         {
-            versions = versions.Where(v => v.StationId == id);
+            sql.AppendLine("  AND v.station_id = @station_id");
+            parameters.Add(new("station_id", NpgsqlDbType.Bigint) { Value = id });
         }
 
-        var rows = await versions
-            .OrderBy(v => v.Name).ThenBy(v => v.StationId)
-            .Select(v => new
-            {
-                v.StationId,
-                v.Station.SourceStationId,
-                v.Name,
-                v.Address,
-                Longitude = v.Location.X,
-                Latitude = v.Location.Y,
-                v.Capacity,
-                MetadataAssumed = v.ValidFrom == null && v.FirstSeenAt > at,
-                Latest = db.StationObservations
-                    .Where(o => o.StationId == v.StationId && o.ObservedAt <= at)
-                    .OrderByDescending(o => o.ObservedAt)
-                    .FirstOrDefault(),
-            })
-            .Take(limit + 1)
-            .ToListAsync(ct);
+        sql.AppendLine("ORDER BY v.name, v.station_id LIMIT @limit");
 
-        return rows.ConvertAll(r => new StationItem(
-            r.StationId, r.SourceStationId, r.Name, r.Address, r.Longitude, r.Latitude, r.Capacity, r.MetadataAssumed,
-            StationStateRules.Evaluate(r.Latest, at, source.StalenessTolerance)));
+        var connection = (NpgsqlConnection)db.Database.GetDbConnection();
+        var opened = connection.State != System.Data.ConnectionState.Open;
+        if (opened) await connection.OpenAsync(ct);
+        try
+        {
+            await using var command = new NpgsqlCommand(sql.ToString(), connection);
+            command.Parameters.AddRange(parameters.ToArray());
+            await using var reader = await command.ExecuteReaderAsync(ct);
+
+            var items = new List<StationItem>();
+            while (await reader.ReadAsync(ct))
+            {
+                StationObservation? latest = reader.IsDBNull(10)
+                    ? null
+                    : new StationObservation
+                    {
+                        ObservedAt = reader.GetFieldValue<DateTimeOffset>(10),
+                        Status = SnakeCaseEnum<ObservationStatus>.Parse(reader.GetString(11)),
+                        BikesAvailable = NullableInt(reader, 12),
+                        MechanicalBikesAvailable = NullableInt(reader, 13),
+                        EbikesAvailable = NullableInt(reader, 14),
+                        DocksAvailable = NullableInt(reader, 15),
+                        BikesDisabled = NullableInt(reader, 16),
+                        DocksDisabled = NullableInt(reader, 17),
+                        IsRenting = reader.IsDBNull(18) ? null : reader.GetBoolean(18),
+                        IsReturning = reader.IsDBNull(19) ? null : reader.GetBoolean(19),
+                        QualityFlags = reader.GetFieldValue<string[]>(20),
+                    };
+
+                items.Add(new StationItem(
+                    Id: reader.GetInt64(0),
+                    SourceStationId: reader.GetString(1),
+                    Name: reader.GetString(2),
+                    Address: NullableString(reader, 3),
+                    District: NullableString(reader, 4),
+                    Neighbourhood: NullableString(reader, 5),
+                    Longitude: reader.GetDouble(6),
+                    Latitude: reader.GetDouble(7),
+                    Capacity: NullableInt(reader, 8),
+                    MetadataAssumed: reader.GetBoolean(9),
+                    State: StationStateRules.Evaluate(latest, at, source.StalenessTolerance)));
+            }
+
+            return items;
+        }
+        finally
+        {
+            if (opened) await connection.CloseAsync();
+        }
     }
+
+    private static int? NullableInt(NpgsqlDataReader reader, int i) => reader.IsDBNull(i) ? null : reader.GetInt32(i);
+
+    private static string? NullableString(NpgsqlDataReader reader, int i) => reader.IsDBNull(i) ? null : reader.GetString(i);
 
     public static SourceRef ToRef(this DataSource s) => new(s.Id, s.Kind, s.Name, s.Attribution, s.License, s.Url);
 }

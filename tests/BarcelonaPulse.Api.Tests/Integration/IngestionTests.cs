@@ -88,6 +88,23 @@ public sealed class IngestionTests(PostgisDatabase database) : IClassFixture<Pos
     }
 
     [Fact]
+    public async Task Reimporting_a_period_with_several_versions_rejects_nothing()
+    {
+        database.RequireAvailable();
+        var source = Source("reimport");
+        var batch = Batch(
+            [Station("s1", capacity: 20), Station("s1", capacity: 24, seenAt: T0.AddHours(1))],
+            source: source);
+
+        var first = await IngestAsync(batch);
+        var second = await IngestAsync(batch);
+
+        Assert.Equal(2, first.StationVersionsCreated);
+        Assert.Equal(0, second.StationVersionsCreated);
+        Assert.Equal(0, second.StationsRejected);
+    }
+
+    [Fact]
     public async Task Older_metadata_with_different_attributes_is_rejected_not_versioned()
     {
         database.RequireAvailable();
@@ -111,7 +128,7 @@ public sealed class IngestionTests(PostgisDatabase database) : IClassFixture<Pos
             stations:
             [
                 Station("ok"),
-                Station("ok"), // repetida en el lote
+                Station("ok", capacity: 99), // otra versión publicada en el mismo instante
                 Station("far", lon: -3.70, lat: 40.42), // Madrid: fuera del área de servicio
                 Station("swapped", lon: 41.39, lat: 2.17), // lat/lon intercambiadas: también fuera del área
                 Station("invalid", lon: 2.17, lat: 141.39), // no es una coordenada WGS84
@@ -129,7 +146,7 @@ public sealed class IngestionTests(PostgisDatabase database) : IClassFixture<Pos
 
         var run = await IngestAsync(batch);
 
-        Assert.Equal(IngestionStatus.SucceededWithRejections, run.Status);
+        Assert.Equal(IngestionStatus.SucceededWithIssues, run.Status);
         Assert.Equal(5, run.StationsReceived);
         Assert.Equal(4, run.StationsRejected);
         Assert.Equal(6, run.ObservationsReceived);

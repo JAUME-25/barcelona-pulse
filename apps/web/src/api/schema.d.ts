@@ -79,7 +79,7 @@ export interface components {
       };
     };
     /** @enum {unknown} */
-    IngestionStatus: 'running' | 'succeeded' | 'succeeded_with_rejections' | 'failed';
+    IngestionStatus: 'running' | 'succeeded' | 'succeeded_with_issues' | 'failed';
     /**
      * @description Cómo se eligió el instante de la respuesta.
      * @enum {unknown}
@@ -95,6 +95,8 @@ export interface components {
       observationsAccepted: number;
       /** Format: int32 */
       observationsDuplicate: number;
+      /** Format: int32 */
+      observationsConflicting: number;
       /** Format: int32 */
       observationsRejected: number;
     };
@@ -164,6 +166,10 @@ export interface components {
       name: string;
       /** @description Dirección, si la fuente la publica. */
       address: null | string;
+      /** @description Distrito, si la fuente lo publica. */
+      district: null | string;
+      /** @description Barrio, si la fuente lo publica. */
+      neighbourhood: null | string;
       /**
        * Format: double
        * @description Longitud WGS84.
@@ -220,11 +226,15 @@ export interface components {
       bikesDisabled: null | number;
       /** Format: int32 */
       docksDisabled: null | number;
+      isRenting: null | boolean;
+      isReturning: null | boolean;
       qualityFlags: string[];
     };
     StationVersionItem: {
       name: string;
       address: null | string;
+      district: null | string;
+      neighbourhood: null | string;
       /** Format: double */
       longitude: number;
       /** Format: double */

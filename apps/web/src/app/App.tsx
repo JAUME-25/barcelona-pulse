@@ -12,23 +12,34 @@ import { SourceNotice } from '../features/stations/SourceNotice';
 import { StationDetail } from '../features/stations/StationDetail';
 import { StationList } from '../features/stations/StationList';
 import { StationMap, type MapStatus } from '../features/stations/StationMap';
-import { pickDefaultSource, useSources, useStations } from '../features/stations/useStationData';
+import {
+  instantFor,
+  pickDefaultSource,
+  useSources,
+  useStations,
+} from '../features/stations/useStationData';
 import { plural } from '../shared/format';
 import './App.css';
 
 const STATION_PARAM = 'estacion';
+const SOURCE_PARAM = 'fuente';
 const NO_STATIONS: readonly StationItem[] = [];
 
-function readStationParam(): string | null {
-  return new URLSearchParams(window.location.search).get(STATION_PARAM);
+function readParam(name: string): string | null {
+  return new URLSearchParams(window.location.search).get(name);
 }
 
-function writeStationParam(sourceStationId: string | null): void {
+function writeParam(name: string, value: string | null): void {
   const url = new URL(window.location.href);
-  if (sourceStationId === null) url.searchParams.delete(STATION_PARAM);
-  else url.searchParams.set(STATION_PARAM, sourceStationId);
+  if (value === null) url.searchParams.delete(name);
+  else url.searchParams.set(name, value);
   window.history.replaceState(null, '', url);
 }
+
+const readStationParam = () => readParam(STATION_PARAM);
+const writeStationParam = (value: string | null) => {
+  writeParam(STATION_PARAM, value);
+};
 
 function MapStatusMessage({ status }: { status: MapStatus }) {
   switch (status.kind) {
@@ -58,10 +69,19 @@ function MapStatusMessage({ status }: { status: MapStatus }) {
 
 export function App() {
   const { state: sourcesState, retry: retrySources } = useSources();
-  const [chosenSourceId, setChosenSourceId] = useState<string | null>(null);
+  // La fuente también va en la URL (?fuente=demo): enlaces compartibles y pruebas deterministas.
+  const [chosenSourceId, setChosenSourceId] = useState<string | null>(() =>
+    readParam(SOURCE_PARAM),
+  );
+  const [now] = useState(() => Date.now());
   const sources = sourcesState.status === 'ready' ? sourcesState.data : [];
-  const sourceId = chosenSourceId ?? pickDefaultSource(sources)?.id ?? null;
-  const { state: stationsState, retry: retryStations } = useStations(sourceId);
+  const source =
+    sources.find((s) => s.id === chosenSourceId) ?? pickDefaultSource(sources) ?? undefined;
+  const sourceId = source?.id ?? null;
+  const { state: stationsState, retry: retryStations } = useStations(
+    sourceId,
+    instantFor(source, now),
+  );
 
   const [query, setQuery] = useState('');
   const [visible, setVisible] = useState<ReadonlySet<Availability>>(
@@ -240,6 +260,7 @@ export function App() {
               value={sourceId ?? ''}
               onChange={(e) => {
                 setChosenSourceId(e.target.value);
+                writeParam(SOURCE_PARAM, e.target.value);
                 closeDetail();
               }}
             >

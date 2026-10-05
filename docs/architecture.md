@@ -38,16 +38,21 @@ visual (`theme.ts`).
 2. Pide `GET /api/stations?source=…`. Sin `at`, la API usa el final de los datos para una fuente
    sintética y el momento actual para una observada (`atBasis` lo dice).
 3. La API toma, por estación, la versión de atributos vigente en `at` y la última observación
-   ≤ `at` (subconsulta lateral sobre el índice único `(station_id, observed_at)`), y aplica la
-   tolerancia de la fuente.
+   ≤ `at` (SQL explícito con `LEFT JOIN LATERAL` sobre el índice único
+   `(station_id, observed_at)`, ADR 0008), y aplica la tolerancia de la fuente.
 4. La web pinta el mapa con una capa de símbolos (imágenes generadas en canvas, sin un nodo DOM
    por estación) y la lista con los mismos datos. La selección se comparte y va en la URL
    (`?estacion=<id de origen>`).
 
 ## Ingesta
 
-Punto de entrada: `docker compose run --rm api ingest demo` (o `dotnet BarcelonaPulse.Api.dll
-ingest demo`). No hay endpoint HTTP de importación.
+Puntos de entrada, por línea de comandos (no hay endpoint HTTP de importación):
+
+- `docker compose run --rm api ingest demo`: el fixture sintético.
+- `docker compose run --rm api ingest bicing-archive --day 2026-08-20`: un día natural (hora de
+  Barcelona) del histórico de Bicing. Descarga los dos .7z del mes a archivos temporales, los
+  lee en streaming y los borra al terminar. Con `--status-file` e `--info-file` usa archivos
+  locales.
 
 - Cada ejecución queda en `ingestion_runs` con fuente, adaptador y versión, entrada y su
   sha256, periodo, recuentos y resultado; los rechazos, en `ingestion_rejections` con su motivo.
@@ -55,8 +60,10 @@ ingest demo`). No hay endpoint HTTP de importación.
 - Las observaciones entran por lotes de 5 000 con `INSERT … SELECT unnest(…) ON CONFLICT DO
   NOTHING`. Repetir una ingesta no duplica nada.
 - Si falla, la transacción se deshace y la ejecución queda como `failed` con el error.
-- Límites del adaptador demo: 5 MB de entrada y profundidad JSON 16. B2 añadirá límites de
-  descarga, descompresión y tiempo.
+- Límites. Demo: 5 MB de entrada y profundidad JSON 16. Histórico: 64 MB por .7z, 2 GB
+  descomprimidos, 6 millones de filas, 15 min por ejecución y comprobación de que lo descargado
+  es un 7z (no una página de error). Descarga con 5 min de tiempo de espera y dos reintentos
+  (2 s y 5 s) ante 5xx o cortes: el portal da 503 a ratos.
 
 ## Contrato HTTP
 
@@ -94,6 +101,7 @@ NuGet, npm, Docker Hub y MCR). Se fijan versiones exactas; los archivos de bloqu
 | EF Core, ASP.NET Core OpenAPI | 10.0.12 | |
 | Npgsql EF Core (+ NetTopologySuite) | 10.0.3 | |
 | EFCore.NamingConventions | 10.0.1 | Nombres `snake_case`. |
+| SharpCompress | 1.0.0 | Lectura de los .7z del histórico (MIT). En 1.0.0 es `SevenZipArchive.Open`; no escribe 7z. |
 | xUnit v3 (MTP v2) | 4.0.1 | `dotnet test` con Microsoft Testing Platform (`global.json`). |
 | PostgreSQL / PostGIS | 18.6 / 3.6.4 | `postgis/postgis:18-3.6`, fijada por digest. Solo `linux/amd64`. |
 | Node.js | 24 LTS (24.18 probado) | `.nvmrc`. |
@@ -119,11 +127,15 @@ Entorno: Windows 11, 16 núcleos, Docker Desktop 29.6, compilación de producci�
 | Mapa listo (estilo cargado y capas añadidas) | 1 224 ms | 1 327 ms |
 | JavaScript descargado, sin comprimir | 1 752 KB | 1 752 KB |
 
-- API, 31 peticiones a `127.0.0.1`: `GET /api/stations?source=demo` mediana 4,0 ms (p90
-  4,4 ms; 18,5 KB sin comprimir); con `bbox`, 3,7 ms; `GET /api/sources`, 3,4 ms.
+- API con la demo, 31 peticiones a `127.0.0.1`: `GET /api/stations?source=demo` mediana
+  4,0 ms (p90 4,4 ms; 18,5 KB sin comprimir); con `bbox`, 3,7 ms; `GET /api/sources`, 3,4 ms.
+- API con un día real (540 estaciones, 154 389 observaciones): `GET /api/stations?source=bicing-bcn&at=…`
+  mediana 14–16 ms (p90 17–19 ms); la consulta en PostgreSQL, 6 ms. Respuesta de 285 KB, 29 KB
+  comprimida (Brotli o gzip). La primera petición tras arrancar tarda ~1 s (arranque en frío).
+- Ingesta de un día real: ~19 s en total, descargas incluidas.
 - El tiempo del mapa depende de la red hasta OpenFreeMap; la red no se limitó.
-- No se ha medido la fluidez (fps) ni con el conjunto real de unas 540 estaciones: queda para B5
-  con un conjunto de referencia mayor.
+- La carga de la web se midió con la demo. Falta medirla con las 540 estaciones reales, y la
+  fluidez (fps) en escritorio y móvil: queda para B5.
 - El paquete principal pesa 1,28 MB (358 KB con gzip), casi todo MapLibre. Cargarlo en diferido
   y quedarse con una sola fuente tipográfica son las primeras mejoras previstas.
 

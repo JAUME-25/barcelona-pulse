@@ -219,7 +219,7 @@
         "enum": [
           "running",
           "succeeded",
-          "succeeded_with_rejections",
+          "succeeded_with_issues",
           "failed"
         ]
       },
@@ -238,6 +238,7 @@
           "status",
           "observationsAccepted",
           "observationsDuplicate",
+          "observationsConflicting",
           "observationsRejected"
         ],
         "type": "object",
@@ -261,6 +262,10 @@
             "format": "int32"
           },
           "observationsDuplicate": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "observationsConflicting": {
             "type": "integer",
             "format": "int32"
           },
@@ -492,6 +497,8 @@
           "sourceStationId",
           "name",
           "address",
+          "district",
+          "neighbourhood",
           "longitude",
           "latitude",
           "capacity",
@@ -519,6 +526,20 @@
               "string"
             ],
             "description": "Dirección, si la fuente la publica."
+          },
+          "district": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Distrito, si la fuente lo publica."
+          },
+          "neighbourhood": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Barrio, si la fuente lo publica."
           },
           "longitude": {
             "type": "number",
@@ -601,6 +622,8 @@
           "docksAvailable",
           "bikesDisabled",
           "docksDisabled",
+          "isRenting",
+          "isReturning",
           "qualityFlags"
         ],
         "type": "object",
@@ -660,6 +683,18 @@
             ],
             "format": "int32"
           },
+          "isRenting": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "isReturning": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
           "qualityFlags": {
             "type": "array",
             "items": {
@@ -673,6 +708,8 @@
         "required": [
           "name",
           "address",
+          "district",
+          "neighbourhood",
           "longitude",
           "latitude",
           "capacity",
@@ -686,6 +723,18 @@
             "type": "string"
           },
           "address": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "district": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "neighbourhood": {
             "type": [
               "null",
               "string"

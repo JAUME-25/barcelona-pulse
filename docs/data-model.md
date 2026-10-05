@@ -9,9 +9,9 @@ Esquema en `apps/api/Infrastructure/Migrations`.
 | --- | --- | --- |
 | `data_sources` | Fuente: `kind` (`observed` o `synthetic`), nombre, atribución, licencia y tolerancia de frescura. | `id` (texto: `demo`, …) |
 | `stations` | Identidad estable de una estación dentro de su fuente. | `(source_id, source_station_id)` |
-| `station_versions` | Nombre, dirección, ubicación (`geometry(Point,4326)`) y capacidad durante un intervalo. | una vigente por estación |
-| `station_observations` | Estado publicado en un instante: estado, bicis (total, mecánicas, eléctricas), anclajes libres, deshabilitados y marcas de calidad. | `(station_id, observed_at)` |
-| `ingestion_runs` | Cada ingesta: fuente, adaptador y versión, entrada y sha256, periodo, recuentos y resultado. | |
+| `station_versions` | Nombre, dirección, distrito, barrio, ubicación (`geometry(Point,4326)`) y capacidad durante un intervalo. | una vigente por estación |
+| `station_observations` | Estado publicado en un instante: estado, bicis (total, mecánicas, eléctricas), anclajes libres, deshabilitados, si presta y si admite devoluciones, y marcas de calidad. | `(station_id, observed_at)` |
+| `ingestion_runs` | Cada ingesta: fuente, adaptador y versión, entrada y sha256, periodo, recuentos (nuevas, duplicadas, en conflicto, rechazadas) y resultado. | |
 | `ingestion_rejections` | Registros rechazados con su motivo (hasta 1 000 por ingesta; el total va en `ingestion_runs`). | |
 
 Los escenarios hipotéticos (B4) tendrán sus propias tablas; nunca filas en estas con otra
@@ -28,24 +28,32 @@ procedencia, instante observado, instante de ingesta (`ingested_at`), estado y c
 
 **Idempotencia.** Una observación es «la estación X según la fuente en el instante T»: la clave
 es `(station_id, observed_at)`, no la hora de descarga. Repetir una ingesta o recibir dos veces
-el mismo feed no crea filas; se cuentan como duplicadas y se conserva la primera. Si llegara la
-misma clave con valores distintos también se conserva la primera; contarlo como conflicto
-queda para B2.
+el mismo feed no crea filas. Cada fila válida acaba en uno de tres recuentos: **nueva**,
+**duplicada** (misma clave y mismos valores que otra ya vista) o **en conflicto** (misma clave,
+valores distintos). En un conflicto se conserva la primera, en el lote y frente a lo guardado.
+Una ingesta con rechazos o conflictos termina como `succeeded_with_issues`.
 
 **Versiones de atributos.** Si cambia el nombre, la dirección, la ubicación (más de ~1 cm) o la
 capacidad, se cierra la versión vigente (`valid_to`) y se abre otra (`valid_from`). La primera
 versión conocida tiene `valid_from` nulo: no sabemos desde cuándo existe y se asume vigente
 hacia atrás. Si se consulta un instante anterior a su publicación, la API lo marca con
-`metadataAssumed`. Metadatos más antiguos que la versión vigente y con valores distintos se
-rechazan (`metadata_older_than_current`).
+`metadataAssumed`. Un lote puede traer varias publicaciones de la misma estación (el histórico
+repite los atributos en cada instantánea): se reducen a los momentos en que cambian y cada
+cambio abre una versión. Al reimportar un periodo ya conocido, una publicación antigua que
+coincide con la versión de su momento no es nueva; si la contradice, se rechaza
+(`metadata_older_than_current`): no se reescribe el pasado.
 
 **Estado en un instante** (ADR 0005). Última observación con `observed_at ≤ T`. Si su antigüedad
-supera la tolerancia de la fuente (30 min en la demo; límite incluido), el estado es
+supera la tolerancia de la fuente (30 min en la demo, 15 min en el histórico de Bicing; límite
+incluido), el estado es
 `unknown` y los recuentos `null`. `freshness` lo explica: `current`, `stale` (hay dato pero
 viejo) o `none` (nunca hubo).
 
 **Nulos.** Un recuento ausente es `null` en la base de datos, la API y la interfaz. Una estación
-`closed` o en `maintenance` no se presenta como vacía aunque publique ceros.
+`closed` o en `maintenance` no se presenta como vacía aunque publique ceros. El histórico no
+publica elementos deshabilitados: quedan nulos, no a cero. `is_renting` e `is_returning` son
+nulos si la fuente no los da; una estación en servicio que no presta ni admite devoluciones se
+muestra fuera de servicio.
 
 **Validación común** (`IngestionRules`), sea cual sea el adaptador:
 
@@ -73,7 +81,7 @@ zona del navegador (la prueba de humo corre con el navegador en Nueva York).
 ## Índices
 
 - `ux_station_observations_station_observed_at` (único): idempotencia y la búsqueda de la
-  última observación ≤ T por estación.
+  última observación ≤ T por estación, con un recorrido hacia atrás por estación (ADR 0008).
 - `ix_station_versions_location` (GiST): filtro por caja.
 - `ix_station_versions_one_current_per_station` (único parcial, `valid_to IS NULL`).
 - `ix_stations_source_id_source_station_id` (único).

@@ -9,6 +9,8 @@ export function stationFixture(overrides: StationOverrides = {}): StationItem {
     sourceStationId: 'demo-001',
     name: 'Pl. de Catalunya',
     address: null,
+    district: null,
+    neighbourhood: null,
     longitude: 2.1699,
     latitude: 41.387,
     capacity: 27,
@@ -24,6 +26,8 @@ export function stationFixture(overrides: StationOverrides = {}): StationItem {
       docksAvailable: 15,
       bikesDisabled: 0,
       docksDisabled: 1,
+      isRenting: true,
+      isReturning: true,
       qualityFlags: [],
       ...state,
     },
@@ -47,7 +51,27 @@ export const demoSource: SourceSummary = {
   lastIngestion: null,
 };
 
-export function stationsResponse(stations: StationItem[]): StationsResponse {
+export const observedSource: SourceSummary = {
+  id: 'bicing-bcn',
+  kind: 'observed',
+  name: 'Bicing, histórico del Ajuntament de Barcelona',
+  attribution: 'Fuente de los datos: Ayuntamiento de Barcelona.',
+  license: 'CC BY 4.0',
+  url: 'https://opendata-ajuntament.barcelona.cat/data/es/dataset/estat-estacions-bicing',
+  toleranceMinutes: 15,
+  stationCount: 3,
+  period: {
+    from: '2026-08-19T22:00:00+00:00',
+    to: '2026-08-20T21:55:02+00:00',
+    observationCount: 300,
+  },
+  lastIngestion: null,
+};
+
+export function stationsResponse(
+  stations: StationItem[],
+  overrides: Partial<StationsResponse> = {},
+): StationsResponse {
   return {
     source: {
       id: 'demo',
@@ -63,5 +87,23 @@ export function stationsResponse(stations: StationItem[]): StationsResponse {
     count: stations.length,
     truncated: false,
     stations,
+    ...overrides,
   };
+}
+
+/** Respuesta de la fuente real pedida en un momento del histórico. */
+export function observedResponse(stations: StationItem[]): StationsResponse {
+  return stationsResponse(stations, {
+    source: {
+      id: observedSource.id,
+      kind: 'observed',
+      name: observedSource.name,
+      attribution: observedSource.attribution,
+      license: observedSource.license,
+      url: observedSource.url,
+    },
+    at: '2026-08-20T21:55:02+00:00',
+    atBasis: 'requested',
+    toleranceMinutes: 15,
+  });
 }

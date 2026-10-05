@@ -3,9 +3,9 @@
 Mapa de las estaciones de Bicing de Barcelona con la disponibilidad de cada una y la procedencia
 de cada dato. Más adelante: reproducción del histórico y escenarios de cobertura.
 
-**Estado (5 de octubre de 2026):** B0 y B1 terminados en local. La aplicación funciona con datos
-sintéticos de demostración; la ingesta de datos reales de Bicing es el bloque B2. No está
-desplegada. Detalle en [docs/roadmap.md](docs/roadmap.md).
+**Estado (5 de octubre de 2026):** B0, B1 y B2 terminados. La aplicación muestra datos reales de
+Bicing (un día del histórico público del Ajuntament) y una demo sintética, sin mezclarlos. No
+está desplegada. Detalle en [docs/roadmap.md](docs/roadmap.md).
 
 ## Qué hay
 
@@ -39,6 +39,16 @@ La web queda en http://localhost:5173 y la API en http://127.0.0.1:5080 (documen
 `docker compose up` arranca PostGIS, aplica las migraciones (servicio `migrate`) y después
 levanta la API. `ingest demo` se puede repetir: la segunda vez informa de 0 observaciones nuevas
 y 572 ya existentes.
+
+Para ver datos reales, importa un día del histórico de Bicing (descarga unos 25 MB del portal
+de Open Data BCN y tarda ~20 s):
+
+```bash
+docker compose run --rm api ingest bicing-archive --day 2026-08-20
+```
+
+Con datos reales, la web los muestra por defecto. La URL admite `?fuente=demo` o
+`?fuente=bicing-bcn`, `&estacion=<id de origen>` y `#mapa=zoom/lat/lon/rumbo/inclinación`.
 
 ## Pruebas
 

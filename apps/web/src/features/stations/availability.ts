@@ -43,6 +43,8 @@ export const AVAILABILITY_HINT: Record<Availability, string> = {
 export function availabilityOf(state: StationState): Availability {
   if (state.freshness !== 'current' || state.status === 'unknown') return 'unknown';
   if (state.status !== 'in_service') return 'outOfService';
+  // En servicio pero sin prestar ni admitir devoluciones: en la práctica no opera.
+  if (state.isRenting === false && state.isReturning === false) return 'outOfService';
   if (state.bikesAvailable === null) return 'unknown';
   if (state.bikesAvailable === 0) return 'empty';
   if (state.docksAvailable === 0) return 'full';

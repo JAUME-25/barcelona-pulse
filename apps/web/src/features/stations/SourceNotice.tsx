@@ -32,6 +32,8 @@ export function SourceNotice({ response }: { response: StationsResponse }) {
     );
   }
 
+  // Un instante pedido en una fuente observada es un momento del pasado (histórico).
+  const historical = response.atBasis === 'requested';
   const latest = response.stations
     .map((s) => s.state.lastObservedAt)
     .filter((t): t is string => t !== null)
@@ -39,14 +41,27 @@ export function SourceNotice({ response }: { response: StationsResponse }) {
     .at(-1);
 
   return (
-    <div className="source-notice">
-      <p className="source-notice__lead">{source.name}</p>
-      {latest === undefined ? (
+    <div className="source-notice source-notice--observed">
+      <p className="source-notice__lead">
+        <span className="source-notice__badge source-notice__badge--real">Datos reales</span>
+        {historical ? 'Es un momento del pasado, no el estado actual.' : `${source.name}.`}
+      </p>
+      {historical ? (
+        <Moment label="Momento mostrado" iso={response.at} />
+      ) : latest === undefined ? (
         <p className="source-notice__moment">Sin observaciones en este momento.</p>
       ) : (
         <Moment label="Última observación" iso={latest} />
       )}
-      <p className="source-notice__credit">{source.attribution}</p>
+      <p className="source-notice__credit">
+        {source.attribution}
+        {source.license !== null && <> Licencia {source.license}.</>}{' '}
+        {source.url !== null && (
+          <a href={source.url} target="_blank" rel="noreferrer">
+            Ver el conjunto de datos
+          </a>
+        )}
+      </p>
     </div>
   );
 }

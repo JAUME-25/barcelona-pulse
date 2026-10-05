@@ -1,7 +1,9 @@
+using System.Data.Common;
 using BarcelonaPulse.Api.Features.Sources;
 using BarcelonaPulse.Api.Features.Stations;
 using BarcelonaPulse.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -27,7 +29,7 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
             SourceId = batch.Source.Id,
             Adapter = batch.Adapter,
             AdapterVersion = batch.AdapterVersion,
-            InputRef = batch.InputRef,
+            InputRef = Truncate(batch.InputRef, 500),
             InputSha256 = batch.InputSha256,
             Trigger = trigger,
             StartedAt = clock.GetUtcNow(),
@@ -46,7 +48,7 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
 
             var rejections = new List<RejectedRecord>(batch.Rejected);
             var stations = await UpsertStationsAsync(batch, run, rejections, ct);
-            await InsertObservationsAsync(batch, run, stations, rejections, ct);
+            await InsertObservationsAsync(batch, run, stations, rejections, tx, ct);
 
             run.StationsRejected = rejections.Count(r => r.RecordKind == RecordKinds.Station);
             run.ObservationsRejected = rejections.Count(r => r.RecordKind == RecordKinds.Observation);
@@ -59,7 +61,9 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
                 Detail = r.Detail is null ? null : Truncate(r.Detail, 500),
             }));
 
-            run.Status = rejections.Count == 0 ? IngestionStatus.Succeeded : IngestionStatus.SucceededWithRejections;
+            run.Status = rejections.Count == 0 && run.ObservationsConflicting == 0
+                ? IngestionStatus.Succeeded
+                : IngestionStatus.SucceededWithIssues;
             run.FinishedAt = clock.GetUtcNow();
             await db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
@@ -77,10 +81,10 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
         }
 
         logger.LogInformation(
-            "Ingesta {RunId} de {SourceId} ({Adapter} v{AdapterVersion}): {Status}. Estaciones {StationsReceived} recibidas, {StationsRejected} rechazadas, {VersionsCreated} versiones nuevas. Observaciones {ObservationsReceived} recibidas, {Accepted} aceptadas, {Duplicates} duplicadas, {ObservationsRejected} rechazadas",
+            "Ingesta {RunId} de {SourceId} ({Adapter} v{AdapterVersion}): {Status}. Estaciones {StationsReceived} recibidas, {StationsRejected} rechazadas, {VersionsCreated} versiones nuevas. Observaciones {ObservationsReceived} recibidas, {Accepted} nuevas, {Duplicates} ya existentes, {Conflicts} en conflicto, {ObservationsRejected} rechazadas",
             run.Id, run.SourceId, run.Adapter, run.AdapterVersion, run.Status, run.StationsReceived, run.StationsRejected,
             run.StationVersionsCreated, run.ObservationsReceived, run.ObservationsAccepted, run.ObservationsDuplicate,
-            run.ObservationsRejected);
+            run.ObservationsConflicting, run.ObservationsRejected);
         return run;
     }
 
@@ -118,6 +122,10 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
         await db.SaveChangesAsync(ct);
     }
 
+    /// <summary>
+    /// Un lote puede traer varias publicaciones de la misma estación; se procesan en orden de
+    /// tiempo y cada cambio de atributos abre una versión.
+    /// </summary>
     private async Task<Dictionary<string, Station>> UpsertStationsAsync(
         IngestionBatch batch, IngestionRun run, List<RejectedRecord> rejections, CancellationToken ct)
     {
@@ -126,17 +134,12 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
             .Include(s => s.Versions)
             .ToDictionaryAsync(s => s.SourceStationId, StringComparer.Ordinal, ct);
 
-        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var current = new Dictionary<string, StationVersion>(StringComparer.Ordinal);
+        var createdHere = new HashSet<string>(StringComparer.Ordinal);
         var pendingVersions = new List<(Station Station, StationVersion Version)>();
 
-        foreach (var ns in batch.Stations)
+        foreach (var ns in batch.Stations.OrderBy(s => s.SourceStationId, StringComparer.Ordinal).ThenBy(s => s.SeenAt))
         {
-            if (!seen.Add(ns.SourceStationId))
-            {
-                rejections.Add(new(RecordKinds.Station, ns.SourceStationId, RejectionReasons.DuplicateInBatch));
-                continue;
-            }
-
             if (IngestionRules.CheckStation(ns) is { } rejected)
             {
                 rejections.Add(rejected);
@@ -152,30 +155,58 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
                     FirstSeenAt = ns.SeenAt,
                     LastSeenAt = ns.SeenAt,
                 };
-                station.Versions.Add(NewVersion(ns, validFrom: null, run));
+                var first = NewVersion(ns, validFrom: null, run);
+                station.Versions.Add(first);
                 db.Stations.Add(station);
                 stations[ns.SourceStationId] = station;
+                current[ns.SourceStationId] = first;
+                createdHere.Add(ns.SourceStationId);
                 run.StationVersionsCreated++;
                 continue;
             }
 
-            var current = station.Versions.Single(v => v.ValidTo is null);
-            if (SameAttributes(current, ns))
-            {
-                station.LastSeenAt = Max(station.LastSeenAt, ns.SeenAt);
-                continue;
-            }
-
-            if (ns.SeenAt <= current.FirstSeenAt)
-            {
-                rejections.Add(new(RecordKinds.Station, ns.SourceStationId, RejectionReasons.MetadataOlderThanCurrent,
-                    $"seenAt={ns.SeenAt:O}, vigente desde {current.FirstSeenAt:O}"));
-                continue;
-            }
-
-            current.ValidTo = ns.SeenAt;
+            var active = current.GetValueOrDefault(ns.SourceStationId) ?? station.Versions.Single(v => v.ValidTo is null);
             station.LastSeenAt = Max(station.LastSeenAt, ns.SeenAt);
-            pendingVersions.Add((station, NewVersion(ns, validFrom: ns.SeenAt, run)));
+            if (SameAttributes(active, ns))
+            {
+                continue;
+            }
+
+            if (ns.SeenAt == active.FirstSeenAt)
+            {
+                rejections.Add(new(RecordKinds.Station, ns.SourceStationId, RejectionReasons.DuplicateInBatch,
+                    $"dos versiones distintas publicadas en {ns.SeenAt:O}"));
+                continue;
+            }
+
+            if (ns.SeenAt < active.FirstSeenAt)
+            {
+                // Reimportar un periodo ya conocido: si una versión guardada ya tenía estos
+                // atributos en ese instante, no hay nada nuevo. Si no, son metadatos antiguos
+                // que contradicen lo guardado y no se reescribe el pasado.
+                if (VersionAt(station, ns.SeenAt) is { } known && SameAttributes(known, ns))
+                {
+                    continue;
+                }
+
+                rejections.Add(new(RecordKinds.Station, ns.SourceStationId, RejectionReasons.MetadataOlderThanCurrent,
+                    $"seenAt={ns.SeenAt:O}, vigente desde {active.FirstSeenAt:O}"));
+                continue;
+            }
+
+            active.ValidTo = ns.SeenAt;
+            var next = NewVersion(ns, validFrom: ns.SeenAt, run);
+            if (createdHere.Contains(ns.SourceStationId))
+            {
+                station.Versions.Add(next);
+            }
+            else
+            {
+                pendingVersions.Add((station, next));
+            }
+
+            current[ns.SourceStationId] = next;
+            run.StationVersionsCreated++;
         }
 
         // Primero se cierran las versiones vigentes y después se abren las nuevas:
@@ -184,19 +215,24 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
         foreach (var (station, version) in pendingVersions)
         {
             station.Versions.Add(version);
-            run.StationVersionsCreated++;
         }
 
         await db.SaveChangesAsync(ct);
         return stations;
     }
 
+    private sealed record ObservationRow(long StationId, NormalizedObservation Observation, string Flags);
+
     private async Task InsertObservationsAsync(
         IngestionBatch batch, IngestionRun run, Dictionary<string, Station> stations,
-        List<RejectedRecord> rejections, CancellationToken ct)
+        List<RejectedRecord> rejections, IDbContextTransaction tx, CancellationToken ct)
     {
         var now = clock.GetUtcNow();
-        var rows = new List<(long StationId, NormalizedObservation Observation, string Flags)>(batch.Observations.Count);
+        // Una fila por clave (estación, instante). Las repeticiones idénticas son duplicados;
+        // si los valores difieren es un conflicto y se conserva la primera.
+        var rows = new Dictionary<(long, DateTimeOffset), ObservationRow>();
+        var duplicatesInBatch = 0;
+        var conflictsInBatch = 0;
 
         foreach (var o in batch.Observations)
         {
@@ -213,48 +249,87 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
                 continue;
             }
 
+            var key = (station.Id, o.ObservedAt.ToUniversalTime());
+            if (rows.TryGetValue(key, out var existing))
+            {
+                if (SameValues(existing.Observation, o)) duplicatesInBatch++;
+                else conflictsInBatch++;
+                continue;
+            }
+
             var capacity = VersionAt(station, o.ObservedAt)?.Capacity;
-            rows.Add((station.Id, o, string.Join(',', IngestionRules.FlagsFor(o, capacity))));
+            rows[key] = new ObservationRow(station.Id, o, string.Join(',', IngestionRules.FlagsFor(o, capacity)));
         }
 
         var inserted = 0;
-        foreach (var chunk in rows.Chunk(InsertChunkSize))
+        var conflictsWithStored = 0;
+        var connection = (NpgsqlConnection)db.Database.GetDbConnection();
+        foreach (var chunk in rows.Values.Chunk(InsertChunkSize))
         {
-            inserted += await db.Database.ExecuteSqlRawAsync(InsertObservationsSql, BuildParameters(chunk, run, now), ct);
+            await using var command = new NpgsqlCommand(InsertObservationsSql, connection, (NpgsqlTransaction)tx.GetDbTransaction());
+            command.Parameters.AddRange(BuildParameters(chunk, run, now));
+            await using DbDataReader reader = await command.ExecuteReaderAsync(ct);
+            await reader.ReadAsync(ct);
+            inserted += (int)reader.GetInt64(0);
+            conflictsWithStored += (int)reader.GetInt64(1);
         }
 
         run.ObservationsAccepted = inserted;
-        run.ObservationsDuplicate = rows.Count - inserted;
+        run.ObservationsConflicting = conflictsInBatch + conflictsWithStored;
+        run.ObservationsDuplicate = duplicatesInBatch + (rows.Count - inserted - conflictsWithStored);
         if (rows.Count > 0)
         {
-            run.PeriodFrom = rows.Min(r => r.Observation.ObservedAt);
-            run.PeriodTo = rows.Max(r => r.Observation.ObservedAt);
+            run.PeriodFrom = rows.Values.Min(r => r.Observation.ObservedAt);
+            run.PeriodTo = rows.Values.Max(r => r.Observation.ObservedAt);
         }
     }
 
-    // ON CONFLICT DO NOTHING: una observación con la misma clave ya guardada (o repetida
-    // en el mismo lote) se cuenta como duplicada y se conserva la primera.
-    // Sin llaves literales: ExecuteSqlRaw trata el texto como cadena de formato.
+    // ON CONFLICT DO NOTHING: si la clave ya existe se conserva la fila guardada. La segunda
+    // columna cuenta las que ya existían con valores distintos (conflictos). El SELECT final no
+    // ve las filas que inserta esta misma sentencia, así que solo compara con lo anterior.
     private const string InsertObservationsSql = """
-        INSERT INTO station_observations (
-            station_id, observed_at, ingested_at, ingestion_run_id, status,
-            bikes_available, mechanical_bikes_available, ebikes_available,
-            docks_available, bikes_disabled, docks_disabled, quality_flags)
-        SELECT t.station_id, t.observed_at, @ingested_at, @run_id, t.status,
-               t.bikes, t.mechanical, t.ebikes, t.docks, t.bikes_disabled, t.docks_disabled,
-               coalesce(string_to_array(nullif(t.flags, ''), ','), ARRAY[]::text[])
-        FROM unnest(@station_ids, @observed_ats, @statuses, @bikes, @mechanical, @ebikes,
-                    @docks, @bikes_disabled, @docks_disabled, @flags)
-             AS t(station_id, observed_at, status, bikes, mechanical, ebikes,
-                  docks, bikes_disabled, docks_disabled, flags)
-        ON CONFLICT (station_id, observed_at) DO NOTHING
+        WITH input AS (
+            SELECT * FROM unnest(@station_ids, @observed_ats, @statuses, @bikes, @mechanical, @ebikes,
+                                 @docks, @bikes_disabled, @docks_disabled, @renting, @returning, @flags)
+                AS t(station_id, observed_at, status, bikes, mechanical, ebikes,
+                     docks, bikes_disabled, docks_disabled, can_rent, can_return, flags)
+        ),
+        inserted AS (
+            INSERT INTO station_observations (
+                station_id, observed_at, ingested_at, ingestion_run_id, status,
+                bikes_available, mechanical_bikes_available, ebikes_available,
+                docks_available, bikes_disabled, docks_disabled, is_renting, is_returning, quality_flags)
+            SELECT i.station_id, i.observed_at, @ingested_at, @run_id, i.status,
+                   i.bikes, i.mechanical, i.ebikes, i.docks, i.bikes_disabled, i.docks_disabled,
+                   i.can_rent, i.can_return,
+                   coalesce(string_to_array(nullif(i.flags, ''), ','), ARRAY[]::text[])
+            FROM input i
+            ON CONFLICT (station_id, observed_at) DO NOTHING
+            RETURNING 1
+        )
+        SELECT
+            (SELECT count(*) FROM inserted),
+            (SELECT count(*)
+             FROM input i
+             JOIN station_observations o ON o.station_id = i.station_id AND o.observed_at = i.observed_at
+             WHERE o.status IS DISTINCT FROM i.status
+                OR o.bikes_available IS DISTINCT FROM i.bikes
+                OR o.mechanical_bikes_available IS DISTINCT FROM i.mechanical
+                OR o.ebikes_available IS DISTINCT FROM i.ebikes
+                OR o.docks_available IS DISTINCT FROM i.docks
+                OR o.bikes_disabled IS DISTINCT FROM i.bikes_disabled
+                OR o.docks_disabled IS DISTINCT FROM i.docks_disabled
+                OR o.is_renting IS DISTINCT FROM i.can_rent
+                OR o.is_returning IS DISTINCT FROM i.can_return)
         """;
 
-    private static NpgsqlParameter[] BuildParameters(
-        (long StationId, NormalizedObservation Observation, string Flags)[] chunk, IngestionRun run, DateTimeOffset now)
+    private static NpgsqlParameter[] BuildParameters(ObservationRow[] chunk, IngestionRun run, DateTimeOffset now)
     {
         static NpgsqlParameter Ints(string name, IEnumerable<int?> values) =>
             new(name, NpgsqlDbType.Array | NpgsqlDbType.Integer) { Value = values.ToArray() };
+
+        static NpgsqlParameter Bools(string name, IEnumerable<bool?> values) =>
+            new(name, NpgsqlDbType.Array | NpgsqlDbType.Boolean) { Value = values.ToArray() };
 
         var obs = chunk.Select(r => r.Observation).ToArray();
         return
@@ -270,6 +345,8 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
             Ints("docks", obs.Select(o => o.DocksAvailable)),
             Ints("bikes_disabled", obs.Select(o => o.BikesDisabled)),
             Ints("docks_disabled", obs.Select(o => o.DocksDisabled)),
+            Bools("renting", obs.Select(o => o.IsRenting)),
+            Bools("returning", obs.Select(o => o.IsReturning)),
             new("flags", NpgsqlDbType.Array | NpgsqlDbType.Text) { Value = chunk.Select(r => r.Flags).ToArray() },
         ];
     }
@@ -280,7 +357,9 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
     private static StationVersion NewVersion(NormalizedStation ns, DateTimeOffset? validFrom, IngestionRun run) => new()
     {
         Name = ns.Name.Trim(),
-        Address = string.IsNullOrWhiteSpace(ns.Address) ? null : ns.Address.Trim(),
+        Address = Clean(ns.Address),
+        District = Clean(ns.District),
+        Neighbourhood = Clean(ns.Neighbourhood),
         Location = Geo.Point(ns.Longitude, ns.Latitude),
         Capacity = ns.Capacity,
         ValidFrom = validFrom,
@@ -290,10 +369,17 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
 
     private static bool SameAttributes(StationVersion v, NormalizedStation ns) =>
         string.Equals(v.Name, ns.Name.Trim(), StringComparison.Ordinal)
-        && string.Equals(v.Address, string.IsNullOrWhiteSpace(ns.Address) ? null : ns.Address.Trim(), StringComparison.Ordinal)
+        && string.Equals(v.Address, Clean(ns.Address), StringComparison.Ordinal)
+        && string.Equals(v.District, Clean(ns.District), StringComparison.Ordinal)
+        && string.Equals(v.Neighbourhood, Clean(ns.Neighbourhood), StringComparison.Ordinal)
         && v.Capacity == ns.Capacity
         && Math.Abs(v.Location.X - ns.Longitude) < CoordinateTolerance
         && Math.Abs(v.Location.Y - ns.Latitude) < CoordinateTolerance;
+
+    private static bool SameValues(NormalizedObservation a, NormalizedObservation b) =>
+        a with { SourceStationId = b.SourceStationId } == b;
+
+    private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static DateTimeOffset Max(DateTimeOffset a, DateTimeOffset b) => a > b ? a : b;
 

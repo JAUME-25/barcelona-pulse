@@ -35,6 +35,10 @@ public sealed class StationVersion
     public required string Name { get; init; }
     public string? Address { get; init; }
 
+    /// <summary>Distrito y barrio, si la fuente los publica (orientan al leer el nombre).</summary>
+    public string? District { get; init; }
+    public string? Neighbourhood { get; init; }
+
     /// <summary>Punto WGS84 (SRID 4326): X = longitud, Y = latitud.</summary>
     public required Point Location { get; init; }
 
@@ -73,6 +77,13 @@ public sealed class StationObservation
     public int? DocksAvailable { get; init; }
     public int? BikesDisabled { get; init; }
     public int? DocksDisabled { get; init; }
+
+    /// <summary>Si permite coger bicis. Nulo si la fuente no lo dice.</summary>
+    public bool? IsRenting { get; init; }
+
+    /// <summary>Si permite devolver bicis. Nulo si la fuente no lo dice.</summary>
+    public bool? IsReturning { get; init; }
+
     public string[] QualityFlags { get; init; } = [];
 }
 
@@ -103,6 +114,8 @@ internal sealed class StationVersionConfiguration : IEntityTypeConfiguration<Sta
     {
         b.Property(x => x.Name).HasMaxLength(200);
         b.Property(x => x.Address).HasMaxLength(300);
+        b.Property(x => x.District).HasMaxLength(100);
+        b.Property(x => x.Neighbourhood).HasMaxLength(100);
         b.Property(x => x.Location).HasColumnType("geometry(Point,4326)");
         b.HasIndex(x => x.Location).HasMethod("gist");
         b.HasIndex(x => x.StationId).IsUnique().HasFilter("valid_to IS NULL")

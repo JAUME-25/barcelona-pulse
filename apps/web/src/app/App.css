@@ -149,12 +149,17 @@
   margin-top: 14px;
 }
 
+/* El nombre de la fuente es largo: el selector se ajusta al panel en vez de desbordarlo. */
 .source-picker select {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
   min-height: 40px;
   padding: 0 10px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--panel-solid);
+  text-overflow: ellipsis;
 }
 
 .source-notice {
@@ -562,5 +567,38 @@
 
   .source-notice__time {
     font-size: 1.125rem;
+  }
+}
+
+.station-detail__area {
+  margin: -2px 0 10px;
+  color: var(--ink-2);
+  font-size: 1.0625rem;
+}
+
+.source-notice--observed {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+}
+
+.source-notice__badge--real {
+  background: var(--ink);
+  color: var(--panel-solid);
+}
+
+.source-notice__note {
+  margin-top: 4px !important;
+  font-size: 0.9375rem;
+}
+
+.source-notice__credit a {
+  color: var(--accent);
+}
+
+@media (max-width: 767px) {
+  .source-notice__credit {
+    font-size: 0.8125rem;
   }
 }

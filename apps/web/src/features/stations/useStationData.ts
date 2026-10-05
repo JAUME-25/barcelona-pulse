@@ -78,10 +78,22 @@ export function useSources() {
   });
 }
 
-export function useStations(sourceId: string | null) {
-  return useRemote<StationsResponse>(sourceId, async (signal) => {
+/**
+ * Instante que se pide para una fuente. Una observada cuyo último dato es más viejo que su
+ * tolerancia es un histórico: se muestra su último momento disponible (avisando de que no es
+ * el estado actual) en vez de «ahora», donde todo saldría desconocido.
+ */
+export function instantFor(source: SourceSummary | undefined, now: number): string | undefined {
+  if (source?.kind !== 'observed' || source.period === null) return undefined;
+  const age = now - Date.parse(source.period.to);
+  return age > source.toleranceMinutes * 60_000 ? source.period.to : undefined;
+}
+
+export function useStations(sourceId: string | null, at?: string) {
+  const key = sourceId === null ? null : `${sourceId}@${at ?? 'por-defecto'}`;
+  return useRemote<StationsResponse>(key, async (signal) => {
     const { data, error, response } = await api.GET('/api/stations', {
-      params: { query: { source: sourceId ?? '' } },
+      params: { query: { source: sourceId ?? '', ...(at === undefined ? {} : { at }) } },
       signal,
     });
     if (data === undefined) throw toApiError(error, response);

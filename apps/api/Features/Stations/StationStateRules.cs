@@ -34,9 +34,11 @@ public static class StationStateRules
             latest.DocksAvailable,
             latest.BikesDisabled,
             latest.DocksDisabled,
+            latest.IsRenting,
+            latest.IsReturning,
             latest.QualityFlags);
     }
 
     private static StationState Unknown(Freshness freshness, DateTimeOffset? lastObservedAt) =>
-        new(freshness, lastObservedAt, ObservationStatus.Unknown, null, null, null, null, null, null, []);
+        new(freshness, lastObservedAt, ObservationStatus.Unknown, null, null, null, null, null, null, null, null, []);
 }
