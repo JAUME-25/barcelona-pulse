@@ -40,8 +40,10 @@ hacia atrás. Si se consulta un instante anterior a su publicación, la API lo m
 `metadataAssumed`. Un lote puede traer varias publicaciones de la misma estación (el histórico
 repite los atributos en cada instantánea): se reducen a los momentos en que cambian y cada
 cambio abre una versión. Al reimportar un periodo ya conocido, una publicación antigua que
-coincide con la versión de su momento no es nueva; si la contradice, se rechaza
-(`metadata_older_than_current`): no se reescribe el pasado.
+coincide con la versión de su momento no es nueva. Si se importa después un periodo anterior o
+intermedio, completa la historia: la versión que se suponía vigente hacia atrás pasa a empezar
+cuando se publicó, o el tramo ya conocido se parte en dos. Lo que ya estaba observado no
+cambia.
 
 **Estado en un instante** (ADR 0005). Última observación con `observed_at ≤ T`. Si su antigüedad
 supera la tolerancia de la fuente (30 min en la demo, 15 min en el histórico de Bicing; límite
@@ -68,7 +70,7 @@ muestra fuera de servicio.
 | `negative_count` | Algún recuento negativo. |
 | `duplicate_in_batch` | La misma estación dos veces en un lote. |
 | `unknown_station` | Observación de una estación que no está en la fuente. |
-| `metadata_older_than_current` | Ver «Versiones de atributos». |
+| `metadata_older_than_current` | Publicación antigua que ninguna versión cubre. No debería darse: la primera versión se asume vigente hacia atrás. |
 
 **Marcas de calidad.** No se corrigen los datos; se señalan. `counts_exceed_capacity`: bicis y
 anclajes (libres y deshabilitados) suman más que la capacidad publicada.
@@ -86,9 +88,10 @@ zona del navegador (la prueba de humo corre con el navegador en Nueva York).
 - `ix_station_versions_one_current_per_station` (único parcial, `valid_to IS NULL`).
 - `ix_stations_source_id_source_station_id` (único).
 
-Sin particiones ni retención todavía: con el histórico real (B3), unos 4 millones de filas al
-mes, se medirá antes de decidir. Propuesta inicial: guardar solo los meses que se importen a
-propósito, no todo el archivo.
+Sin particiones ni retención todavía. Medido con la semana del 17 al 23 de agosto de 2026:
+~155 000 observaciones por día y unos 206 MB por semana con índices, así que un año entero
+serían ~57 millones de filas y ~11 GB. Propuesta: guardar solo los periodos que se importen a
+propósito, no todo el archivo; decidirlo antes de importar más de unas semanas.
 
 ## Fixture de demostración
 

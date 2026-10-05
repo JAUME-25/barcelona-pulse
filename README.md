@@ -3,14 +3,15 @@
 Mapa de las estaciones de Bicing de Barcelona con la disponibilidad de cada una y la procedencia
 de cada dato. Más adelante: reproducción del histórico y escenarios de cobertura.
 
-**Estado (5 de octubre de 2026):** B0, B1 y B2 terminados. La aplicación muestra datos reales de
-Bicing (un día del histórico público del Ajuntament) y una demo sintética, sin mezclarlos. No
+**Estado (5 de octubre de 2026):** B0, B1 y B2 terminados; B3 (reproducción histórica) en
+curso, con la importación de periodos y la línea temporal en la API. La aplicación muestra datos
+reales de Bicing (el histórico público del Ajuntament) y una demo sintética, sin mezclarlos. No
 está desplegada. Detalle en [docs/roadmap.md](docs/roadmap.md).
 
 ## Qué hay
 
 - **API** ASP.NET Core sobre .NET 10 con PostgreSQL 18 y PostGIS 3.6: fuentes de datos,
-  estaciones y su estado en un instante, con OpenAPI.
+  estaciones y su estado en un instante, y la línea temporal de un periodo, con OpenAPI.
 - **Ingesta** por línea de comandos, idempotente y con registro de cada ejecución.
 - **Web** React + MapLibre: mapa, leyenda que también filtra, lista accesible y detalle.
 - **Diseño «Fanals»**: Barcelona de noche, con estados que se distinguen por forma, color y
@@ -45,6 +46,12 @@ de Open Data BCN y tarda ~20 s):
 
 ```bash
 docker compose run --rm api ingest bicing-archive --day 2026-08-20
+```
+
+Para un periodo, hasta 31 días (una semana son ~930 000 observaciones, unos 200 MB en la base):
+
+```bash
+docker compose run --rm api ingest bicing-archive --from 2026-08-17 --to 2026-08-23
 ```
 
 Con datos reales, la web los muestra por defecto. La URL admite `?fuente=demo` o

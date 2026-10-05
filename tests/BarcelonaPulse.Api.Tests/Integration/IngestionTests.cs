@@ -105,18 +105,65 @@ public sealed class IngestionTests(PostgisDatabase database) : IClassFixture<Pos
     }
 
     [Fact]
-    public async Task Older_metadata_with_different_attributes_is_rejected_not_versioned()
+    public async Task Importing_an_older_period_afterwards_fills_in_the_history()
     {
         database.RequireAvailable();
         var source = Source("older");
-        await IngestAsync(Batch([Station("s1", capacity: 20, seenAt: T0.AddDays(1))], source: source));
+        var later = T0.AddDays(3);
+        await IngestAsync(Batch([Station("s1", capacity: 20, seenAt: later)], source: source));
         var run = await IngestAsync(Batch([Station("s1", capacity: 30, seenAt: T0)], source: source));
 
-        Assert.Equal(0, run.StationVersionsCreated);
-        Assert.Equal(1, run.StationsRejected);
+        Assert.Equal(1, run.StationVersionsCreated);
+        Assert.Equal(0, run.StationsRejected);
         await using var db = database.CreateContext();
-        var rejection = await db.IngestionRejections.SingleAsync(r => r.IngestionRunId == run.Id);
-        Assert.Equal(RejectionReasons.MetadataOlderThanCurrent, rejection.Reason);
+        var station = await db.Stations.Include(s => s.Versions).SingleAsync(s => s.SourceId == "older");
+        Assert.Equal(T0, station.FirstSeenAt);
+        var versions = station.Versions.OrderBy(v => v.FirstSeenAt).ToList();
+        Assert.Collection(versions,
+            v =>
+            {
+                // Lo más antiguo que se sabe ahora: vigente hacia atrás hasta que se vio la otra.
+                Assert.Equal(30, v.Capacity);
+                Assert.Null(v.ValidFrom);
+                Assert.Equal(later, v.ValidTo);
+            },
+            v =>
+            {
+                // Ya no se supone vigente desde siempre: empieza cuando se publicó.
+                Assert.Equal(20, v.Capacity);
+                Assert.Equal(later, v.ValidFrom);
+                Assert.Null(v.ValidTo);
+            });
+    }
+
+    [Fact]
+    public async Task A_change_inside_a_known_period_splits_that_version()
+    {
+        database.RequireAvailable();
+        var source = Source("split");
+        var day1 = T0;
+        var day2 = T0.AddDays(1);
+        var day3 = T0.AddDays(2);
+        // Primero se conocen el día 1 (capacidad 20) y el día 3 (capacidad 30)…
+        await IngestAsync(Batch([Station("s1", capacity: 20, seenAt: day1), Station("s1", capacity: 30, seenAt: day3)], source: source));
+        // …y después llega el día 2, con un valor intermedio.
+        var run = await IngestAsync(Batch([Station("s1", capacity: 25, seenAt: day2)], source: source));
+
+        Assert.Equal(1, run.StationVersionsCreated);
+        await using var db = database.CreateContext();
+        var versions = await db.StationVersions.Where(v => v.Station.SourceId == "split")
+            .OrderBy(v => v.FirstSeenAt).Select(v => new { v.Capacity, v.ValidFrom, v.ValidTo }).ToListAsync();
+        Assert.Equal([20, 25, 30], versions.Select(v => v.Capacity));
+        Assert.Equal(day2, versions[0].ValidTo);
+        Assert.Equal(day2, versions[1].ValidFrom);
+        Assert.Equal(day3, versions[1].ValidTo);
+        Assert.Equal(day3, versions[2].ValidFrom);
+        Assert.Null(versions[2].ValidTo);
+
+        // Repetirlo no cambia nada.
+        var again = await IngestAsync(Batch([Station("s1", capacity: 25, seenAt: day2)], source: source));
+        Assert.Equal(0, again.StationVersionsCreated);
+        Assert.Equal(0, again.StationsRejected);
     }
 
     [Fact]

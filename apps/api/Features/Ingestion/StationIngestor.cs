@@ -124,7 +124,8 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
 
     /// <summary>
     /// Un lote puede traer varias publicaciones de la misma estación; se procesan en orden de
-    /// tiempo y cada cambio de atributos abre una versión.
+    /// tiempo y cada cambio de atributos abre una versión. Lo anterior a lo ya conocido
+    /// completa la historia (ver FillInHistory).
     /// </summary>
     private async Task<Dictionary<string, Station>> UpsertStationsAsync(
         IngestionBatch batch, IngestionRun run, List<RejectedRecord> rejections, CancellationToken ct)
@@ -166,7 +167,21 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
             }
 
             var active = current.GetValueOrDefault(ns.SourceStationId) ?? station.Versions.Single(v => v.ValidTo is null);
+            station.FirstSeenAt = Min(station.FirstSeenAt, ns.SeenAt);
             station.LastSeenAt = Max(station.LastSeenAt, ns.SeenAt);
+
+            if (ns.SeenAt < active.FirstSeenAt)
+            {
+                // Publicación anterior a la versión vigente (importar un periodo antiguo después
+                // de uno reciente): completa la historia en vez de descartarse.
+                if (FillInHistory(station, ns, run, rejections))
+                {
+                    run.StationVersionsCreated++;
+                }
+
+                continue;
+            }
+
             if (SameAttributes(active, ns))
             {
                 continue;
@@ -176,21 +191,6 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
             {
                 rejections.Add(new(RecordKinds.Station, ns.SourceStationId, RejectionReasons.DuplicateInBatch,
                     $"dos versiones distintas publicadas en {ns.SeenAt:O}"));
-                continue;
-            }
-
-            if (ns.SeenAt < active.FirstSeenAt)
-            {
-                // Reimportar un periodo ya conocido: si una versión guardada ya tenía estos
-                // atributos en ese instante, no hay nada nuevo. Si no, son metadatos antiguos
-                // que contradicen lo guardado y no se reescribe el pasado.
-                if (VersionAt(station, ns.SeenAt) is { } known && SameAttributes(known, ns))
-                {
-                    continue;
-                }
-
-                rejections.Add(new(RecordKinds.Station, ns.SourceStationId, RejectionReasons.MetadataOlderThanCurrent,
-                    $"seenAt={ns.SeenAt:O}, vigente desde {active.FirstSeenAt:O}"));
                 continue;
             }
 
@@ -219,6 +219,54 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
 
         await db.SaveChangesAsync(ct);
         return stations;
+    }
+
+    /// <summary>
+    /// Inserta en la historia una publicación anterior a la versión vigente. Devuelve si creó
+    /// una versión. Solo añade versiones cerradas (con fin), así que no choca con el índice de
+    /// una versión vigente por estación.
+    /// </summary>
+    private static bool FillInHistory(
+        Station station, NormalizedStation ns, IngestionRun run, List<RejectedRecord> rejections)
+    {
+        var known = VersionAt(station, ns.SeenAt);
+        if (known is null)
+        {
+            rejections.Add(new(RecordKinds.Station, ns.SourceStationId, RejectionReasons.MetadataOlderThanCurrent,
+                $"ninguna versión cubre {ns.SeenAt:O}"));
+            return false;
+        }
+
+        // Ya se sabía: reimportar un periodo conocido no crea nada.
+        if (SameAttributes(known, ns))
+        {
+            return false;
+        }
+
+        if (ns.SeenAt < known.FirstSeenAt && known.ValidFrom is null)
+        {
+            // Antes de la primera publicación conocida. La que se suponía vigente hacia atrás
+            // pasa a empezar cuando se vio por primera vez; la nueva ocupa lo anterior.
+            var older = NewVersion(ns, validFrom: null, run);
+            older.ValidTo = known.FirstSeenAt;
+            known.ValidFrom = known.FirstSeenAt;
+            station.Versions.Add(older);
+            return true;
+        }
+
+        if (ns.SeenAt > known.FirstSeenAt && known.ValidTo is not null)
+        {
+            // Un cambio dentro de un tramo ya conocido: se parte en dos.
+            var middle = NewVersion(ns, validFrom: ns.SeenAt, run);
+            middle.ValidTo = known.ValidTo;
+            known.ValidTo = ns.SeenAt;
+            station.Versions.Add(middle);
+            return true;
+        }
+
+        rejections.Add(new(RecordKinds.Station, ns.SourceStationId, RejectionReasons.DuplicateInBatch,
+            $"dos versiones distintas publicadas en {ns.SeenAt:O}"));
+        return false;
     }
 
     private sealed record ObservationRow(long StationId, NormalizedObservation Observation, string Flags);
@@ -382,6 +430,8 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static DateTimeOffset Max(DateTimeOffset a, DateTimeOffset b) => a > b ? a : b;
+
+    private static DateTimeOffset Min(DateTimeOffset a, DateTimeOffset b) => a < b ? a : b;
 
     private static string Truncate(string value, int max) => value.Length <= max ? value : value[..max];
 }

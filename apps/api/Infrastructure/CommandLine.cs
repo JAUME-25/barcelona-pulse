@@ -13,6 +13,7 @@ namespace BarcelonaPulse.Api.Infrastructure;
 ///   migrate                         aplica las migraciones pendientes
 ///   ingest demo                     importa el fixture sintético (idempotente)
 ///   ingest bicing-archive --day D   importa un día del histórico de Bicing (idempotente)
+///   ingest bicing-archive --from A --to B   importa un periodo, un día por ingesta
 /// </summary>
 public static class CommandLine
 {
@@ -29,9 +30,11 @@ public static class CommandLine
               Aplica las migraciones pendientes.
           ingest demo
               Importa los datos sintéticos de demostración. Repetirlo no duplica nada.
-          ingest bicing-archive --day AAAA-MM-DD [--status-file RUTA --info-file RUTA]
-              Importa un día (hora de Barcelona) del histórico mensual de Bicing del Ajuntament.
-              Sin rutas, descarga los dos .7z del mes. Repetirlo no duplica nada.
+          ingest bicing-archive (--day AAAA-MM-DD | --from AAAA-MM-DD --to AAAA-MM-DD)
+                                [--status-file RUTA --info-file RUTA]
+              Importa días naturales (hora de Barcelona) del histórico mensual de Bicing del
+              Ajuntament, hasta 31 por comando. Sin rutas, descarga los dos .7z de cada mes.
+              Repetirlo no duplica nada.
         """;
 
     public static bool IsCommand(string[] args) => args.Length > 0 && Commands.Contains(args[0]);
@@ -92,8 +95,14 @@ public static class CommandLine
 
             case ["ingest", "bicing-archive", .. var options]:
                 {
-                    var run = await IngestBicingArchiveAsync(sp, ParseOptions(options), ct);
-                    PrintSummary(run);
+                    var runs = await IngestBicingArchiveAsync(sp, ParseOptions(options), ct);
+                    if (runs.Count > 1)
+                    {
+                        Console.WriteLine($"Periodo: {runs.Count} días, {runs.Sum(r => r.ObservationsAccepted)} observaciones nuevas, " +
+                            $"{runs.Sum(r => r.ObservationsDuplicate)} ya existentes, {runs.Sum(r => r.ObservationsConflicting)} en conflicto, " +
+                            $"{runs.Sum(r => r.ObservationsRejected)} rechazadas.");
+                    }
+
                     return 0;
                 }
 
@@ -103,20 +112,18 @@ public static class CommandLine
         }
     }
 
-    private static async Task<IngestionRun> IngestBicingArchiveAsync(
+    private sealed record MonthFiles(string Status, string Info, string? StatusName, string? InfoName);
+
+    /// <summary>
+    /// Un día (--day) o un periodo (--from/--to, máximo <see cref="MaxDaysPerCommand"/> días).
+    /// Cada día es una ingesta propia: si uno falla, los anteriores quedan guardados y repetir
+    /// el comando no duplica nada. Los .7z de cada mes se descargan una sola vez.
+    /// </summary>
+    private static async Task<List<IngestionRun>> IngestBicingArchiveAsync(
         IServiceProvider sp, Dictionary<string, string> options, CancellationToken ct)
     {
-        if (!options.TryGetValue("day", out var dayText)
-            || !DateOnly.TryParseExact(dayText, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day))
-        {
-            throw new ArgumentException("Falta --day AAAA-MM-DD.");
-        }
-
-        var yesterday = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-1);
-        if (day < FirstArchiveDay || day > yesterday)
-        {
-            throw new ArgumentException($"--day debe estar entre {FirstArchiveDay:yyyy-MM-dd} y {yesterday:yyyy-MM-dd}.");
-        }
+        var (from, to) = ParsePeriod(options);
+        var days = to.DayNumber - from.DayNumber + 1;
 
         options.TryGetValue("status-file", out var statusFile);
         options.TryGetValue("info-file", out var infoFile);
@@ -125,38 +132,113 @@ public static class CommandLine
             throw new ArgumentException("--status-file e --info-file van juntos.");
         }
 
+        if (statusFile is not null && (from.Year != to.Year || from.Month != to.Month))
+        {
+            throw new ArgumentException("Con archivos locales, el periodo debe estar dentro de un mismo mes.");
+        }
+
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeout.CancelAfter(ArchiveTimeout);
+        timeout.CancelAfter(ArchiveTimeout + TimeSpan.FromMinutes(2 * days));
         var limits = new ArchiveLimits();
         var downloaded = new List<string>();
-        string? statusName = null, infoName = null;
+        var months = new Dictionary<DateOnly, MonthFiles>();
+        var runs = new List<IngestionRun>();
         try
         {
-            if (statusFile is null || infoFile is null)
+            for (var day = from; day <= to; day = day.AddDays(1))
             {
-                var downloader = sp.GetRequiredService<BicingArchiveDownloader>();
                 var month = new DateOnly(day.Year, day.Month, 1);
-                foreach (var kind in new[] { BicingArchiveKind.Status, BicingArchiveKind.Info })
+                if (!months.TryGetValue(month, out var files))
                 {
-                    var url = BicingArchiveDownloader.UrlFor(month, kind);
-                    Console.WriteLine($"Descargando {url}");
-                    downloaded.Add(await downloader.DownloadAsync(url, limits.MaxArchiveBytes, timeout.Token));
+                    files = statusFile is not null && infoFile is not null
+                        ? new MonthFiles(statusFile, infoFile, null, null)
+                        : await DownloadMonthAsync(sp, month, limits, downloaded, timeout.Token);
+                    months[month] = files;
                 }
 
-                (statusFile, infoFile) = (downloaded[0], downloaded[1]);
-                statusName = Path.GetFileName(BicingArchiveDownloader.UrlFor(month, BicingArchiveKind.Status).LocalPath);
-                infoName = Path.GetFileName(BicingArchiveDownloader.UrlFor(month, BicingArchiveKind.Info).LocalPath);
+                Console.WriteLine($"Leyendo el día {day:yyyy-MM-dd} ({LocalDay.TimeZoneId})…");
+                var batch = BicingArchiveAdapter.Read(
+                    files.Status, files.Info, day, limits, timeout.Token, files.StatusName, files.InfoName);
+
+                // Un contexto de datos por día: la memoria no crece con el periodo.
+                await using var scope = sp.GetRequiredService<IServiceScopeFactory>().CreateAsyncScope();
+                var ingestor = scope.ServiceProvider.GetRequiredService<StationIngestor>();
+                var run = await ingestor.IngestAsync(batch, trigger: "cli", timeout.Token);
+                PrintSummary(run);
+                runs.Add(run);
             }
 
-            Console.WriteLine($"Leyendo el día {day:yyyy-MM-dd} ({LocalDay.TimeZoneId})…");
-            var batch = BicingArchiveAdapter.Read(statusFile, infoFile, day, limits, timeout.Token, statusName, infoName);
-            var ingestor = sp.GetRequiredService<StationIngestor>();
-            return await ingestor.IngestAsync(batch, trigger: "cli", timeout.Token);
+            return runs;
         }
         finally
         {
             foreach (var path in downloaded) File.Delete(path);
         }
+    }
+
+    private static async Task<MonthFiles> DownloadMonthAsync(
+        IServiceProvider sp, DateOnly month, ArchiveLimits limits, List<string> downloaded, CancellationToken ct)
+    {
+        var downloader = sp.GetRequiredService<BicingArchiveDownloader>();
+        var paths = new List<string>();
+        foreach (var kind in new[] { BicingArchiveKind.Status, BicingArchiveKind.Info })
+        {
+            var url = BicingArchiveDownloader.UrlFor(month, kind);
+            Console.WriteLine($"Descargando {url}");
+            var path = await downloader.DownloadAsync(url, limits.MaxArchiveBytes, ct);
+            downloaded.Add(path);
+            paths.Add(path);
+        }
+
+        return new MonthFiles(
+            paths[0], paths[1],
+            Path.GetFileName(BicingArchiveDownloader.UrlFor(month, BicingArchiveKind.Status).LocalPath),
+            Path.GetFileName(BicingArchiveDownloader.UrlFor(month, BicingArchiveKind.Info).LocalPath));
+    }
+
+    internal const int MaxDaysPerCommand = 31;
+
+    internal static (DateOnly From, DateOnly To) ParsePeriod(Dictionary<string, string> options)
+    {
+        static DateOnly Parse(Dictionary<string, string> options, string name) =>
+            options.TryGetValue(name, out var text)
+            && DateOnly.TryParseExact(text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var value)
+                ? value
+                : throw new ArgumentException($"Falta --{name} AAAA-MM-DD.");
+
+        DateOnly from, to;
+        if (options.ContainsKey("day"))
+        {
+            if (options.ContainsKey("from") || options.ContainsKey("to"))
+            {
+                throw new ArgumentException("Usa --day o --from/--to, no los dos.");
+            }
+
+            from = to = Parse(options, "day");
+        }
+        else
+        {
+            from = Parse(options, "from");
+            to = Parse(options, "to");
+        }
+
+        var yesterday = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-1);
+        if (from > to)
+        {
+            throw new ArgumentException("--from debe ser anterior o igual a --to.");
+        }
+
+        if (from < FirstArchiveDay || to > yesterday)
+        {
+            throw new ArgumentException($"Las fechas deben estar entre {FirstArchiveDay:yyyy-MM-dd} y {yesterday:yyyy-MM-dd}.");
+        }
+
+        if (to.DayNumber - from.DayNumber + 1 > MaxDaysPerCommand)
+        {
+            throw new ArgumentException($"Como máximo {MaxDaysPerCommand} días por comando.");
+        }
+
+        return (from, to);
     }
 
     private static Dictionary<string, string> ParseOptions(string[] options)

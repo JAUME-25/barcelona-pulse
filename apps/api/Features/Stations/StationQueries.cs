@@ -25,21 +25,24 @@ public static class StationQueries
             return (at, InstantBasis.Requested);
         }
 
-        if (source.Kind == SourceKind.Synthetic)
+        if (source.Kind == SourceKind.Synthetic && await LatestObservationAsync(db, source.Id, ct) is { } latest)
         {
-            var latest = await (
-                from o in db.StationObservations
-                join s in db.Stations on o.StationId equals s.Id
-                where s.SourceId == source.Id
-                select (DateTimeOffset?)o.ObservedAt).MaxAsync(ct);
-            if (latest is { } l)
-            {
-                return (l, InstantBasis.LatestObservation);
-            }
+            return (latest, InstantBasis.LatestObservation);
         }
 
         return (now, InstantBasis.Now);
     }
+
+    /// <summary>
+    /// Instante de la última observación de la fuente. Se calcula por estación para que baje por
+    /// el índice (station_id, observed_at): el MAX sobre el join recorría todo el histórico
+    /// (97 ms frente a 4 ms con una semana real).
+    /// </summary>
+    public static Task<DateTimeOffset?> LatestObservationAsync(PulseDbContext db, string sourceId, CancellationToken ct) =>
+        db.Stations
+            .Where(s => s.SourceId == sourceId)
+            .Select(s => db.StationObservations.Where(o => o.StationId == s.Id).Max(o => (DateTimeOffset?)o.ObservedAt))
+            .MaxAsync(ct);
 
     /// <summary>
     /// SQL explícito a propósito (ADR 0005): por cada versión vigente en @at, la última

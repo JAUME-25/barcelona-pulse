@@ -47,8 +47,9 @@ public sealed class StationVersion
     /// <summary>
     /// Inicio de vigencia. Nulo en la primera versión conocida: no sabemos desde cuándo
     /// existe y se asume vigente hacia atrás (se marca al servirla para instantes anteriores).
+    /// Si después se importa algo anterior, pasa a ser el momento en que se vio por primera vez.
     /// </summary>
-    public DateTimeOffset? ValidFrom { get; init; }
+    public DateTimeOffset? ValidFrom { get; set; }
 
     /// <summary>Fin de vigencia (excluido). Nulo en la versión actual.</summary>
     public DateTimeOffset? ValidTo { get; set; }

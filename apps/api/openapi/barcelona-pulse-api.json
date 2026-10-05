@@ -30,6 +30,84 @@
         }
       }
     },
+    "/api/sources/{id}/timeline": {
+      "get": {
+        "tags": [
+          "History"
+        ],
+        "summary": "Línea temporal de una fuente: estaciones con dato y totales en cada paso",
+        "description": "Aplica en cada paso la misma regla que GET /api/stations: última observación ≤ instante dentro de la tolerancia. Los huecos se ven como pasos con menos estaciones con dato. Máximo 7 días por petición.",
+        "operationId": "GetTimeline",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la fuente.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "Inicio ISO 8601 con zona. Sin from ni to: las últimas 24 h con datos de la fuente.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "Fin ISO 8601 con zona (incluido).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "step",
+            "in": "query",
+            "description": "Paso en minutos: 5, 10, 15, 30 o 60. Por defecto, 5.",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimelineResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/stations": {
       "get": {
         "tags": [
@@ -774,12 +852,110 @@
             "format": "date-time"
           }
         }
+      },
+      "TimelinePoint": {
+        "required": [
+          "at",
+          "stationsKnown",
+          "stationsWithData",
+          "stationsCounted",
+          "bikesAvailable",
+          "docksAvailable"
+        ],
+        "type": "object",
+        "properties": {
+          "at": {
+            "type": "string",
+            "description": "Instante (UTC) del paso.",
+            "format": "date-time"
+          },
+          "stationsKnown": {
+            "type": "integer",
+            "description": "Estaciones con atributos vigentes en ese instante.",
+            "format": "int32"
+          },
+          "stationsWithData": {
+            "type": "integer",
+            "description": "Estaciones con observación dentro de la tolerancia (misma regla que el mapa).",
+            "format": "int32"
+          },
+          "stationsCounted": {
+            "type": "integer",
+            "description": "De ellas, las que están en servicio y tienen los dos recuentos: las que se suman.",
+            "format": "int32"
+          },
+          "bikesAvailable": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "description": "Bicis disponibles en las estaciones contadas; nula si no se cuenta ninguna.",
+            "format": "int32"
+          },
+          "docksAvailable": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "description": "Anclajes libres en las estaciones contadas; nula si no se cuenta ninguna.",
+            "format": "int32"
+          }
+        },
+        "description": "Un instante de la línea temporal: cuántas estaciones tienen dato y qué suman."
+      },
+      "TimelineResponse": {
+        "required": [
+          "source",
+          "from",
+          "to",
+          "stepMinutes",
+          "toleranceMinutes",
+          "points"
+        ],
+        "type": "object",
+        "properties": {
+          "source": {
+            "description": "Fuente consultada, con su tipo.",
+            "$ref": "#/components/schemas/SourceRef"
+          },
+          "from": {
+            "type": "string",
+            "description": "Primer paso, alineado a la rejilla (UTC).",
+            "format": "date-time"
+          },
+          "to": {
+            "type": "string",
+            "description": "Último paso, alineado a la rejilla (UTC).",
+            "format": "date-time"
+          },
+          "stepMinutes": {
+            "type": "integer",
+            "description": "Minutos entre pasos.",
+            "format": "int32"
+          },
+          "toleranceMinutes": {
+            "type": "integer",
+            "description": "Antigüedad máxima de una observación para contar como dato.",
+            "format": "int32"
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimelinePoint"
+            },
+            "description": "Un punto por paso, de From a To."
+          }
+        },
+        "description": "Línea temporal de una fuente."
       }
     }
   },
   "tags": [
     {
       "name": "Sources"
+    },
+    {
+      "name": "History"
     },
     {
       "name": "Stations"

@@ -21,6 +21,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/sources/{id}/timeline': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Línea temporal de una fuente: estaciones con dato y totales en cada paso
+     * @description Aplica en cada paso la misma regla que GET /api/stations: última observación ≤ instante dentro de la tolerancia. Los huecos se ven como pasos con menos estaciones con dato. Máximo 7 días por petición.
+     */
+    get: operations['GetTimeline'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/stations': {
     parameters: {
       query?: never;
@@ -248,6 +268,66 @@ export interface components {
       /** Format: date-time */
       firstSeenAt: string;
     };
+    /** @description Un instante de la línea temporal: cuántas estaciones tienen dato y qué suman. */
+    TimelinePoint: {
+      /**
+       * Format: date-time
+       * @description Instante (UTC) del paso.
+       */
+      at: string;
+      /**
+       * Format: int32
+       * @description Estaciones con atributos vigentes en ese instante.
+       */
+      stationsKnown: number;
+      /**
+       * Format: int32
+       * @description Estaciones con observación dentro de la tolerancia (misma regla que el mapa).
+       */
+      stationsWithData: number;
+      /**
+       * Format: int32
+       * @description De ellas, las que están en servicio y tienen los dos recuentos: las que se suman.
+       */
+      stationsCounted: number;
+      /**
+       * Format: int32
+       * @description Bicis disponibles en las estaciones contadas; nula si no se cuenta ninguna.
+       */
+      bikesAvailable: null | number;
+      /**
+       * Format: int32
+       * @description Anclajes libres en las estaciones contadas; nula si no se cuenta ninguna.
+       */
+      docksAvailable: null | number;
+    };
+    /** @description Línea temporal de una fuente. */
+    TimelineResponse: {
+      /** @description Fuente consultada, con su tipo. */
+      source: components['schemas']['SourceRef'];
+      /**
+       * Format: date-time
+       * @description Primer paso, alineado a la rejilla (UTC).
+       */
+      from: string;
+      /**
+       * Format: date-time
+       * @description Último paso, alineado a la rejilla (UTC).
+       */
+      to: string;
+      /**
+       * Format: int32
+       * @description Minutos entre pasos.
+       */
+      stepMinutes: number;
+      /**
+       * Format: int32
+       * @description Antigüedad máxima de una observación para contar como dato.
+       */
+      toleranceMinutes: number;
+      /** @description Un punto por paso, de From a To. */
+      points: components['schemas']['TimelinePoint'][];
+    };
   };
   responses: never;
   parameters: never;
@@ -273,6 +353,54 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['SourceSummary'][];
+        };
+      };
+    };
+  };
+  GetTimeline: {
+    parameters: {
+      query?: {
+        /** @description Inicio ISO 8601 con zona. Sin from ni to: las últimas 24 h con datos de la fuente. */
+        from?: string;
+        /** @description Fin ISO 8601 con zona (incluido). */
+        to?: string;
+        /** @description Paso en minutos: 5, 10, 15, 30 o 60. Por defecto, 5. */
+        step?: number;
+      };
+      header?: never;
+      path: {
+        /** @description Identificador de la fuente. */
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TimelineResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['HttpValidationProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
         };
       };
     };

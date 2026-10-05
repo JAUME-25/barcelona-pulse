@@ -6,7 +6,7 @@ PostGIS. Sin colas, cachés externas ni servicios separados mientras no haga fal
 ```
 Navegador ── SPA React (estática) ──HTTP/JSON──▶ API ASP.NET Core ──EF Core/Npgsql──▶ PostgreSQL + PostGIS
    │                                                ▲
-   └── teselas del mapa base (OpenFreeMap)          └── CLI de la misma imagen: migrate, ingest demo
+   └── teselas del mapa base (OpenFreeMap)          └── CLI de la misma imagen: migrate, ingest
 ```
 
 El navegador solo habla con nuestra API y con el proveedor de teselas. Nunca descarga ni procesa
@@ -22,10 +22,11 @@ que solo reenvían llamadas.
 | --- | --- |
 | `Features/Sources` | Fuentes de datos (observada o sintética) y `GET /api/sources` con el periodo cubierto. |
 | `Features/Stations` | Estaciones, versiones de atributos y observaciones; regla del estado en un instante; `GET /api/stations` y `GET /api/stations/{id}`. |
-| `Features/Ingestion` | Contrato normalizado, validación común, `StationIngestor` (idempotente) y adaptadores. Hoy: `Demo/DemoFixtureAdapter`. |
+| `Features/Ingestion` | Contrato normalizado, validación común, `StationIngestor` (idempotente) y adaptadores: `Demo/DemoFixtureAdapter` y `BicingArchive/BicingArchiveAdapter`. |
+| `Features/History` | Línea temporal de una fuente para reproducir un periodo: `GET /api/sources/{id}/timeline` (ADR 0009). |
 | `Infrastructure` | `PulseDbContext`, migraciones, registro de servicios, CLI, utilidades de instantes y geometría. |
 
-Previstos: `Features/History` (B3) y `Features/Scenarios` (B4), en sus propias carpetas.
+Previsto: `Features/Scenarios` (B4), en su propia carpeta.
 
 La web (`apps/web`) sigue la misma idea: `features/stations` con el mapa, la lista, el detalle y
 las reglas de presentación; `api` con el cliente tipado; `app` con la composición y el tema
@@ -43,6 +44,9 @@ visual (`theme.ts`).
 4. La web pinta el mapa con una capa de símbolos (imágenes generadas en canvas, sin un nodo DOM
    por estación) y la lista con los mismos datos. La selección se comparte y va en la URL
    (`?estacion=<id de origen>`).
+5. Para reproducir un periodo, `GET /api/sources/{id}/timeline` aplica la misma regla en una
+   rejilla de pasos y devuelve, en cada uno, cuántas estaciones tienen dato y cuántas bicis
+   suman. Los huecos se ven como pasos con menos estaciones con dato (ADR 0009).
 
 ## Ingesta
 
@@ -53,6 +57,8 @@ Puntos de entrada, por línea de comandos (no hay endpoint HTTP de importación)
   Barcelona) del histórico de Bicing. Descarga los dos .7z del mes a archivos temporales, los
   lee en streaming y los borra al terminar. Con `--status-file` e `--info-file` usa archivos
   locales.
+- `… ingest bicing-archive --from 2026-08-17 --to 2026-08-23`: un periodo de hasta 31 días.
+  Cada día es una ejecución propia; los archivos de cada mes se descargan una sola vez.
 
 - Cada ejecución queda en `ingestion_runs` con fuente, adaptador y versión, entrada y su
   sha256, periodo, recuentos y resultado; los rechazos, en `ingestion_rejections` con su motivo.
@@ -135,7 +141,10 @@ Entorno: Windows 11, 16 núcleos, Docker Desktop 29.6, compilación de producci�
 - API con un día real (540 estaciones, 154 389 observaciones): `GET /api/stations?source=bicing-bcn&at=…`
   mediana 14–16 ms (p90 17–19 ms); la consulta en PostgreSQL, 6 ms. Respuesta de 285 KB, 29 KB
   comprimida (Brotli o gzip). La primera petición tras arrancar tarda ~1 s (arranque en frío).
-- Ingesta de un día real: ~19 s en total, descargas incluidas.
+- Ingesta de un día real: ~19 s en total, descargas incluidas. Una semana (17–23 de agosto de
+  2026, 925 784 observaciones nuevas): 72 s.
+- Línea temporal con esa semana (1 080 173 observaciones): un día a 5 min, 0,48 s la primera
+  vez; la semana a 15 min, 1,7 s; repetidas, 5–9 ms desde la caché (ADR 0009).
 - El tiempo del mapa depende de la red hasta OpenFreeMap; la red no se limitó.
 - La carga de la web se midió con la demo. Falta medirla con las 540 estaciones reales, y la
   fluidez (fps) en escritorio y móvil: queda para B5.

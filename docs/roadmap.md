@@ -7,7 +7,7 @@ Actualizado el 5 de octubre de 2026.
 | **B0** Validación y decisiones | Hecho | Fuentes comprobadas, versiones fijadas, arquitectura y ADR. |
 | **B1** Primera funcionalidad completa | Hecho | PostGIS, demo idempotente, API de estaciones, mapa, lista y detalle, pruebas. |
 | **B2** Ingesta observada | Hecho | Una muestra real entra y se consulta con origen y fecha; repetirla no duplica. |
-| **B3** Reproducción histórica | Siguiente | Reproduce un periodo real respetando huecos y de forma determinista. |
+| **B3** Reproducción histórica | En curso | Reproduce un periodo real respetando huecos y de forma determinista. |
 | B4 Escenarios de cobertura | Pendiente | Cálculo espacial comprobado, sin solapes duplicados ni conclusiones de demanda. |
 | B5 Demo y portfolio | Pendiente | Demo estable y desplegada, rendimiento medido, caso técnico. |
 
@@ -33,19 +33,22 @@ Actualizado el 5 de octubre de 2026.
 - Por el camino: la consulta del estado pasó a SQL explícito (de 119 a 14 ms, ADR 0008) y las
   respuestas se comprimen (285 KB → 29 KB).
 
-## B3: plan
+## B3: estado
 
-1. Importar un periodo: `--from` y `--to` reutilizando la descarga del mes. Empezar con una
-   semana completa (17 a 23 de agosto de 2026) y medir volumen (~155 000 filas por día).
-2. Periodos disponibles: endpoint con la cobertura real por hora (instantáneas y estaciones con
-   dato), para que la línea temporal enseñe los huecos en vez de esconderlos.
-3. Línea temporal en la web: control deslizante accesible con teclado, pasos de 5 y 15 min,
-   reproducción con pausa, sin animación si se pide movimiento reducido. Cancelar las peticiones
-   viejas al moverse; medir antes de decidir si hace falta un endpoint de «fotogramas».
-4. Pruebas: días de cambio de hora (23 y 25 h), cambio de día, huecos que dejan estaciones en
-   «sin dato reciente», resultado igual para el mismo instante.
-5. Retención: un año entero serían ~57 millones de filas. Decidir qué periodos se guardan antes
-   de importar más de unas semanas.
+1. **Hecho.** Importar un periodo: `--from` y `--to` (hasta 31 días), con la descarga de cada
+   mes una sola vez. La semana del 17 al 23 de agosto de 2026 entró en 72 s (925 784
+   observaciones nuevas). Reimportarla: 0 nuevas y 0 rechazos. Importar un periodo anterior a
+   lo conocido completa la historia de versiones en vez de rechazarla.
+2. **Hecho.** Línea temporal: `GET /api/sources/{id}/timeline` con estaciones con dato y sumas
+   por paso, misma regla que el mapa, máximo 7 días y caché por ingesta (ADR 0009).
+3. **Siguiente.** Interfaz de «Reproducir»: tres direcciones para elegir antes de construirla.
+   Requisitos: control accesible con teclado, pasos de 5 y 15 min, reproducción con pausa, sin
+   animación si se pide movimiento reducido, peticiones viejas canceladas al moverse; medir
+   antes de decidir si hace falta un endpoint de «fotogramas».
+4. **En parte.** Pruebas: rejilla en días de 23 y 25 h, huecos que dejan estaciones sin dato y
+   cada paso igual al mapa en ese instante. Faltan las de la interfaz.
+5. **Por decidir.** Retención: un año entero serían ~57 millones de filas y ~11 GB. Decidir qué
+   periodos se guardan antes de importar más de unas semanas.
 
 ## Backlog
 
@@ -59,6 +62,9 @@ Actualizado el 5 de octubre de 2026.
 - Tiempo real con el token de Open Data BCN (`Authorization: <token>`; un 302 a `/tokens` es un
   fallo de autenticación): tarea programada y «Última observación» con frescura medida.
 - API: caché HTTP con validación para `/api/stations`.
+- API: `GET /api/sources` calcula el periodo y el recuento recorriendo todas las observaciones
+  de la fuente (80 ms con una semana real; crecerá con el histórico). Sacarlo de
+  `ingestion_runs` o precalcularlo en cada ingesta.
 - API: cabeceras reenviadas (`ForwardedHeaders`) para el límite por IP detrás de un proxy.
 - Índice no único en `station_versions(station_id)` si las consultas de detalle crecen.
 - Rendimiento: medir la carga de la web con las 540 estaciones reales y la fluidez (fps).
