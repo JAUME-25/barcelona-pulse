@@ -79,6 +79,9 @@ Puntos de entrada, por línea de comandos (no hay endpoint HTTP de importación)
 
 - Secretos fuera del código: `.env` (no versionado) para Compose y variables de entorno en la
   imagen. `.env.example` solo tiene valores de ejemplo.
+- Repositorio público en GitHub: escaneo de secretos con bloqueo en el push (activo por defecto)
+  y Dependabot con alertas y actualizaciones de seguridad (activado el 5-10-2026). La CI usa
+  permisos de solo lectura y ningún secreto.
 - CORS solo para `GET` y para los orígenes de `Cors:AllowedOrigins`. En local no hace falta:
   Vite reenvía `/api`.
 - Límite de 120 peticiones por minuto e IP en `/api` (configurable). Consultas acotadas: caja
