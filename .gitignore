@@ -1,0 +1,26 @@
+# .NET
+artifacts/
+bin/
+obj/
+*.user
+.vs/
+TestResults/
+
+# Node
+node_modules/
+apps/web/dist/
+apps/web/test-results/
+apps/web/playwright-report/
+*.tsbuildinfo
+
+# Entorno
+.env
+.env.local
+*.local
+
+# Editores y sistema
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db

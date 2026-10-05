@@ -1,0 +1,64 @@
+.station-map__canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.station-map__pitch {
+  position: absolute;
+  top: 118px;
+  right: 10px;
+  z-index: 2;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel-solid);
+  color: var(--ink);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+
+.station-map__pitch[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.map-message {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  z-index: 3;
+  width: max-content;
+  max-width: min(90%, 460px);
+  margin: 0;
+  padding: 10px 14px;
+  transform: translateX(-50%);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-solid);
+  color: var(--ink);
+  font-size: 0.875rem;
+}
+
+.map-message--soft {
+  top: auto;
+  bottom: 40px;
+}
+
+.app[data-map='unavailable'] .map-message {
+  position: static;
+  width: auto;
+  max-width: none;
+  margin: 12px 16px;
+  transform: none;
+}
+
+@media (min-width: 768px) {
+  .app[data-map='unavailable'] .map-message {
+    max-width: 460px;
+    margin: 24px auto;
+  }
+}

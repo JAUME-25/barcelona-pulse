@@ -1,0 +1,739 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "Barcelona Pulse API",
+    "description": "Estaciones de Bicing y su estado. Distingue datos observados de datos sintéticos de demostración.",
+    "version": "v1"
+  },
+  "paths": {
+    "/api/sources": {
+      "get": {
+        "tags": [
+          "Sources"
+        ],
+        "summary": "Fuentes de datos, su tipo (observada o sintética) y el periodo que cubren",
+        "operationId": "ListSources",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SourceSummary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stations": {
+      "get": {
+        "tags": [
+          "Stations"
+        ],
+        "summary": "Estaciones de una fuente y su estado en un instante",
+        "description": "Devuelve la versión vigente de cada estación y su última observación anterior o igual a `at`. Fuera de la tolerancia de la fuente el estado es `unknown` y los recuentos son nulos.",
+        "operationId": "ListStations",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "query",
+            "description": "Obligatorio. Identificador de la fuente (ver GET /api/sources).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "bbox",
+            "in": "query",
+            "description": "Opcional. Zona minLon,minLat,maxLon,maxLat en grados WGS84 (máximo 1° de lado).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "at",
+            "in": "query",
+            "description": "Opcional. Instante ISO 8601 con zona explícita. Sin él: fuente sintética, final de sus datos; fuente observada, ahora. La respuesta lo indica en atBasis.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StationsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stations/{id}": {
+      "get": {
+        "tags": [
+          "Stations"
+        ],
+        "summary": "Una estación, su estado en un instante y sus versiones",
+        "operationId": "GetStation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador interno de la estación.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "at",
+            "in": "query",
+            "description": "Opcional. Instante ISO 8601 con zona explícita. Sin él: fuente sintética, final de sus datos; fuente observada, ahora. La respuesta lo indica en atBasis.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StationDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Freshness": {
+        "enum": [
+          "current",
+          "stale",
+          "none"
+        ],
+        "description": "Frescura del dato en el instante consultado."
+      },
+      "HttpValidationProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "IngestionStatus": {
+        "enum": [
+          "running",
+          "succeeded",
+          "succeeded_with_rejections",
+          "failed"
+        ]
+      },
+      "InstantBasis": {
+        "enum": [
+          "requested",
+          "latest_observation",
+          "now"
+        ],
+        "description": "Cómo se eligió el instante de la respuesta."
+      },
+      "LastIngestionSummary": {
+        "required": [
+          "startedAt",
+          "finishedAt",
+          "status",
+          "observationsAccepted",
+          "observationsDuplicate",
+          "observationsRejected"
+        ],
+        "type": "object",
+        "properties": {
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "$ref": "#/components/schemas/IngestionStatus"
+          },
+          "observationsAccepted": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "observationsDuplicate": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "observationsRejected": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "ObservationPeriod": {
+        "required": [
+          "from",
+          "to",
+          "observationCount"
+        ],
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "observationCount": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ObservationStatus": {
+        "enum": [
+          "in_service",
+          "maintenance",
+          "closed",
+          "planned",
+          "unknown"
+        ]
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SourceKind": {
+        "enum": [
+          "observed",
+          "synthetic"
+        ]
+      },
+      "SourceRef": {
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "attribution",
+          "license",
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SourceKind"
+          },
+          "name": {
+            "type": "string"
+          },
+          "attribution": {
+            "type": "string"
+          },
+          "license": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SourceSummary": {
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "attribution",
+          "license",
+          "url",
+          "toleranceMinutes",
+          "stationCount",
+          "period",
+          "lastIngestion"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SourceKind"
+          },
+          "name": {
+            "type": "string"
+          },
+          "attribution": {
+            "type": "string"
+          },
+          "license": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "toleranceMinutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "stationCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "period": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ObservationPeriod"
+              }
+            ]
+          },
+          "lastIngestion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LastIngestionSummary"
+              }
+            ]
+          }
+        },
+        "description": "Fuente disponible, con el periodo realmente cubierto por sus observaciones."
+      },
+      "StationDetailResponse": {
+        "required": [
+          "source",
+          "at",
+          "atBasis",
+          "toleranceMinutes",
+          "station",
+          "versions"
+        ],
+        "type": "object",
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/SourceRef"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "atBasis": {
+            "$ref": "#/components/schemas/InstantBasis"
+          },
+          "toleranceMinutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "station": {
+            "$ref": "#/components/schemas/StationItem"
+          },
+          "versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StationVersionItem"
+            }
+          }
+        }
+      },
+      "StationItem": {
+        "required": [
+          "id",
+          "sourceStationId",
+          "name",
+          "address",
+          "longitude",
+          "latitude",
+          "capacity",
+          "metadataAssumed",
+          "state"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Identificador interno, estable dentro de esta base de datos.",
+            "format": "int64"
+          },
+          "sourceStationId": {
+            "type": "string",
+            "description": "Identificador tal como lo publica la fuente."
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre publicado por la fuente."
+          },
+          "address": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Dirección, si la fuente la publica."
+          },
+          "longitude": {
+            "type": "number",
+            "description": "Longitud WGS84.",
+            "format": "double"
+          },
+          "latitude": {
+            "type": "number",
+            "description": "Latitud WGS84.",
+            "format": "double"
+          },
+          "capacity": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "description": "Capacidad publicada; nula si la fuente no la da.",
+            "format": "int32"
+          },
+          "metadataAssumed": {
+            "type": "boolean",
+            "description": "Los atributos se publicaron después del instante consultado y se asumen vigentes\ntambién antes (primera versión conocida)."
+          },
+          "state": {
+            "description": "Estado en el instante consultado.",
+            "$ref": "#/components/schemas/StationState"
+          }
+        },
+        "description": "Estación con sus atributos vigentes en el instante consultado."
+      },
+      "StationsResponse": {
+        "required": [
+          "source",
+          "at",
+          "atBasis",
+          "toleranceMinutes",
+          "count",
+          "truncated",
+          "stations"
+        ],
+        "type": "object",
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/SourceRef"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "atBasis": {
+            "$ref": "#/components/schemas/InstantBasis"
+          },
+          "toleranceMinutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "stations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StationItem"
+            }
+          }
+        }
+      },
+      "StationState": {
+        "required": [
+          "freshness",
+          "lastObservedAt",
+          "status",
+          "bikesAvailable",
+          "mechanicalBikesAvailable",
+          "ebikesAvailable",
+          "docksAvailable",
+          "bikesDisabled",
+          "docksDisabled",
+          "qualityFlags"
+        ],
+        "type": "object",
+        "properties": {
+          "freshness": {
+            "$ref": "#/components/schemas/Freshness"
+          },
+          "lastObservedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ObservationStatus"
+          },
+          "bikesAvailable": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "mechanicalBikesAvailable": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "ebikesAvailable": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "docksAvailable": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "bikesDisabled": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "docksDisabled": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "qualityFlags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "description": "Estado en el instante consultado. Si la frescura no es `current`, el estado es\n`unknown` y los recuentos son nulos: falta de dato no es cero."
+      },
+      "StationVersionItem": {
+        "required": [
+          "name",
+          "address",
+          "longitude",
+          "latitude",
+          "capacity",
+          "validFrom",
+          "validTo",
+          "firstSeenAt"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "longitude": {
+            "type": "number",
+            "format": "double"
+          },
+          "latitude": {
+            "type": "number",
+            "format": "double"
+          },
+          "capacity": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "validFrom": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "validTo": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "firstSeenAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Sources"
+    },
+    {
+      "name": "Stations"
+    }
+  ]
+}

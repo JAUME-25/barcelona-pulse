@@ -1,0 +1,32 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.{cs,csproj,props,targets,slnx}]
+indent_size = 4
+
+[*.cs]
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_prefer_braces = when_multiline:suggestion
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+dotnet_sort_system_directives_first = true
+dotnet_style_readonly_field = true:warning
+dotnet_diagnostic.IDE0005.severity = warning # usings innecesarios
+dotnet_diagnostic.IDE0161.severity = warning # namespace con ámbito de archivo
+[tests/**.cs]
+# En las comprobaciones contra la base de datos, el token de la prueba no aporta.
+dotnet_diagnostic.xUnit1051.severity = suggestion
+
+# Las migraciones las genera EF; no se les aplica estilo.
+[**/Migrations/*.cs]
+generated_code = true
+
+[*.md]
+trim_trailing_whitespace = false

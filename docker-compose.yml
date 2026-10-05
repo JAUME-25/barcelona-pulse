@@ -1,0 +1,79 @@
+name: barcelona-pulse
+
+# Entorno local reproducible. Requiere un .env (cp .env.example .env).
+# Imágenes fijadas: ver docs/architecture.md#versiones.
+
+x-db-connection: &db-connection "Host=db;Port=5432;Database=${POSTGRES_DB:?Falta .env: copia .env.example a .env};Username=${POSTGRES_USER:?Falta .env};Password=${POSTGRES_PASSWORD:?Falta .env};GSS Encryption Mode=Disable"
+
+x-api-build: &api-build
+  context: .
+  dockerfile: apps/api/Dockerfile
+
+services:
+  db:
+    image: postgis/postgis:18-3.6@sha256:60f6ad1d21ea86a67d47780b9a0d1e1d200500f62b19293fa834d0dea80b8677
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:${DB_PORT:-55432}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  # Aplica las migraciones pendientes y termina. La API espera a que acabe bien.
+  migrate:
+    build: *api-build
+    image: barcelona-pulse-api:dev
+    command: ["migrate"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Postgres: *db-connection
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build: *api-build
+    image: barcelona-pulse-api:dev
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Postgres: *db-connection
+      Cors__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-}
+    ports:
+      - "127.0.0.1:${API_PORT:-5080}:8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # SDK de .NET en contenedor: compilar, probar y generar migraciones sin instalar
+  # el SDK en el equipo. Uso: docker compose run --rm sdk dotnet test
+  sdk:
+    profiles: ["tools"]
+    image: mcr.microsoft.com/dotnet/sdk:10.0.401-noble
+    working_dir: /src
+    volumes:
+      - .:/src
+      - nuget-cache:/root/.nuget/packages
+      - dotnet-artifacts:/artifacts
+    environment:
+      ArtifactsPath: /artifacts
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      ConnectionStrings__Postgres: *db-connection
+      # Conexión de administración para que las pruebas creen y borren bases temporales.
+      BP_TEST_POSTGRES: "Host=db;Port=5432;Database=postgres;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};GSS Encryption Mode=Disable"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:
+  nuget-cache:
+  dotnet-artifacts:

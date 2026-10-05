@@ -1,0 +1,11 @@
+**/bin
+**/obj
+artifacts
+**/node_modules
+apps/web
+docs
+tests
+.git
+.github
+.env
+**/*.user
