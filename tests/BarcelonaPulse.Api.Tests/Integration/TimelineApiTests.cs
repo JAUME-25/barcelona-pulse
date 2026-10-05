@@ -44,14 +44,19 @@ public sealed class TimelineApiTests(DemoApiFixture fixture) : IClassFixture<Dem
             var at = Uri.EscapeDataString(point.At.ToString("O"));
             var map = (await Client().GetFromJsonAsync<StationsResponse>(
                 $"/api/stations?source=demo&at={at}", Json, TestContext.Current.CancellationToken))!;
+            // Misma precedencia que la leyenda de la web (availability.ts).
             var current = map.Stations.Where(s => s.State.Freshness == Freshness.Current).ToList();
-            var counted = current
-                .Where(s => s.State is { Status: ObservationStatus.InService, BikesAvailable: not null, DocksAvailable: not null })
+            var operating = current
+                .Where(s => s.State.Status == ObservationStatus.InService
+                    && !(s.State.IsRenting == false && s.State.IsReturning == false))
                 .ToList();
+            var counted = operating.Where(s => s.State is { BikesAvailable: not null, DocksAvailable: not null }).ToList();
 
             Assert.Equal(map.Count, point.StationsKnown);
             Assert.Equal(current.Count, point.StationsWithData);
             Assert.Equal(counted.Count, point.StationsCounted);
+            Assert.Equal(operating.Count(s => s.State.BikesAvailable == 0), point.StationsEmpty);
+            Assert.Equal(operating.Count(s => s.State is { BikesAvailable: > 0, DocksAvailable: 0 }), point.StationsFull);
             Assert.Equal(counted.Count == 0 ? null : counted.Sum(s => s.State.BikesAvailable), point.BikesAvailable);
             Assert.Equal(counted.Count == 0 ? null : counted.Sum(s => s.State.DocksAvailable), point.DocksAvailable);
         }
@@ -73,7 +78,7 @@ public sealed class TimelineApiTests(DemoApiFixture fixture) : IClassFixture<Dem
     }
 
     [Fact]
-    public async Task Closed_stations_and_missing_counts_are_not_added_as_zero()
+    public async Task Closed_stuck_and_blind_stations_are_neither_empty_nor_added_as_zero()
     {
         fixture.Database.RequireAvailable();
         var ct = TestContext.Current.CancellationToken;
@@ -81,11 +86,14 @@ public sealed class TimelineApiTests(DemoApiFixture fixture) : IClassFixture<Dem
         {
             var ingestor = new StationIngestor(db, TimeProvider.System, NullLogger<StationIngestor>.Instance);
             await ingestor.IngestAsync(TestData.Batch(
-                [TestData.Station("closed"), TestData.Station("blind")],
+                [TestData.Station("closed"), TestData.Station("blind"), TestData.Station("stuck"), TestData.Station("full")],
                 [
                     TestData.Observation("closed", TestData.T0, bikes: 0, docks: 0, status: ObservationStatus.Closed),
                     TestData.Observation("blind", TestData.T0, bikes: null),
+                    // En servicio, pero no presta ni admite devoluciones: no opera.
+                    TestData.Observation("stuck", TestData.T0, bikes: 0) with { IsRenting = false, IsReturning = false },
                     TestData.Observation("blind", TestData.T0.AddMinutes(15), bikes: 3, docks: 7),
+                    TestData.Observation("full", TestData.T0.AddMinutes(15), bikes: 20, docks: 0),
                 ],
                 source: TestData.Source("timeline-closed")), "test", ct);
         }
@@ -96,17 +104,21 @@ public sealed class TimelineApiTests(DemoApiFixture fixture) : IClassFixture<Dem
         Assert.Collection(timeline!.Points,
             p =>
             {
-                // Hay dato de las dos, pero ninguna se puede sumar: no es «0 bicis».
-                Assert.Equal(2, p.StationsWithData);
+                // Hay dato de las tres, pero ninguna está vacía ni se puede sumar: no es «0 bicis».
+                Assert.Equal(3, p.StationsWithData);
                 Assert.Equal(0, p.StationsCounted);
+                Assert.Equal(0, p.StationsEmpty);
+                Assert.Equal(0, p.StationsFull);
                 Assert.Null(p.BikesAvailable);
                 Assert.Null(p.DocksAvailable);
             },
             p =>
             {
-                Assert.Equal(2, p.StationsWithData);
-                Assert.Equal(1, p.StationsCounted);
-                Assert.Equal(3, p.BikesAvailable);
+                Assert.Equal(4, p.StationsWithData);
+                Assert.Equal(2, p.StationsCounted);
+                Assert.Equal(0, p.StationsEmpty);
+                Assert.Equal(1, p.StationsFull);
+                Assert.Equal(23, p.BikesAvailable);
                 Assert.Equal(7, p.DocksAvailable);
             });
     }

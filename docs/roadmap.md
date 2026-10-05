@@ -49,6 +49,11 @@ Actualizado el 5 de octubre de 2026.
    cada paso igual al mapa en ese instante. Faltan las de la interfaz.
 5. **Por decidir.** Retención: un año entero serían ~57 millones de filas y ~11 GB. Decidir qué
    periodos se guardan antes de importar más de unas semanas.
+6. **Pendiente.** Días que se pueden reproducir. El periodo de una fuente va de su primera a su
+   última observación, y una estación que publica el mismo `last_reported` desde el 12-6-2025
+   lo estira hasta entonces (el dato es correcto: por eso sale «sin dato reciente»). Los días
+   reproducibles deben salir de lo importado (la ventana de cada ingesta), no del mínimo y el
+   máximo.
 
 ## Backlog
 

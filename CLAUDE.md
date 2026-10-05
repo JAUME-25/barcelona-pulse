@@ -63,8 +63,9 @@ En este equipo no hay SDK de .NET instalado: todo lo de .NET va por el contenedo
   `ROW_NUMBER()` sobre todo el histórico. Si cambian columnas de `station_observations`, revísala.
 - `returning` es palabra reservada de PostgreSQL: no la uses como alias.
 - La línea temporal (`Features/History/TimelineQuery.cs`, ADR 0009) repite en SQL la regla del
-  estado en un instante. Si cambia una, cambia la otra; la prueba
-  `Every_step_matches_the_map_at_that_instant` lo vigila.
+  estado en un instante y la precedencia de la leyenda (`availability.ts`) para vacías y
+  llenas. Si cambia una, cambian las otras; la prueba `Every_step_matches_the_map_at_that_instant`
+  lo vigila.
 - Un `MAX(observed_at)` sobre el join de observaciones y estaciones recorre todo el histórico
   (~100 ms con una semana): usa `StationQueries.LatestObservationAsync`, que va por estación.
 - SharpCompress 1.0.0: `SevenZipArchive.Open(...)` (la documentación de `master` dice

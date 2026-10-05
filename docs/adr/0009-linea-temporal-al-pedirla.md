@@ -18,9 +18,13 @@ precalcularla en una tabla en cada ingesta.
   reporte de su estación, sin pasar de la tolerancia. Es la regla del estado en un instante
   aplicada a una rejilla, y una prueba de integración comprueba que cada paso coincide con
   `GET /api/stations?at=…`.
-- Cada paso devuelve las estaciones conocidas, las que tienen dato, las que se pueden sumar (en
-  servicio y con recuentos) y las sumas de esas. Si no se puede sumar ninguna, las sumas son
-  `null`: cerrada no es vacía y sin dato no es cero.
+- Cada paso devuelve las estaciones conocidas, las que tienen dato, las vacías y las llenas, las
+  que se pueden sumar (operativas y con recuentos) y las sumas de esas. Si no se puede sumar
+  ninguna, las sumas son `null`: cerrada no es vacía y sin dato no es cero.
+- Vacías y llenas siguen la precedencia de la leyenda de la web (`availability.ts`): una
+  estación cerrada, o en servicio que no presta ni admite devoluciones, no cuenta como vacía. Se
+  eligieron porque son lo que cambia a lo largo del día: el 20-8-2026, las vacías van de 26 a
+  79 y las llenas de 7 a 43, mientras el total de bicis solo varía un ±10 %.
 - Pasos de 5, 10, 15, 30 o 60 minutos, alineados en UTC. Como máximo 7 días por petición.
 - Caché en memoria (200 entradas) cuya clave incluye la última ingesta terminada de la fuente:
   una ingesta nueva la invalida sin más mecanismo.

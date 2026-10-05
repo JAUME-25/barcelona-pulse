@@ -268,7 +268,11 @@ export interface components {
       /** Format: date-time */
       firstSeenAt: string;
     };
-    /** @description Un instante de la línea temporal: cuántas estaciones tienen dato y qué suman. */
+    /**
+     * @description Un instante de la línea temporal: cuántas estaciones tienen dato, cuántas están vacías o
+     *     llenas y qué suman. Operativa: en servicio y prestando o admitiendo devoluciones; es la misma
+     *     precedencia que la leyenda de la web (`availability.ts`).
+     */
     TimelinePoint: {
       /**
        * Format: date-time
@@ -287,9 +291,19 @@ export interface components {
       stationsWithData: number;
       /**
        * Format: int32
-       * @description De ellas, las que están en servicio y tienen los dos recuentos: las que se suman.
+       * @description De ellas, las operativas con los dos recuentos: las que se suman.
        */
       stationsCounted: number;
+      /**
+       * Format: int32
+       * @description Operativas sin bicis.
+       */
+      stationsEmpty: number;
+      /**
+       * Format: int32
+       * @description Operativas con bicis y sin anclajes libres.
+       */
+      stationsFull: number;
       /**
        * Format: int32
        * @description Bicis disponibles en las estaciones contadas; nula si no se cuenta ninguna.

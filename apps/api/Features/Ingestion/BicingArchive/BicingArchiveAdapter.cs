@@ -26,7 +26,7 @@ public static partial class BicingArchiveAdapter
         Id: "bicing-bcn",
         Kind: SourceKind.Observed,
         Name: "Bicing, histórico del Ajuntament de Barcelona",
-        Attribution: "Fuente de los datos: Ayuntamiento de Barcelona. Datos transformados: un día del histórico, normalizado.",
+        Attribution: "Fuente de los datos: Ayuntamiento de Barcelona. Datos transformados: histórico mensual normalizado.",
         License: "CC BY 4.0",
         Url: "https://opendata-ajuntament.barcelona.cat/data/es/dataset/estat-estacions-bicing",
         StalenessTolerance: TimeSpan.FromMinutes(15));

@@ -39,6 +39,8 @@ export const AVAILABILITY_HINT: Record<Availability, string> = {
 /**
  * Precedencia: sin dato fiable → desconocido; estación no operativa → fuera de servicio
  * (aunque sus recuentos sean cero, cerrada no es vacía); después, bicis y anclajes.
+ * La línea temporal de la API cuenta vacías y llenas con la misma regla
+ * (apps/api/Features/History/TimelineQuery.cs): si cambia aquí, cambia allí.
  */
 export function availabilityOf(state: StationState): Availability {
   if (state.freshness !== 'current' || state.status === 'unknown') return 'unknown';

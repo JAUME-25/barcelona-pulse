@@ -8,11 +8,17 @@ using NpgsqlTypes;
 
 namespace BarcelonaPulse.Api.Features.History;
 
-/// <summary>Un instante de la línea temporal: cuántas estaciones tienen dato y qué suman.</summary>
+/// <summary>
+/// Un instante de la línea temporal: cuántas estaciones tienen dato, cuántas están vacías o
+/// llenas y qué suman. Operativa: en servicio y prestando o admitiendo devoluciones; es la misma
+/// precedencia que la leyenda de la web (<c>availability.ts</c>).
+/// </summary>
 /// <param name="At">Instante (UTC) del paso.</param>
 /// <param name="StationsKnown">Estaciones con atributos vigentes en ese instante.</param>
 /// <param name="StationsWithData">Estaciones con observación dentro de la tolerancia (misma regla que el mapa).</param>
-/// <param name="StationsCounted">De ellas, las que están en servicio y tienen los dos recuentos: las que se suman.</param>
+/// <param name="StationsCounted">De ellas, las operativas con los dos recuentos: las que se suman.</param>
+/// <param name="StationsEmpty">Operativas sin bicis.</param>
+/// <param name="StationsFull">Operativas con bicis y sin anclajes libres.</param>
 /// <param name="BikesAvailable">Bicis disponibles en las estaciones contadas; nula si no se cuenta ninguna.</param>
 /// <param name="DocksAvailable">Anclajes libres en las estaciones contadas; nula si no se cuenta ninguna.</param>
 public sealed record TimelinePoint(
@@ -20,6 +26,8 @@ public sealed record TimelinePoint(
     int StationsKnown,
     int StationsWithData,
     int StationsCounted,
+    int StationsEmpty,
+    int StationsFull,
     int? BikesAvailable,
     int? DocksAvailable);
 
@@ -77,6 +85,7 @@ public static class TimelineQuery
         ),
         obs AS (
             SELECT o.station_id, o.observed_at, o.status, o.bikes_available, o.docks_available,
+                   o.is_renting, o.is_returning,
                    lead(o.observed_at) OVER (PARTITION BY o.station_id ORDER BY o.observed_at) AS next_at
             FROM station_observations o
             JOIN stations s ON s.id = o.station_id
@@ -85,7 +94,8 @@ public static class TimelineQuery
               AND o.observed_at <= @to
         ),
         covered AS (
-            SELECT g.at, obs.status, obs.bikes_available, obs.docks_available
+            SELECT g.at, obs.bikes_available, obs.docks_available,
+                   obs.status = 'in_service' AND NOT (obs.is_renting IS FALSE AND obs.is_returning IS FALSE) AS operating
             FROM obs,
             LATERAL generate_series(
                 @from + ceil(extract(epoch FROM (greatest(obs.observed_at, @from) - @from)) / extract(epoch FROM @step)) * @step,
@@ -93,14 +103,16 @@ public static class TimelineQuery
                 @step) AS g(at)
         ),
         counted AS (
-            SELECT at, bikes_available, docks_available,
-                   status = 'in_service' AND bikes_available IS NOT NULL AND docks_available IS NOT NULL AS counted
+            SELECT at, operating, bikes_available, docks_available,
+                   operating AND bikes_available IS NOT NULL AND docks_available IS NOT NULL AS counted
             FROM covered
         ),
         aggregated AS (
             SELECT at,
                    count(*) AS with_data,
                    count(*) FILTER (WHERE counted) AS counted,
+                   count(*) FILTER (WHERE operating AND bikes_available = 0) AS empty,
+                   count(*) FILTER (WHERE operating AND bikes_available > 0 AND docks_available = 0) AS full,
                    sum(bikes_available) FILTER (WHERE counted) AS bikes,
                    sum(docks_available) FILTER (WHERE counted) AS docks
             FROM counted
@@ -114,7 +126,8 @@ public static class TimelineQuery
             JOIN stations s ON s.id = v.station_id AND s.source_id = @source
             GROUP BY st.at
         )
-        SELECT st.at, coalesce(k.stations_known, 0), coalesce(a.with_data, 0), coalesce(a.counted, 0), a.bikes, a.docks
+        SELECT st.at, coalesce(k.stations_known, 0), coalesce(a.with_data, 0), coalesce(a.counted, 0),
+               coalesce(a.empty, 0), coalesce(a.full, 0), a.bikes, a.docks
         FROM steps st
         LEFT JOIN known k ON k.at = st.at
         LEFT JOIN aggregated a ON a.at = st.at
@@ -156,8 +169,10 @@ public static class TimelineQuery
                     (int)reader.GetInt64(1),
                     (int)reader.GetInt64(2),
                     (int)reader.GetInt64(3),
-                    reader.IsDBNull(4) ? null : (int)reader.GetInt64(4),
-                    reader.IsDBNull(5) ? null : (int)reader.GetInt64(5)));
+                    (int)reader.GetInt64(4),
+                    (int)reader.GetInt64(5),
+                    reader.IsDBNull(6) ? null : (int)reader.GetInt64(6),
+                    reader.IsDBNull(7) ? null : (int)reader.GetInt64(7)));
             }
 
             cache.Set(key, (IReadOnlyList<TimelinePoint>)points,

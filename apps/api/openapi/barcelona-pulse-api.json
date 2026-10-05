@@ -859,6 +859,8 @@
           "stationsKnown",
           "stationsWithData",
           "stationsCounted",
+          "stationsEmpty",
+          "stationsFull",
           "bikesAvailable",
           "docksAvailable"
         ],
@@ -881,7 +883,17 @@
           },
           "stationsCounted": {
             "type": "integer",
-            "description": "De ellas, las que están en servicio y tienen los dos recuentos: las que se suman.",
+            "description": "De ellas, las operativas con los dos recuentos: las que se suman.",
+            "format": "int32"
+          },
+          "stationsEmpty": {
+            "type": "integer",
+            "description": "Operativas sin bicis.",
+            "format": "int32"
+          },
+          "stationsFull": {
+            "type": "integer",
+            "description": "Operativas con bicis y sin anclajes libres.",
             "format": "int32"
           },
           "bikesAvailable": {
@@ -901,7 +913,7 @@
             "format": "int32"
           }
         },
-        "description": "Un instante de la línea temporal: cuántas estaciones tienen dato y qué suman."
+        "description": "Un instante de la línea temporal: cuántas estaciones tienen dato, cuántas están vacías o\nllenas y qué suman. Operativa: en servicio y prestando o admitiendo devoluciones; es la misma\nprecedencia que la leyenda de la web (`availability.ts`)."
       },
       "TimelineResponse": {
         "required": [
