@@ -502,9 +502,11 @@
     width: 50px;
   }
 
-  /* La leyenda sube por encima del reproductor y se compacta. */
+  /* La leyenda sube por encima del reproductor y se compacta, sin pasar de los controles del
+     mapa (zoom y «Vista 3D»): si no cabe, se desplaza dentro. */
   .app[data-mode='replay'] .map-legend {
     bottom: calc(52px + var(--replay-deck-height, 300px));
+    max-height: calc(100% - 52px - var(--replay-deck-height, 300px) - 160px);
   }
 
   .app[data-mode='replay'] .availability-filter__help {
@@ -513,6 +515,34 @@
 
   .app[data-mode='replay'] .availability-filter__item {
     min-height: 34px;
+  }
+}
+
+/* Escritorio estrecho y tableta: los días encogen para caber junto al panel. */
+@media (min-width: 768px) and (max-width: 1359px) {
+  .week-dials__day {
+    flex: 1 1 0;
+    width: auto;
+    max-width: 50px;
+  }
+}
+
+/* Tableta en vertical: junto al panel quedan unos 300 px, una sola columna como en móvil. */
+@media (min-width: 768px) and (max-width: 839px) {
+  .replay-deck {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'transport'
+      'clock'
+      'counts'
+      'track'
+      'gaps'
+      'days';
+  }
+
+  .replay-deck__transport {
+    flex-direction: row;
+    flex-wrap: wrap;
   }
 }
 

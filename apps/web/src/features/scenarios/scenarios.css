@@ -453,12 +453,31 @@
     border-left: 1px solid var(--line);
   }
 
-  .scenario-deck__share {
-    font-size: 3rem;
-  }
-
-  /* La leyenda sube por encima del mando, como al reproducir. */
+  /* La leyenda sube por encima del mando, como al reproducir, sin pasar de los controles del
+     mapa (zoom y «Vista 3D»): si no cabe, se desplaza dentro. */
   .app[data-mode='experiment'] .map-legend {
     bottom: calc(52px + var(--scenario-deck-height, 220px));
+    max-height: calc(100% - 52px - var(--scenario-deck-height, 220px) - 160px);
+  }
+}
+
+/* Escritorio estrecho y tableta: las dos columnas del mando no caben junto al panel. */
+@media (min-width: 768px) and (max-width: 1179px) {
+  .scenario-deck {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .scenario-deck__result {
+    padding-top: 14px;
+    padding-left: 0;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+}
+
+@media (min-width: 1180px) {
+  .scenario-deck__share {
+    font-size: 3rem;
   }
 }
