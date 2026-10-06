@@ -54,8 +54,11 @@ public sealed class StationVersion
     /// <summary>Fin de vigencia (excluido). Nulo en la versión actual.</summary>
     public DateTimeOffset? ValidTo { get; set; }
 
-    /// <summary>Primera vez que la fuente publicó estos atributos.</summary>
-    public DateTimeOffset FirstSeenAt { get; init; }
+    /// <summary>
+    /// Primera vez que la fuente publicó estos atributos en este tramo. Retrocede si después se
+    /// importa una publicación anterior con los mismos atributos.
+    /// </summary>
+    public DateTimeOffset FirstSeenAt { get; set; }
 
     public long IngestionRunId { get; init; }
 }

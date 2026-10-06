@@ -3,6 +3,7 @@ using System.Text.Json;
 using BarcelonaPulse.Api.Features.Ingestion;
 using BarcelonaPulse.Api.Features.Ingestion.Demo;
 using BarcelonaPulse.Api.Features.Sources;
+using BarcelonaPulse.Api.Features.Stations;
 using BarcelonaPulse.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -178,6 +179,130 @@ public sealed class IngestionTests(PostgisDatabase database) : IClassFixture<Pos
         var again = await IngestAsync(Batch([Station("s1", capacity: 25, seenAt: day2)], source: source));
         Assert.Equal(0, again.StationVersionsCreated);
         Assert.Equal(0, again.StationsRejected);
+    }
+
+    [Fact]
+    public async Task Importing_older_days_out_of_order_keeps_what_each_day_published()
+    {
+        database.RequireAvailable();
+        var source = Source("out-of-order");
+        var day1 = T0;
+        var day10 = T0.AddDays(9);
+        var day20 = T0.AddDays(19);
+        // Como se importó en local: primero el día 20 y después el 10, los dos con 44 anclajes;
+        // al final, el día 1, que aún tenía 46.
+        await IngestAsync(Batch([Station("s1", capacity: 44, seenAt: day20)], source: source));
+        var middle = await IngestAsync(Batch([Station("s1", capacity: 44, seenAt: day10)], source: source));
+        var oldest = await IngestAsync(Batch([Station("s1", capacity: 46, seenAt: day1)], source: source));
+
+        Assert.Equal(0, middle.StationVersionsCreated);
+        Assert.Equal(1, oldest.StationVersionsCreated);
+        await using var db = database.CreateContext();
+        var versions = await db.StationVersions.Where(v => v.Station.SourceId == "out-of-order")
+            .OrderBy(v => v.FirstSeenAt).ToListAsync();
+        Assert.Equal([46, 44], versions.Select(v => v.Capacity));
+        // La de 44 empieza el día 10, cuando ya se publicaba, y no el 20.
+        Assert.Equal(day10, versions[0].ValidTo);
+        Assert.Equal(day10, versions[1].ValidFrom);
+        Assert.Equal(day10, versions[1].FirstSeenAt);
+
+        // El día 15 la API da los 44 anclajes que se publicaban entonces, sin marcarlos como supuestos.
+        var dataSource = await db.DataSources.SingleAsync(s => s.Id == "out-of-order");
+        var station = Assert.Single(await StationQueries.StatesAtAsync(
+            db, dataSource, T0.AddDays(14), bbox: null, stationId: null, limit: 10, TestContext.Current.CancellationToken));
+        Assert.Equal(44, station.Capacity);
+        Assert.False(station.MetadataAssumed);
+    }
+
+    [Fact]
+    public async Task A_change_inside_the_current_version_lasts_until_the_end_of_its_period()
+    {
+        database.RequireAvailable();
+        var source = Source("in-between");
+        var day1 = T0;
+        var day10 = T0.AddDays(9);
+        var day11 = T0.AddDays(10);
+        var day20 = T0.AddDays(19);
+        // Se conocen los días 1 y 20, los dos con 20 anclajes: una sola versión, la vigente…
+        await IngestAsync(Batch([Station("s1", capacity: 20, seenAt: day1)], source: source));
+        await IngestAsync(Batch([Station("s1", capacity: 20, seenAt: day20)], source: source));
+        // …y después llega el día 10, con 25. El lote dice qué periodo cubre.
+        var dayBatch = Batch([Station("s1", capacity: 25, seenAt: day10)], source: source) with
+        {
+            Covers = new CoveredPeriod(day10, day11),
+        };
+        var run = await IngestAsync(dayBatch);
+
+        Assert.Equal(2, run.StationVersionsCreated);
+        Assert.Equal(0, run.StationsRejected);
+        await using var db = database.CreateContext();
+        var versions = await db.StationVersions.Where(v => v.Station.SourceId == "in-between")
+            .OrderBy(v => v.FirstSeenAt).Select(v => new { v.Capacity, v.ValidFrom, v.ValidTo }).ToListAsync();
+        // El cambio dura el día importado; el 20, ya conocido, sigue con 20 y es la vigente.
+        Assert.Equal([20, 25, 20], versions.Select(v => v.Capacity));
+        Assert.Null(versions[0].ValidFrom);
+        Assert.Equal(day10, versions[0].ValidTo);
+        Assert.Equal(day10, versions[1].ValidFrom);
+        Assert.Equal(day11, versions[1].ValidTo);
+        Assert.Equal(day11, versions[2].ValidFrom);
+        Assert.Null(versions[2].ValidTo);
+
+        // Repetirlo no cambia nada.
+        var again = await IngestAsync(dayBatch);
+        Assert.Equal(0, again.StationVersionsCreated);
+        Assert.Equal(0, again.StationsRejected);
+    }
+
+    [Fact]
+    public async Task A_change_inside_the_current_version_without_a_period_is_rejected_instead_of_applied()
+    {
+        database.RequireAvailable();
+        var source = Source("in-between-unbounded");
+        await IngestAsync(Batch([Station("s1", capacity: 20, seenAt: T0)], source: source));
+        await IngestAsync(Batch([Station("s1", capacity: 20, seenAt: T0.AddDays(19))], source: source));
+
+        // Sin periodo no se sabe cuándo volvió a 20: antes pasaba a ser la vigente y el día 20,
+        // ya conocido, salía con 25.
+        var run = await IngestAsync(Batch([Station("s1", capacity: 25, seenAt: T0.AddDays(9))], source: source));
+
+        Assert.Equal(0, run.StationVersionsCreated);
+        Assert.Equal(1, run.StationsRejected);
+        await using var db = database.CreateContext();
+        Assert.Equal(
+            RejectionReasons.MetadataInsideKnownPeriod,
+            await db.IngestionRejections.Where(r => r.IngestionRunId == run.Id).Select(r => r.Reason).SingleAsync());
+        var version = await db.StationVersions.SingleAsync(v => v.Station.SourceId == "in-between-unbounded");
+        Assert.Equal(20, version.Capacity);
+        Assert.Null(version.ValidFrom);
+        Assert.Null(version.ValidTo);
+    }
+
+    [Fact]
+    public async Task A_change_inside_a_closed_version_lasts_until_the_end_of_its_period()
+    {
+        database.RequireAvailable();
+        var source = Source("split-period");
+        var day1 = T0;
+        var day10 = T0.AddDays(9);
+        var day11 = T0.AddDays(10);
+        var day20 = T0.AddDays(19);
+        await IngestAsync(Batch([Station("s1", capacity: 20, seenAt: day1), Station("s1", capacity: 30, seenAt: day20)], source: source));
+
+        var run = await IngestAsync(Batch([Station("s1", capacity: 25, seenAt: day10)], source: source) with
+        {
+            Covers = new CoveredPeriod(day10, day11),
+        });
+
+        Assert.Equal(2, run.StationVersionsCreated);
+        await using var db = database.CreateContext();
+        var versions = await db.StationVersions.Where(v => v.Station.SourceId == "split-period")
+            .OrderBy(v => v.FirstSeenAt).Select(v => new { v.Capacity, v.ValidFrom, v.ValidTo }).ToListAsync();
+        // Entre el día 11 y el 20 sigue lo que ya se sabía (20), no el cambio del día 10.
+        Assert.Equal([20, 25, 20, 30], versions.Select(v => v.Capacity));
+        Assert.Equal(day10, versions[0].ValidTo);
+        Assert.Equal((day10, day11), (versions[1].ValidFrom!.Value, versions[1].ValidTo!.Value));
+        Assert.Equal((day11, day20), (versions[2].ValidFrom!.Value, versions[2].ValidTo!.Value));
+        Assert.Equal(day20, versions[3].ValidFrom);
     }
 
     [Fact]

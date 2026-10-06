@@ -172,18 +172,17 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
             }
 
             var active = current.GetValueOrDefault(ns.SourceStationId) ?? station.Versions.Single(v => v.ValidTo is null);
+            // Lo último que se sabía de la estación: una publicación anterior viene de un periodo
+            // importado fuera de orden.
+            var latestKnown = station.LastSeenAt;
             station.FirstSeenAt = Min(station.FirstSeenAt, ns.SeenAt);
             station.LastSeenAt = Max(station.LastSeenAt, ns.SeenAt);
 
-            if (ns.SeenAt < active.FirstSeenAt)
+            if (ns.SeenAt < active.FirstSeenAt || ns.SeenAt < latestKnown)
             {
-                // Publicación anterior a la versión vigente (importar un periodo antiguo después
-                // de uno reciente): completa la historia en vez de descartarse.
-                if (FillInHistory(station, ns, run, rejections))
-                {
-                    run.StationVersionsCreated++;
-                }
-
+                // Importar un periodo antiguo o intermedio después de uno reciente: completa la
+                // historia en vez de descartarse o de cambiar lo que ya se conocía después.
+                run.StationVersionsCreated += FillInHistory(station, ns, latestKnown, batch.Covers, run, rejections);
                 continue;
             }
 
@@ -227,25 +226,33 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
     }
 
     /// <summary>
-    /// Inserta en la historia una publicación anterior a la versión vigente. Devuelve si creó
-    /// una versión. Solo añade versiones cerradas (con fin), así que no choca con el índice de
-    /// una versión vigente por estación.
+    /// Inserta en la historia una publicación anterior a lo último que se sabía de la estación.
+    /// Devuelve cuántas versiones creó. Solo añade versiones cerradas (con fin), así que no choca
+    /// con el índice de una versión vigente por estación.
     /// </summary>
-    private static bool FillInHistory(
-        Station station, NormalizedStation ns, IngestionRun run, List<RejectedRecord> rejections)
+    private static int FillInHistory(
+        Station station, NormalizedStation ns, DateTimeOffset latestKnown, CoveredPeriod? covers,
+        IngestionRun run, List<RejectedRecord> rejections)
     {
         var known = VersionAt(station, ns.SeenAt);
         if (known is null)
         {
             rejections.Add(new(RecordKinds.Station, ns.SourceStationId, RejectionReasons.MetadataOlderThanCurrent,
                 $"ninguna versión cubre {ns.SeenAt:O}"));
-            return false;
+            return 0;
         }
 
-        // Ya se sabía: reimportar un periodo conocido no crea nada.
+        // Ya se sabía: reimportar un periodo conocido no crea nada. Si es anterior a la primera
+        // vez que se vio, ahora se sabe desde antes: lo que llegue después, aún más antiguo y
+        // distinto, acabará aquí y no donde se vio por primera vez.
         if (SameAttributes(known, ns))
         {
-            return false;
+            if (ns.SeenAt < known.FirstSeenAt)
+            {
+                known.FirstSeenAt = ns.SeenAt;
+            }
+
+            return 0;
         }
 
         if (ns.SeenAt < known.FirstSeenAt && known.ValidFrom is null)
@@ -256,22 +263,83 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
             older.ValidTo = known.FirstSeenAt;
             known.ValidFrom = known.FirstSeenAt;
             station.Versions.Add(older);
-            return true;
+            return 1;
         }
 
-        if (ns.SeenAt > known.FirstSeenAt && known.ValidTo is not null)
+        if (ns.SeenAt > known.FirstSeenAt)
         {
-            // Un cambio dentro de un tramo ya conocido: se parte en dos.
-            var middle = NewVersion(ns, validFrom: ns.SeenAt, run);
-            middle.ValidTo = known.ValidTo;
-            known.ValidTo = ns.SeenAt;
-            station.Versions.Add(middle);
-            return true;
+            return SplitKnownSpan(station, known, ns, latestKnown, covers, run, rejections);
         }
 
         rejections.Add(new(RecordKinds.Station, ns.SourceStationId, RejectionReasons.DuplicateInBatch,
             $"dos versiones distintas publicadas en {ns.SeenAt:O}"));
-        return false;
+        return 0;
+    }
+
+    /// <summary>
+    /// Un cambio dentro de un tramo ya conocido, publicado en un periodo que no se había
+    /// importado. Dura hasta el final de ese periodo (lo que el lote dice cubrir); después siguen
+    /// los atributos de antes, que se vieron más tarde. Un lote sin periodo deja el cambio hasta
+    /// el final del tramo si está cerrado; dentro de la versión vigente no se puede acotar y se
+    /// rechaza en vez de cambiar lo que ya se conocía después.
+    /// </summary>
+    private static int SplitKnownSpan(
+        Station station, StationVersion known, NormalizedStation ns, DateTimeOffset latestKnown,
+        CoveredPeriod? covers, IngestionRun run, List<RejectedRecord> rejections)
+    {
+        var periodEnd = covers is { } c && c.To > ns.SeenAt ? c.To : (DateTimeOffset?)null;
+
+        if (known.ValidTo is { } spanEnd)
+        {
+            var end = periodEnd is { } p && p < spanEnd ? p : spanEnd;
+            var middle = NewVersion(ns, validFrom: ns.SeenAt, run);
+            middle.ValidTo = end;
+            known.ValidTo = ns.SeenAt;
+            station.Versions.Add(middle);
+            if (end == spanEnd)
+            {
+                return 1;
+            }
+
+            station.Versions.Add(CopyOf(known, validFrom: end, validTo: spanEnd, firstSeenAt: end));
+            return 2;
+        }
+
+        // La vigente: se sabe que seguía así en latestKnown, después del periodo importado.
+        if (periodEnd is not { } resume || resume > latestKnown)
+        {
+            rejections.Add(new(RecordKinds.Station, ns.SourceStationId, RejectionReasons.MetadataInsideKnownPeriod,
+                $"cambio en {ns.SeenAt:O} dentro de la versión vigente, sin un periodo que lo acote"));
+            return 0;
+        }
+
+        var before = CopyOf(known, validFrom: known.ValidFrom, validTo: ns.SeenAt, firstSeenAt: known.FirstSeenAt);
+        var change = NewVersion(ns, validFrom: ns.SeenAt, run);
+        change.ValidTo = resume;
+        known.ValidFrom = resume;
+        known.FirstSeenAt = resume;
+        station.Versions.Add(before);
+        station.Versions.Add(change);
+        return 2;
+    }
+
+    /// <summary>Los mismos atributos en otro tramo, con la ingesta que los trajo.</summary>
+    private static StationVersion CopyOf(
+        StationVersion v, DateTimeOffset? validFrom, DateTimeOffset validTo, DateTimeOffset firstSeenAt)
+    {
+        return new()
+        {
+            Name = v.Name,
+            Address = v.Address,
+            District = v.District,
+            Neighbourhood = v.Neighbourhood,
+            Location = Geo.Point(v.Location.X, v.Location.Y),
+            Capacity = v.Capacity,
+            ValidFrom = validFrom,
+            ValidTo = validTo,
+            FirstSeenAt = firstSeenAt,
+            IngestionRunId = v.IngestionRunId,
+        };
     }
 
     private sealed record ObservationRow(long StationId, NormalizedObservation Observation, string Flags);

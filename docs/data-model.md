@@ -41,10 +41,12 @@ hacia atrás. Si se consulta un instante anterior a su publicación, la API lo m
 `metadataAssumed`. Un lote puede traer varias publicaciones de la misma estación (el histórico
 repite los atributos en cada instantánea): se reducen a los momentos en que cambian y cada
 cambio abre una versión. Al reimportar un periodo ya conocido, una publicación antigua que
-coincide con la versión de su momento no es nueva. Si se importa después un periodo anterior o
+coincide con la versión de su momento no es nueva; si es anterior a la primera vez que se vio
+esa versión, la adelanta (`first_seen_at`). Si se importa después un periodo anterior o
 intermedio, completa la historia: la versión que se suponía vigente hacia atrás pasa a empezar
-cuando se publicó, o el tramo ya conocido se parte en dos. Lo que ya estaba observado no
-cambia.
+cuando se publicó por primera vez, o el tramo ya conocido se parte. Un cambio dentro de un tramo
+conocido dura hasta el final del periodo importado y después siguen los atributos que ya se
+conocían. Lo que ya estaba observado no cambia.
 
 **Estado en un instante** (ADR 0005). Última observación con `observed_at ≤ T`. Si su antigüedad
 supera la tolerancia de la fuente (30 min en la demo, 15 min en el histórico de Bicing; límite
@@ -72,6 +74,7 @@ muestra fuera de servicio.
 | `duplicate_in_batch` | La misma estación dos veces en un lote. |
 | `unknown_station` | Observación de una estación que no está en la fuente. |
 | `metadata_older_than_current` | Publicación antigua que ninguna versión cubre. No debería darse: la primera versión se asume vigente hacia atrás. |
+| `metadata_inside_known_period` | Cambio de atributos dentro de la versión vigente, de un lote que no dice qué periodo cubre: no se sabe cuándo volvió a lo conocido. |
 
 **Marcas de calidad.** No se corrigen los datos; se señalan. `counts_exceed_capacity`: bicis y
 anclajes (libres y deshabilitados) suman más que la capacidad publicada.

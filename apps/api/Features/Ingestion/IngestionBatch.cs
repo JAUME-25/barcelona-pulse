@@ -91,6 +91,7 @@ public static class RejectionReasons
     public const string DuplicateInBatch = "duplicate_in_batch";
     public const string UnknownStation = "unknown_station";
     public const string MetadataOlderThanCurrent = "metadata_older_than_current";
+    public const string MetadataInsideKnownPeriod = "metadata_inside_known_period";
 }
 
 /// <summary>Marcas de calidad de una observación aceptada. No se corrigen los datos: se señalan.</summary>
