@@ -47,6 +47,10 @@ npm --prefix apps/web run test:e2e                                 # humo con Pl
 
 En este equipo no hay SDK de .NET instalado: todo lo de .NET va por el contenedor `sdk`.
 
+Producción: `pulse.jaumeperez.com` en el VPS de Forge, con `infra/compose.prod.yml` y
+`infra/deploy.sh` detrás del nginx de Forge (`docs/despliegue.md`). Al servidor no se entra:
+Jaume ejecuta los comandos en Forge y pega la salida.
+
 ## Trampas conocidas
 
 - `ExecuteSqlRaw` trata el SQL como cadena de formato: nada de llaves literales (`'{}'`); usa
@@ -88,6 +92,12 @@ En este equipo no hay SDK de .NET instalado: todo lo de .NET va por el contenedo
   `fullPage`: en páginas largas Chromium deja el mapa en negro.
 - La cobertura (ADR 0013) redondea las superficies al metro cuadrado: sin eso, una estación en
   zona ya cubierta «ganaba» 1e-8 m². «Sin cambio» en la web es ganar y perder 0 exactos.
+- `infra/compose.prod.yml` se llama `barcelona-pulse`, como el entorno de desarrollo: para
+  ensayarlo en local, `-p bp-prodtest` y otro `API_PORT`, o recrearía los contenedores de
+  desarrollo. Y `infra/deploy.sh` no se ejecuta en Windows: su `npm ci` en un contenedor deja
+  binarios de Linux en `node_modules`.
+- Detrás de nginx, el límite por IP depende de `ForwardedHeaders:KnownNetworks`: sin él, todas
+  las visitas comparten los 120 por minuto de la IP del proxy.
 - SharpCompress 1.0.0: `SevenZipArchive.Open(...)` (la documentación de `master` dice
   `OpenArchive`) y no escribe 7z. Los fixtures del histórico se generan con
   `node scripts/make-bicing-archive-fixtures.mjs` usando bsdtar.

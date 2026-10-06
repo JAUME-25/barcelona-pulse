@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Despliegue en el servidor, desde la raíz del repositorio y después de `git pull` (en Forge, el
+# script de despliegue del sitio hace el pull y luego `bash infra/deploy.sh`). Necesita Docker y
+# el .env de producción (docs/despliegue.md).
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+# La web, con el mismo Node que la CI y sin instalarlo en el servidor. Se compila aparte y se
+# cambia de golpe: nginx no sirve nunca una carpeta a medias.
+docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -e npm_config_cache=/tmp/npm-cache \
+  -v "$PWD:/src" -w /src/apps/web node:24-slim \
+  sh -c "npm ci --no-audit --no-fund && npm run build -- --outDir dist-next --emptyOutDir"
+rm -rf apps/web/dist-previous
+if [ -d apps/web/dist ]; then mv apps/web/dist apps/web/dist-previous; fi
+mv apps/web/dist-next apps/web/dist
+rm -rf apps/web/dist-previous
+
+# Base de datos, migraciones y API: reconstruye la imagen si cambió el código y reinicia lo que
+# haga falta.
+docker compose -f infra/compose.prod.yml --env-file .env up -d --build --remove-orphans
+
+# La API tiene que responder con la base de datos lista; si no, el despliegue falla.
+for attempt in $(seq 1 30); do
+  if curl -fsS http://127.0.0.1:5080/health/ready > /dev/null; then
+    echo "API lista."
+    break
+  fi
+  if [ "$attempt" -eq 30 ]; then
+    echo "La API no responde en /health/ready." >&2
+    docker compose -f infra/compose.prod.yml --env-file .env logs --tail 50 api >&2
+    exit 1
+  fi
+  sleep 2
+done
+
+# Imágenes y capas de compilación que ya no se usan.
+docker image prune -f > /dev/null

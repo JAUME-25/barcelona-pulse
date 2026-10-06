@@ -1,0 +1,78 @@
+name: barcelona-pulse
+
+# Producción en un servidor con nginx delante (el VPS de Forge, docs/despliegue.md): PostGIS y la
+# API en Docker, solo accesibles desde el propio servidor; nginx sirve la web y reenvía /api.
+# Desde la raíz del repositorio, con el .env de producción:
+#   docker compose -f infra/compose.prod.yml --env-file .env up -d --build
+# Límites de memoria y CPU para no quitar sitio a lo que ya corre en el servidor.
+
+x-db-connection: &db-connection "Host=db;Port=5432;Database=${POSTGRES_DB:?Falta .env};Username=${POSTGRES_USER:?Falta .env};Password=${POSTGRES_PASSWORD:?Falta .env};GSS Encryption Mode=Disable"
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-api: &api
+  build:
+    context: ..
+    dockerfile: apps/api/Dockerfile
+  image: barcelona-pulse-api:prod
+  environment:
+    ASPNETCORE_ENVIRONMENT: Production
+    ConnectionStrings__Postgres: *db-connection
+    # nginx llega a la API desde esta red: solo de ella se cree X-Forwarded-For (la IP del
+    # cliente, para el límite de peticiones por IP).
+    ForwardedHeaders__KnownNetworks: 172.30.30.0/24
+  logging: *logging
+
+services:
+  db:
+    image: postgis/postgis:18-3.6@sha256:60f6ad1d21ea86a67d47780b9a0d1e1d200500f62b19293fa834d0dea80b8677
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+    mem_limit: 768m
+    cpus: 1.5
+    logging: *logging
+
+  # Aplica las migraciones pendientes y termina. La API espera a que acabe bien.
+  migrate:
+    <<: *api
+    command: ["migrate"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    <<: *api
+    ports:
+      - "127.0.0.1:${API_PORT:-5080}:8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    # La API usa unos 200 MB; una importación de un mes (docker compose run api ingest …) usa la
+    # misma configuración y llega a unos 450 MB.
+    mem_limit: 768m
+    cpus: 1.5
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.30.30.0/24
+
+volumes:
+  db-data:

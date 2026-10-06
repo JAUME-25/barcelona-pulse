@@ -101,10 +101,12 @@ honesta de lo hecho.
    de 2026 (decidido por Jaume el 6-10-2026). Mayo comprobado en local: 28 días sin rechazos,
    4 229 268 observaciones, 549 estaciones con dato en el 98,1 % de los pasos de 5 min de
    media; 20 de 8 064 pasos por debajo del 90 % (miércoles 6, 13, 20 y 27, unos minutos) y
-   ninguno vacío; unos 0,83 GB en la base. Servidor: Jaume prefiere un VPS aparte si cuesta
-   parecido; el CX23 no está disponible y el primero con 2 GB es el CPX12 (14,51 €/mes con
-   IVA). Si sale caro, el VPS de Forge, comprobando antes memoria y disco. La web dice
-   «Datos históricos · mayo de 2026» y la fecha completa del instante.
+   ninguno vacío; unos 0,83 GB en la base. Servidor: el VPS de Forge (un VPS aparte con memoria
+   suficiente costaba el doble; recursos comprobados: 3 GB disponibles y 28 GB de disco). La
+   web dice «Datos históricos · mayo de 2026» y la fecha completa del instante. Preparado y
+   ensayado en local: `infra/compose.prod.yml`, `infra/nginx/pulse.conf`, `infra/deploy.sh`,
+   la IP del cliente detrás del proxy para el límite por IP y la comprobación
+   `e2e/despliegue.capture.ts`. Falta hacerlo en el servidor con Jaume (`docs/despliegue.md`).
 3. **Pendiente.** Límites visibles en la propia web: de qué fecha son los datos, que no es tiempo
    real, qué mide y qué no la cobertura, de dónde sale cada cosa.
 4. **Pendiente.** Caso técnico para el portfolio: qué problema resuelve, decisiones, dificultades
@@ -130,8 +132,6 @@ honesta de lo hecho.
 - Mapa: al moverse en móvil, explorar y reproducir van a 48 fps y experimentar a 60. La
   diferencia probable son los números dentro de los marcadores (experimentar no los lleva y sus
   marcadores son más pequeños): comprobarlo antes de cambiar nada (p. ej., números desde z14).
-- API: cabeceras reenviadas (`ForwardedHeaders`) para el límite por IP detrás de un proxy
-  (antes de desplegar).
 - Índice no único en `station_versions(station_id)` si las consultas de detalle crecen.
 - Fuentes: aclarar condiciones del GBFS del operador antes de cualquier uso.
 

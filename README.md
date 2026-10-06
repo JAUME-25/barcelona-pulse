@@ -87,6 +87,8 @@ escenario: `&modo=experimentar&radio=300&area=barcelona&nuevas=2.166,41.3635&qui
 
 ## Operación
 
+- **Despliegue:** en el VPS de Forge, con la API y PostGIS en Docker detrás de nginx
+  (`infra/`). Pasos, recursos y cómo quitarlo: [docs/despliegue.md](docs/despliegue.md).
 - **Migraciones:** `docker compose run --rm migrate`.
 - **Nueva migración:**
   `docker compose run --rm sdk sh -c "dotnet tool restore && dotnet ef migrations add NombreCambio --project apps/api/BarcelonaPulse.Api.csproj --output-dir Infrastructure/Migrations"`.
@@ -165,4 +167,5 @@ La licencia MIT no cubre los datos ni los recursos de terceros, que mantienen su
 - [Fuentes de datos](docs/data-sources.md)
 - [Modelo de datos](docs/data-model.md)
 - [Hoja de ruta y backlog](docs/roadmap.md)
+- [Despliegue](docs/despliegue.md)
 - [Decisiones de arquitectura (ADR)](docs/adr/)
