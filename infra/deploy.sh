@@ -19,9 +19,10 @@ rm -rf apps/web/dist-previous
 # haga falta.
 docker compose -f infra/compose.prod.yml --env-file .env up -d --build --remove-orphans
 
-# La API tiene que responder con la base de datos lista; si no, el despliegue falla.
+# La API tiene que responder con la base de datos lista; si no, el despliegue falla. Los primeros
+# intentos pueden llegar mientras arranca: sin mensajes hasta el veredicto.
 for attempt in $(seq 1 30); do
-  if curl -fsS http://127.0.0.1:5080/health/ready > /dev/null; then
+  if curl -fs http://127.0.0.1:5080/health/ready > /dev/null 2>&1; then
     echo "API lista."
     break
   fi
