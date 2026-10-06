@@ -35,7 +35,8 @@ async function loadFrames(
 /**
  * Estado de las estaciones al reproducir, a partir de fotogramas: una petición por hora del
  * día (12 pasos de 5 min) en vez de una por paso, y la hora siguiente pedida por adelantado.
- * Mientras llega una hora se ofrece en `previous` el último paso anterior ya cargado.
+ * Mientras llega una hora se ofrece en `previous` el último paso anterior ya cargado, si está
+ * dentro de la tolerancia de la fuente; si la hora ha fallado, nada.
  */
 export function useFrames(sourceId: string | null, at: string | undefined) {
   const [entries, setEntries] = useState<ReadonlyMap<string, Entry>>(() => new Map());
@@ -117,14 +118,15 @@ export function useFrames(sourceId: string | null, at: string | undefined) {
         ? { status: 'ready', data: response }
         : { status: 'loading' };
 
+  const failed = current?.status === 'error';
   const previous = useMemo(() => {
-    if (response !== undefined || sourceId === null || at === undefined) return undefined;
+    if (response !== undefined || failed || sourceId === null || at === undefined) return undefined;
     const loaded: FramesResponse[] = [];
     for (const [key, entry] of entries) {
       if (key.startsWith(`${sourceId}|`) && entry.status === 'ready') loaded.push(entry.data);
     }
     return latestFrameBefore(loaded, at);
-  }, [response, entries, sourceId, at]);
+  }, [response, failed, entries, sourceId, at]);
 
   const retry = useCallback(() => {
     if (sourceId === null || hour === null) return;

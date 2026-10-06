@@ -46,7 +46,11 @@ export function stationsAt(frames: FramesResponse, at: string): StationsResponse
   };
 }
 
-/** El último paso anterior o igual a `at` entre las ventanas ya cargadas. */
+/**
+ * El último paso anterior o igual a `at` entre las ventanas ya cargadas, mientras llega el de
+ * `at`. Solo si está dentro de la tolerancia de la fuente: uno más viejo sería el estado de otro
+ * momento con la hora de este.
+ */
 export function latestFrameBefore(
   windows: Iterable<FramesResponse>,
   at: string,
@@ -60,5 +64,6 @@ export function latestFrameBefore(
         best = { frames, at: frame.at, time };
     }
   }
-  return best === undefined ? undefined : stationsAt(best.frames, best.at);
+  if (best === undefined || t - best.time > best.frames.toleranceMinutes * 60_000) return undefined;
+  return stationsAt(best.frames, best.at);
 }

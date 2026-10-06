@@ -530,6 +530,68 @@ describe('App', () => {
     expect(new URLSearchParams(window.location.search).get('hora')).toBe('00:00');
   });
 
+  it('al saltar a una hora que no ha llegado no enseña la de antes; si falla, lo dice y reintenta', async () => {
+    const far = '2026-03-10T22:00:00.000Z';
+    let farAttempts = 0;
+    let answerFar: (response: Response) => void = () => undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: Request) => {
+        const url = new URL(input.url);
+        if (url.pathname === '/api/sources') return Promise.resolve(json([demoSource]));
+        if (url.pathname === '/api/sources/demo/timeline')
+          return Promise.resolve(json(timelineFor(url)));
+        if (url.pathname === '/api/sources/demo/frames') {
+          if (url.searchParams.get('from') !== far) return Promise.resolve(json(framesFor(url)));
+          farAttempts += 1;
+          if (farAttempts > 1) return Promise.resolve(json(framesFor(url)));
+          return new Promise<Response>((resolve) => {
+            answerFar = resolve;
+          });
+        }
+        return Promise.resolve(json({ title: 'Petición inesperada' }, 500));
+      }),
+    );
+    const user = userEvent.setup();
+    window.history.replaceState(null, '', '/?fuente=demo&modo=reproducir&hora=08:30');
+    renderApp();
+
+    const slider = await screen.findByRole('slider', { name: 'Momento del día' });
+    await waitFor(() => {
+      expect(
+        within(screen.getByRole('button', { name: /^Pl\. de Catalunya/ })).getByText('30'),
+      ).toBeTruthy();
+    });
+
+    // A las 23:55 (las 22:55 UTC): mientras llega esa hora no se ven las 08:55 con otra hora.
+    slider.focus();
+    await user.keyboard('{End}');
+    expect(slider.getAttribute('aria-valuetext')).toMatch(/^23:55,/);
+    await waitFor(() => {
+      expect(screen.getByText('Cargando el estado de las estaciones…')).toBeTruthy();
+    });
+    expect(screen.queryByRole('button', { name: /Pl\. de Catalunya/ })).toBeNull();
+
+    // Si falla, el mapa sigue vacío y lo dice con un «Reintentar» a mano.
+    await waitFor(() => {
+      expect(farAttempts).toBe(1);
+    });
+    answerFar(json({ title: 'Error' }, 500));
+    const failed = (
+      await screen.findByText('No se ha podido cargar el estado de las estaciones en este momento.')
+    ).closest('[role="alert"]');
+    expect(failed).not.toBeNull();
+    expect(screen.queryByRole('button', { name: /Pl\. de Catalunya/ })).toBeNull();
+
+    await user.click(within(failed as HTMLElement).getByRole('button', { name: 'Reintentar' }));
+    await waitFor(() => {
+      expect(
+        within(screen.getByRole('button', { name: /^Pl\. de Catalunya/ })).getByText('55'),
+      ).toBeTruthy();
+    });
+    expect(farAttempts).toBe(2);
+  });
+
   it('con días importados en dos semanas, se pasa de una a otra con las flechas', async () => {
     const twoWeeks = { ...observedSource, days: ['2026-08-21', '2026-08-24'] };
     mockApi((path, url) => {

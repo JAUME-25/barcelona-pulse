@@ -54,17 +54,20 @@ function availableDays(source: SourceSummary | undefined): string[] {
   return period === null ? [] : lastLocalDays(period.from, period.to, MAX_DAYS);
 }
 
+/** Cómo va el estado de las estaciones del paso actual. */
+export type StationsProgress = 'loading' | 'ready' | 'error';
+
 /**
  * Estado de la reproducción de un día de una fuente: días disponibles, semana del día elegido,
  * línea temporal del día (cada 5 min) y de la semana (cada hora), paso actual y reproducción
- * con pausa. Sin fuente no pide nada. Si `stalled` se activa (no llega el estado de las
- * estaciones), la reproducción se para en vez de seguir con el mapa congelado.
+ * con pausa. Sin fuente no pide nada. Mientras llega el estado de las estaciones del paso
+ * actual, la reproducción espera: el reloj no se adelanta al mapa. Si no llega, se para.
  */
 export function useReplay(
   source: SourceSummary | undefined,
   initialDay: string | null,
   initialTime: string | null,
-  stalled?: { readonly current: boolean },
+  stations?: { readonly current: StationsProgress },
 ) {
   const days = useMemo(() => availableDays(source), [source]);
   const [chosenDay, setChosenDay] = useState(initialDay);
@@ -110,16 +113,17 @@ export function useReplay(
     if (!playing || count === 0) return;
     const timer = window.setInterval(() => {
       const current = indexRef.current;
-      if (stalled?.current === true || current >= count - 1) {
+      if (stations?.current === 'error' || current >= count - 1) {
         setPlaying(false);
         return;
       }
+      if (stations?.current === 'loading') return;
       setChosenIndex(current + 1);
     }, SPEED_MS[speed]);
     return () => {
       window.clearInterval(timer);
     };
-  }, [playing, speed, count, stalled]);
+  }, [playing, speed, count, stations]);
 
   // La URL guarda el día y la hora al parar, no en cada paso de la reproducción.
   const pausedClock = !playing && point !== undefined ? localClock(point.at) : null;

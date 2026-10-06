@@ -433,7 +433,33 @@
   stroke-width: 0.4;
 }
 
+/* Sin el estado de las estaciones del paso, el mapa se queda vacío y lo dice: en móvil, bajo el
+   sello y con su ancho, sin tapar los controles. Doble clase: StationMap.css llega después,
+   con el mapa. */
+.map-message.map-message--replay {
+  top: 70px;
+  left: 10px;
+  max-width: calc(100% - 80px);
+  transform: none;
+}
+
+.map-message--replay p {
+  margin: 0;
+}
+
+.map-message--replay .button {
+  margin-top: 8px;
+}
+
 @media (min-width: 768px) {
+  /* Centrado en la parte del mapa que no tapa el panel. */
+  .map-message.map-message--replay {
+    top: 16px;
+    left: calc(50% + 226px);
+    max-width: min(90%, 460px);
+    transform: translateX(-50%);
+  }
+
   .replay-deck {
     position: absolute;
     right: 16px;

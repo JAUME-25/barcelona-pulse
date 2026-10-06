@@ -9,11 +9,11 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { StationItem } from '../api/client';
+import type { SourceSummary, StationItem, StationsResponse } from '../api/client';
 import { ReplayDeck } from '../features/history/ReplayDeck';
 import { ModeSwitch, type Mode } from '../features/history/ReplayParts';
 import { useFrames } from '../features/history/useFrames';
-import { useReplay } from '../features/history/useReplay';
+import { useReplay, type StationsProgress } from '../features/history/useReplay';
 import { LimitsSheet } from '../features/limits/LimitsSheet';
 import { MapStamp } from '../features/limits/MapStamp';
 import { hasChanges } from '../features/scenarios/scenario';
@@ -115,6 +115,43 @@ function MapStatusMessage({ status }: { status: MapStatus }) {
   }
 }
 
+/**
+ * Al reproducir, sin el estado de las estaciones del paso (llega o ha fallado): el mapa queda
+ * vacío en vez de enseñar otro momento, y lo dice donde se mira.
+ */
+function ReplayStationsMessage({ failed, onRetry }: { failed: boolean; onRetry: () => void }) {
+  const m = t().replay;
+  return failed ? (
+    <div className="map-message map-message--replay" role="alert">
+      <p>{m.stationsFailed}</p>
+      <button type="button" className="button" onClick={onRetry}>
+        {t().app.retry}
+      </button>
+    </div>
+  ) : (
+    <p className="map-message map-message--replay" role="status">
+      {m.stationsLoading}
+    </p>
+  );
+}
+
+/**
+ * Al reproducir, el aviso de procedencia no enseña el instante (lo hace el reproductor): basta
+ * la fuente. Así sigue a la vista mientras llega un paso y la cabecera no salta.
+ */
+function replayNotice(source: SourceSummary): StationsResponse {
+  const { id, kind, name, attribution, license, url } = source;
+  return {
+    source: { id, kind, name, attribution, license, url },
+    at: source.period?.to ?? '',
+    atBasis: 'requested',
+    toleranceMinutes: source.toleranceMinutes,
+    count: 0,
+    truncated: false,
+    stations: [],
+  };
+}
+
 export function App() {
   const { state: sourcesState, retry: retrySources } = useSources();
   // La fuente también va en la URL (?fuente=demo): enlaces compartibles y pruebas deterministas.
@@ -139,13 +176,13 @@ export function App() {
   const replaying = mode === 'replay' && (source?.period ?? null) !== null;
   const experimenting = mode === 'experiment' && sourceId !== null;
   const shownMode: Mode = replaying ? 'replay' : experimenting ? 'experiment' : 'explore';
-  // Si no llega el estado de las estaciones, la reproducción se para.
-  const stationsFailedRef = useRef(false);
+  // Mientras llega el estado de las estaciones, la reproducción espera; si no llega, se para.
+  const stationsProgressRef = useRef<StationsProgress>('loading');
   const replay = useReplay(
     replaying ? source : undefined,
     initialMoment.day,
     initialMoment.time,
-    stationsFailedRef,
+    stationsProgressRef,
   );
 
   // Al explorar, un instante con /api/stations; al reproducir, fotogramas de una hora.
@@ -157,7 +194,7 @@ export function App() {
     retry: retryStations,
   } = replaying ? framed : explored;
   useEffect(() => {
-    stationsFailedRef.current = stationsState.status === 'error';
+    stationsProgressRef.current = stationsState.status;
   });
 
   const [query, setQuery] = useState('');
@@ -175,13 +212,14 @@ export function App() {
   const bodyRef = useRef<HTMLElement>(null);
 
   // Al reproducir, mientras llega el momento siguiente se sigue viendo el anterior de la misma
-  // fuente: el mapa no parpadea en cada paso.
+  // fuente si está dentro de su tolerancia (useFrames): el mapa no parpadea en cada paso.
   const response =
     stationsState.status === 'ready'
       ? stationsState.data
       : replaying && previousStations?.source.id === sourceId
         ? previousStations
         : null;
+  const notice = replaying && source !== undefined ? replayNotice(source) : response;
   const all = response?.stations ?? NO_STATIONS;
   const counts = useMemo(() => countByAvailability(all), [all]);
   const filtered = useMemo(() => filterStations(all, query, visible), [all, query, visible]);
@@ -451,12 +489,12 @@ export function App() {
             </select>
           </label>
         )}
-        {response !== null && (
+        {notice !== null && (
           <SourceNotice
-            response={response}
+            response={notice}
             compact={replaying || experimenting}
             months={source === undefined ? null : formatMonths(source.days)}
-            onLimits={response.source.kind === 'observed' ? openSheet : undefined}
+            onLimits={notice.source.kind === 'observed' ? openSheet : undefined}
           />
         )}
       </header>
@@ -479,11 +517,17 @@ export function App() {
           />
         </Suspense>
         <MapStatusMessage status={mapStatus} />
+        {replaying && response === null && replay.point !== undefined && !mapUnavailable && (
+          <ReplayStationsMessage
+            failed={stationsState.status === 'error'}
+            onRetry={retryStations}
+          />
+        )}
         {/* Sello de qué es y de cuándo: solo en móvil (CSS), donde el aviso queda arriba. */}
-        {response !== null && !mapUnavailable && (
+        {notice !== null && !mapUnavailable && (
           <MapStamp
-            kind={response.source.kind}
-            at={replaying ? replay.point?.at : response.at}
+            kind={notice.source.kind}
+            at={replaying ? replay.point?.at : notice.at}
             experiment={experimenting}
             hypothetical={hasChanges(scenario.scenario)}
           />

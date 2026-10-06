@@ -64,11 +64,13 @@ describe('fotogramas', () => {
     expect(stationsAt(frames, '2026-03-10T06:02:00Z')).toBeUndefined();
   });
 
-  it('mientras llega una hora, el último paso anterior ya cargado', () => {
+  it('mientras llega una hora, el último paso anterior ya cargado, dentro de la tolerancia', () => {
     expect(latestFrameBefore([frames], '2026-03-10T06:30:00Z')?.at).toBe(
       '2026-03-10T06:05:00+00:00',
     );
     expect(latestFrameBefore([frames], '2026-03-10T05:55:00Z')).toBeUndefined();
+    // 35 minutos después del último paso cargado (tolerancia de 30): sería otro momento.
+    expect(latestFrameBefore([frames], '2026-03-10T06:40:00Z')).toBeUndefined();
   });
 
   it('las ventanas son horas UTC, que coinciden con las de Barcelona', () => {
