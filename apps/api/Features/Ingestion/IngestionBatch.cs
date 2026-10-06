@@ -7,6 +7,19 @@ namespace BarcelonaPulse.Api.Features.Ingestion;
 /// Contrato interno normalizado. Cada adaptador traduce el formato de su proveedor a
 /// esto; el resto de la aplicación no conoce el esquema de ningún proveedor.
 /// </summary>
+/// <param name="Source">Fuente a la que pertenece la entrada.</param>
+/// <param name="Adapter">Adaptador que la ha leído.</param>
+/// <param name="AdapterVersion">Versión del adaptador.</param>
+/// <param name="InputRef">Referencia legible a la entrada.</param>
+/// <param name="InputSha256">Huella de la entrada, si se conoce.</param>
+/// <param name="Stations">Estaciones con sus atributos publicados.</param>
+/// <param name="Observations">Observaciones normalizadas.</param>
+/// <param name="Rejected">Registros que el adaptador no pudo traducir, con su motivo.</param>
+/// <param name="Covers">
+/// Periodo [desde, hasta) que dice cubrir la entrada: el día pedido del histórico, el del
+/// fixture. De ahí salen los días que se pueden reproducir, y no del mínimo y el máximo de las
+/// observaciones, que una estación con un dato viejo estira (ADR 0011).
+/// </param>
 public sealed record IngestionBatch(
     SourceDescriptor Source,
     string Adapter,
@@ -15,7 +28,11 @@ public sealed record IngestionBatch(
     string? InputSha256,
     IReadOnlyList<NormalizedStation> Stations,
     IReadOnlyList<NormalizedObservation> Observations,
-    IReadOnlyList<RejectedRecord> Rejected);
+    IReadOnlyList<RejectedRecord> Rejected,
+    CoveredPeriod? Covers = null);
+
+/// <summary>Periodo [desde, hasta) en instantes UTC.</summary>
+public sealed record CoveredPeriod(DateTimeOffset From, DateTimeOffset To);
 
 public sealed record SourceDescriptor(
     string Id,

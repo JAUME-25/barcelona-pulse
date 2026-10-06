@@ -50,11 +50,11 @@ Actualizado el 5 de octubre de 2026.
    de componentes y de humo en escritorio y móvil).
 5. **Por decidir.** Retención: un año entero serían ~57 millones de filas y ~11 GB. Decidir qué
    periodos se guardan antes de importar más de unas semanas.
-6. **Pendiente.** Días que se pueden reproducir. El periodo de una fuente va de su primera a su
-   última observación, y una estación que publica el mismo `last_reported` desde el 12-6-2025
-   lo estira hasta entonces (el dato es correcto: por eso sale «sin dato reciente»). Los días
-   reproducibles deben salir de lo importado (la ventana de cada ingesta), no del mínimo y el
-   máximo. Mientras, la web ofrece los últimos 7 días del periodo.
+6. **Hecho.** Días que se pueden reproducir: salen del periodo que cubre cada ingesta terminada
+   (`days` en `/api/sources`, ADR 0011), no del mínimo y el máximo de las observaciones, que
+   una estación con un `last_reported` de 2025 estiraba. La web enseña la semana del día
+   elegido, con los días sin datos a la vista, y flechas si hay más semanas. En local hay dos
+   semanas importadas (17 a 30 de agosto de 2026).
 7. **Hecho.** Fotogramas: `GET /api/sources/{id}/frames`, 12 pasos por petición con la misma
    regla que el mapa (ADR 0010). Un día entero a la velocidad más alta, con todos los pasos de
    5 min: 43,7 s, 23 peticiones y ningún 429.

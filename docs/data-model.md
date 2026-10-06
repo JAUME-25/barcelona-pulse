@@ -11,7 +11,7 @@ Esquema en `apps/api/Infrastructure/Migrations`.
 | `stations` | Identidad estable de una estación dentro de su fuente. | `(source_id, source_station_id)` |
 | `station_versions` | Nombre, dirección, distrito, barrio, ubicación (`geometry(Point,4326)`) y capacidad durante un intervalo. | una vigente por estación |
 | `station_observations` | Estado publicado en un instante: estado, bicis (total, mecánicas, eléctricas), anclajes libres, deshabilitados, si presta y si admite devoluciones, y marcas de calidad. | `(station_id, observed_at)` |
-| `ingestion_runs` | Cada ingesta: fuente, adaptador y versión, entrada y sha256, periodo, recuentos (nuevas, duplicadas, en conflicto, rechazadas) y resultado. | |
+| `ingestion_runs` | Cada ingesta: fuente, adaptador y versión, entrada y sha256, periodo observado y periodo que dice cubrir (`covered_from`, `covered_to`), recuentos (nuevas, duplicadas, en conflicto, rechazadas) y resultado. | |
 | `ingestion_rejections` | Registros rechazados con su motivo (hasta 1 000 por ingesta; el total va en `ingestion_runs`). | |
 
 Los escenarios hipotéticos (B4) tendrán sus propias tablas; nunca filas en estas con otra
@@ -76,6 +76,11 @@ muestra fuera de servicio.
 anclajes (libres y deshabilitados) suman más que la capacidad publicada.
 `bike_types_mismatch`: mecánicas más eléctricas no dan el total. Que sumen menos que la
 capacidad es normal y no se marca.
+
+**Días que se pueden reproducir** (ADR 0011). Las fechas de Barcelona que tocan los periodos
+cubiertos por ingestas terminadas: el día pedido en el histórico, de la primera a la última
+observación en el demo. No salen del mínimo y el máximo de las observaciones: una estación que
+repite un `last_reported` de 2025 estiraría el periodo hasta entonces.
 
 **Zona horaria.** Se guarda UTC. La web formatea con `Intl` en `Europe/Madrid`, sea cual sea la
 zona del navegador (la prueba de humo corre con el navegador en Nueva York).

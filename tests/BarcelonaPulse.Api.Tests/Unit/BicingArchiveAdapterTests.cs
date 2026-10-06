@@ -196,4 +196,21 @@ public sealed class LocalDayTests
         Assert.Equal(new DateTimeOffset(2026, 10, 25, 23, 0, 0, TimeSpan.Zero), day.EndUtc);
         Assert.Equal(TimeSpan.FromHours(25), day.Length);
     }
+
+    [Fact]
+    public void A_period_covers_the_barcelona_dates_it_touches()
+    {
+        var day = LocalDay.For(new DateOnly(2026, 10, 25));
+        Assert.Equal([new DateOnly(2026, 10, 25)], LocalDay.DatesIn(day.StartUtc, day.EndUtc));
+
+        // El demo: de 06:00 a 09:00 UTC del 10-3-2026, que en Barcelona sigue siendo ese día.
+        Assert.Equal(
+            [new DateOnly(2026, 3, 10)],
+            LocalDay.DatesIn(new(2026, 3, 10, 6, 0, 0, TimeSpan.Zero), new(2026, 3, 10, 9, 0, 0, TimeSpan.Zero)));
+
+        Assert.Equal(
+            [new DateOnly(2026, 8, 20), new DateOnly(2026, 8, 21)],
+            LocalDay.DatesIn(LocalDay.For(new DateOnly(2026, 8, 20)).StartUtc, LocalDay.For(new DateOnly(2026, 8, 21)).EndUtc));
+        Assert.Empty(LocalDay.DatesIn(day.EndUtc, day.StartUtc));
+    }
 }

@@ -3,7 +3,7 @@ import type { SourceSummary, TimelinePoint } from '../../api/client';
 import { writeParam } from '../../shared/url';
 import { useTimeline, type TimelineRange } from '../stations/useStationData';
 import { byLocalDay } from './series';
-import { addDays, lastLocalDays, localClock, localMidnight } from './time';
+import { addDays, lastLocalDays, localClock, localMidnight, weekDates, weekStart } from './time';
 
 /** Paso de la reproducción de un día: 288 pasos en un día normal. */
 export const DAY_STEP_MINUTES = 5;
@@ -49,10 +49,21 @@ function initialIndex(points: readonly TimelinePoint[], time: string | null): nu
 }
 
 /**
- * Estado de la reproducción de un día de una fuente: días disponibles, línea temporal del día
- * (cada 5 min) y de la semana (cada hora), paso actual y reproducción con pausa.
- * Sin fuente no pide nada. Si `stalled` se activa (no llega el estado de las estaciones), la
- * reproducción se para en vez de seguir con el mapa congelado.
+ * Días que se pueden reproducir: los que cubren las ingestas de la fuente. Una base anterior a
+ * ese dato no los tiene: entonces, los últimos días de su periodo.
+ */
+function availableDays(source: SourceSummary | undefined): string[] {
+  if (source === undefined) return [];
+  if (source.days.length > 0) return source.days;
+  const period = source.period;
+  return period === null ? [] : lastLocalDays(period.from, period.to, MAX_DAYS);
+}
+
+/**
+ * Estado de la reproducción de un día de una fuente: días disponibles, semana del día elegido,
+ * línea temporal del día (cada 5 min) y de la semana (cada hora), paso actual y reproducción
+ * con pausa. Sin fuente no pide nada. Si `stalled` se activa (no llega el estado de las
+ * estaciones), la reproducción se para en vez de seguir con el mapa congelado.
  */
 export function useReplay(
   source: SourceSummary | undefined,
@@ -60,27 +71,24 @@ export function useReplay(
   initialTime: string | null,
   stalled?: { readonly current: boolean },
 ) {
-  const period = source?.period ?? null;
-  const days = useMemo(
-    () => (period === null ? [] : lastLocalDays(period.from, period.to, MAX_DAYS)),
-    [period],
-  );
+  const days = useMemo(() => availableDays(source), [source]);
   const [chosenDay, setChosenDay] = useState(initialDay);
   const day = chosenDay !== null && days.includes(chosenDay) ? chosenDay : (days.at(-1) ?? null);
   const sourceId = source?.id ?? null;
+
+  // La semana (de lunes a domingo) del día elegido, con los días sin datos a la vista.
+  const monday = day === null ? null : weekStart(day);
+  const week = useMemo(() => (monday === null ? [] : weekDates(monday)), [monday]);
+  const previousWeekDay = monday === null ? undefined : days.findLast((d) => d < monday);
+  const nextWeekDay = monday === null ? undefined : days.find((d) => d > addDays(monday, 6));
 
   const dayRange = useMemo(
     () => (day === null ? null : rangeOfDays(day, day, DAY_STEP_MINUTES)),
     [day],
   );
-  const first = days[0];
-  const last = days.at(-1);
   const weekRange = useMemo(
-    () =>
-      first === undefined || last === undefined
-        ? null
-        : rangeOfDays(first, last, WEEK_STEP_MINUTES),
-    [first, last],
+    () => (monday === null ? null : rangeOfDays(monday, addDays(monday, 6), WEEK_STEP_MINUTES)),
+    [monday],
   );
   const { state: dayState, retry: retryDay } = useTimeline(sourceId, dayRange);
   const { state: weekState } = useTimeline(sourceId, weekRange);
@@ -145,6 +153,9 @@ export function useReplay(
   return {
     days,
     day,
+    week,
+    previousWeekDay,
+    nextWeekDay,
     selectDay,
     dayState,
     retryDay,

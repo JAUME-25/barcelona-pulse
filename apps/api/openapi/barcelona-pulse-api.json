@@ -713,40 +713,49 @@
           "toleranceMinutes",
           "stationCount",
           "period",
+          "days",
           "lastIngestion"
         ],
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "description": "Identificador de la fuente."
           },
           "kind": {
+            "description": "Observada o sintética.",
             "$ref": "#/components/schemas/SourceKind"
           },
           "name": {
-            "type": "string"
+            "type": "string",
+            "description": "Nombre de la fuente."
           },
           "attribution": {
-            "type": "string"
+            "type": "string",
+            "description": "Atribución exigida por la licencia."
           },
           "license": {
             "type": [
               "null",
               "string"
-            ]
+            ],
+            "description": "Licencia de los datos, si la hay."
           },
           "url": {
             "type": [
               "null",
               "string"
-            ]
+            ],
+            "description": "Página del conjunto de datos, si la hay."
           },
           "toleranceMinutes": {
             "type": "integer",
+            "description": "Antigüedad máxima de una observación para contar como dato.",
             "format": "int32"
           },
           "stationCount": {
             "type": "integer",
+            "description": "Estaciones conocidas.",
             "format": "int32"
           },
           "period": {
@@ -755,9 +764,18 @@
                 "type": "null"
               },
               {
+                "description": "Primera y última observación. Una estación con un dato viejo lo estira: para reproducir, `days`.",
                 "$ref": "#/components/schemas/ObservationPeriod"
               }
             ]
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Días (hora de Barcelona) que cubren sus ingestas terminadas, en orden: los que se pueden reproducir."
           },
           "lastIngestion": {
             "oneOf": [
@@ -765,6 +783,7 @@
                 "type": "null"
               },
               {
+                "description": "La ingesta más reciente.",
                 "$ref": "#/components/schemas/LastIngestionSummary"
               }
             ]

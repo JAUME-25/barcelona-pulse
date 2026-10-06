@@ -48,6 +48,10 @@ public sealed class BicingArchiveIdempotencyTests(PostgisDatabase database) : IC
         Assert.Equal(5, first.StationVersionsCreated);
         Assert.Equal(1, first.StationsRejected);
         Assert.Equal(IngestionStatus.SucceededWithIssues, first.Status);
+        // Cubre el día pedido, no el rango de las observaciones.
+        var day = LocalDay.For(BicingFixtures.Day);
+        Assert.Equal(day.StartUtc, first.CoveredFrom);
+        Assert.Equal(day.EndUtc, first.CoveredTo);
 
         // Repetir no crea nada: todo es duplicado salvo el mismo conflicto y los mismos rechazos.
         Assert.Equal(0, second.ObservationsAccepted);

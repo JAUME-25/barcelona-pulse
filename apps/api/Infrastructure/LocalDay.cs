@@ -15,6 +15,21 @@ public readonly record struct LocalDay(DateOnly Day, DateTimeOffset StartUtc, Da
 
     public bool Contains(DateTimeOffset instant) => instant >= StartUtc && instant < EndUtc;
 
+    /// <summary>Fecha de Barcelona de un instante.</summary>
+    public static DateOnly DateOf(DateTimeOffset instant) =>
+        DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(instant, Zone).DateTime);
+
+    /// <summary>Fechas de Barcelona que toca el periodo [desde, hasta), en orden.</summary>
+    public static IEnumerable<DateOnly> DatesIn(DateTimeOffset from, DateTimeOffset to)
+    {
+        if (to <= from) yield break;
+        var last = DateOf(to - TimeSpan.FromTicks(1));
+        for (var day = DateOf(from); day <= last; day = day.AddDays(1))
+        {
+            yield return day;
+        }
+    }
+
     public TimeSpan Length => EndUtc - StartUtc;
 
     // Las 00:00 locales nunca caen en el hueco ni en la hora repetida en Europe/Madrid

@@ -82,6 +82,7 @@ public sealed class StationsApiTests(DemoApiFixture fixture) : IClassFixture<Dem
         Assert.Equal(new DateTimeOffset(2026, 3, 10, 6, 0, 0, TimeSpan.Zero), demo.Period!.From);
         Assert.Equal(DemoEnd, demo.Period.To);
         Assert.Equal(572, demo.Period.ObservationCount);
+        Assert.Equal([new DateOnly(2026, 3, 10)], demo.Days);
         Assert.Equal(IngestionStatus.Succeeded, demo.LastIngestion!.Status);
     }
 

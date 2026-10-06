@@ -6,6 +6,8 @@ import {
   localClock,
   localMidnight,
   localParts,
+  weekDates,
+  weekStart,
 } from './time';
 
 const hoursIn = (day: string) => (localMidnight(addDays(day, 1)) - localMidnight(day)) / 3_600_000;
@@ -35,6 +37,22 @@ describe('días de Barcelona', () => {
     ]);
     expect(lastLocalDays('2026-03-10T06:00:00+00:00', '2026-03-10T09:00:00+00:00', 7)).toEqual([
       '2026-03-10',
+    ]);
+  });
+
+  it('las semanas van de lunes a domingo', () => {
+    expect(weekStart('2026-08-20')).toBe('2026-08-17'); // jueves
+    expect(weekStart('2026-08-17')).toBe('2026-08-17'); // lunes
+    expect(weekStart('2026-08-23')).toBe('2026-08-17'); // domingo
+    expect(weekStart('2026-03-01')).toBe('2026-02-23'); // cruza de mes
+    expect(weekDates('2026-08-17')).toEqual([
+      '2026-08-17',
+      '2026-08-18',
+      '2026-08-19',
+      '2026-08-20',
+      '2026-08-21',
+      '2026-08-22',
+      '2026-08-23',
     ]);
   });
 

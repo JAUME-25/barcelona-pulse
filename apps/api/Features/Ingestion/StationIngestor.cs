@@ -34,6 +34,8 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
             Trigger = trigger,
             StartedAt = clock.GetUtcNow(),
             Status = IngestionStatus.Running,
+            CoveredFrom = batch.Covers?.From,
+            CoveredTo = batch.Covers?.To,
             StationsReceived = batch.Stations.Count + batch.Rejected.Count(r => r.RecordKind == RecordKinds.Station),
             ObservationsReceived = batch.Observations.Count + batch.Rejected.Count(r => r.RecordKind == RecordKinds.Observation),
         };

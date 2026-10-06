@@ -75,6 +75,17 @@ test('reproducir: un día real y el demo con huecos', async ({ page }, testInfo)
   await page.waitForTimeout(1200);
   await shot('domingo');
 
+  // A la semana siguiente (del 24 al 30 de agosto) con la flecha.
+  await page.getByRole('button', { name: 'Semana siguiente' }).click();
+  await expect(page.getByRole('button', { name: 'lun 24' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(slider).toHaveAttribute('aria-valuetext', /lunes, 24 de agosto de 2026/);
+  await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(1200);
+  await shot('semana-siguiente');
+
   // El demo tiene huecos: así se ven las horas sin datos.
   await page.goto(DEMO);
   await waitForReplay(page);

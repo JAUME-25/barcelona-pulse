@@ -73,6 +73,7 @@ export const demoSource: SourceSummary = {
     to: '2026-03-10T09:00:00+00:00',
     observationCount: 30,
   },
+  days: ['2026-03-10'],
   lastIngestion: null,
 };
 
@@ -90,6 +91,7 @@ export const observedSource: SourceSummary = {
     to: '2026-08-20T21:55:02+00:00',
     observationCount: 300,
   },
+  days: ['2026-08-20'],
   lastIngestion: null,
 };
 

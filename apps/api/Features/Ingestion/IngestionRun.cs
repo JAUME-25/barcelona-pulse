@@ -26,6 +26,13 @@ public sealed class IngestionRun
     public DateTimeOffset? PeriodFrom { get; set; }
     public DateTimeOffset? PeriodTo { get; set; }
 
+    /// <summary>
+    /// Periodo [desde, hasta) que dice cubrir la entrada (un día del histórico). Nulo en las
+    /// ingestas anteriores a este dato: reimportar, que es idempotente, lo completa.
+    /// </summary>
+    public DateTimeOffset? CoveredFrom { get; init; }
+    public DateTimeOffset? CoveredTo { get; init; }
+
     public int StationsReceived { get; set; }
     public int StationsRejected { get; set; }
     public int StationVersionsCreated { get; set; }
@@ -73,7 +80,12 @@ internal sealed class IngestionRunConfiguration : IEntityTypeConfiguration<Inges
         b.Property(x => x.Error).HasMaxLength(2000);
         b.HasOne<DataSource>().WithMany().HasForeignKey(x => x.SourceId).OnDelete(DeleteBehavior.Restrict);
         b.HasIndex(x => new { x.SourceId, x.StartedAt });
-        b.ToTable(t => t.HasCheckConstraint("ck_ingestion_runs_status", SnakeCaseEnum<IngestionStatus>.CheckSql("status")));
+        b.ToTable(t =>
+        {
+            t.HasCheckConstraint("ck_ingestion_runs_status", SnakeCaseEnum<IngestionStatus>.CheckSql("status"));
+            t.HasCheckConstraint("ck_ingestion_runs_covered",
+                "(covered_from IS NULL AND covered_to IS NULL) OR covered_from < covered_to");
+        });
     }
 }
 

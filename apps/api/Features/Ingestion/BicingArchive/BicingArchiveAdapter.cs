@@ -64,7 +64,8 @@ public static partial class BicingArchiveAdapter
             $"(sha256 {infoHash[..12]}), día {day:yyyy-MM-dd} en {LocalDay.TimeZoneId}";
         var combined = Convert.ToHexStringLower(SHA256.HashData(System.Text.Encoding.ASCII.GetBytes(statusHash + infoHash)));
 
-        return new IngestionBatch(Source, AdapterName, AdapterVersion, inputRef, combined, stations, observations, rejected);
+        return new IngestionBatch(Source, AdapterName, AdapterVersion, inputRef, combined, stations, observations, rejected,
+            new CoveredPeriod(window.StartUtc, window.EndUtc));
     }
 
     /// <summary>

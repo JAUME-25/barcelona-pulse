@@ -52,6 +52,8 @@ Pletina, con los relojes de la semana y los pasos de 5 minutos de Rellotge.
 - Una hora sin datos se dibuja con el eje discontinuo y sin área: sin datos no es cero.
 - Relojes de 24 horas, uno por día: dentro las vacías, fuera las llenas, por horas y con la
   misma escala en toda la semana para que se puedan comparar. El día elegido lleva borde ámbar.
+  Se ve la semana entera (de lunes a domingo): un día sin datos importados sale apagado y no se
+  puede elegir. Si hay más semanas importadas, flechas a los lados.
   Las bandas son sectores contiguos: barras sueltas parecían un trazo discontinuo, que aquí
   significa «sin datos».
 - En escritorio la leyenda sube por encima del reproductor y se compacta; en móvil, el

@@ -20,7 +20,7 @@ que solo reenvían llamadas.
 
 | Carpeta | Responsabilidad |
 | --- | --- |
-| `Features/Sources` | Fuentes de datos (observada o sintética) y `GET /api/sources` con el periodo cubierto. |
+| `Features/Sources` | Fuentes de datos (observada o sintética) y `GET /api/sources` con el periodo observado y los días que se pueden reproducir (ADR 0011). |
 | `Features/Stations` | Estaciones, versiones de atributos y observaciones; regla del estado en un instante; `GET /api/stations` y `GET /api/stations/{id}`. |
 | `Features/Ingestion` | Contrato normalizado, validación común, `StationIngestor` (idempotente) y adaptadores: `Demo/DemoFixtureAdapter` y `BicingArchive/BicingArchiveAdapter`. |
 | `Features/History` | Reproducir un periodo: línea temporal `GET /api/sources/{id}/timeline` (ADR 0009) y fotogramas `GET /api/sources/{id}/frames` (ADR 0010). |

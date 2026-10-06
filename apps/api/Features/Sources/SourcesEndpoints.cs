@@ -6,6 +6,17 @@ using Microsoft.EntityFrameworkCore;
 namespace BarcelonaPulse.Api.Features.Sources;
 
 /// <summary>Fuente disponible, con el periodo realmente cubierto por sus observaciones.</summary>
+/// <param name="Id">Identificador de la fuente.</param>
+/// <param name="Kind">Observada o sintética.</param>
+/// <param name="Name">Nombre de la fuente.</param>
+/// <param name="Attribution">Atribución exigida por la licencia.</param>
+/// <param name="License">Licencia de los datos, si la hay.</param>
+/// <param name="Url">Página del conjunto de datos, si la hay.</param>
+/// <param name="ToleranceMinutes">Antigüedad máxima de una observación para contar como dato.</param>
+/// <param name="StationCount">Estaciones conocidas.</param>
+/// <param name="Period">Primera y última observación. Una estación con un dato viejo lo estira: para reproducir, <c>days</c>.</param>
+/// <param name="Days">Días (hora de Barcelona) que cubren sus ingestas terminadas, en orden: los que se pueden reproducir.</param>
+/// <param name="LastIngestion">La ingesta más reciente.</param>
 public sealed record SourceSummary(
     string Id,
     SourceKind Kind,
@@ -16,6 +27,7 @@ public sealed record SourceSummary(
     int ToleranceMinutes,
     int StationCount,
     ObservationPeriod? Period,
+    IReadOnlyList<DateOnly> Days,
     LastIngestionSummary? LastIngestion);
 
 public sealed record ObservationPeriod(DateTimeOffset From, DateTimeOffset To, long ObservationCount);
@@ -64,8 +76,16 @@ public static class SourcesEndpoints
                     r.ObservationsAccepted, r.ObservationsDuplicate, r.ObservationsConflicting, r.ObservationsRejected))
                 .FirstOrDefaultAsync(ct);
 
+            // Solo las ingestas terminadas: una fallida no deja nada que reproducir.
+            var covered = await db.IngestionRuns.AsNoTracking()
+                .Where(r => r.SourceId == s.Id && r.CoveredFrom != null && r.CoveredTo != null
+                    && (r.Status == IngestionStatus.Succeeded || r.Status == IngestionStatus.SucceededWithIssues))
+                .Select(r => new { From = r.CoveredFrom!.Value, To = r.CoveredTo!.Value })
+                .ToListAsync(ct);
+            var days = covered.SelectMany(c => LocalDay.DatesIn(c.From, c.To)).Distinct().Order().ToList();
+
             result.Add(new SourceSummary(s.Id, s.Kind, s.Name, s.Attribution, s.License, s.Url,
-                (int)s.StalenessTolerance.TotalMinutes, stationCount, period, last));
+                (int)s.StalenessTolerance.TotalMinutes, stationCount, period, days, last));
         }
 
         return TypedResults.Ok(result);

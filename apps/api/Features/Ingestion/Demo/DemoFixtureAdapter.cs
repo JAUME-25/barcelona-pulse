@@ -119,8 +119,13 @@ public static class DemoFixtureAdapter
                 GetInt(el, "docks"), GetInt(el, "bikesDisabled"), GetInt(el, "docksDisabled")));
         }
 
+        // El fixture no declara periodo: cubre de su primera a su última observación.
+        CoveredPeriod? covers = observations.Count == 0 ? null : new(
+            observations.Min(o => o.ObservedAt), observations.Max(o => o.ObservedAt));
+        if (covers is { } c && c.From >= c.To) covers = null;
+
         return new IngestionBatch(source, AdapterName, AdapterVersion, inputRef,
-            Convert.ToHexStringLower(SHA256.HashData(json)), stations, observations, rejected);
+            Convert.ToHexStringLower(SHA256.HashData(json)), stations, observations, rejected, covers);
     }
 
     private static JsonElement Required(JsonElement el, string name) =>

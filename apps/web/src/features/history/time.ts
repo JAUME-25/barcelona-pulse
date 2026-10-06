@@ -52,6 +52,18 @@ export function localMidnight(date: string): number {
   throw new RangeError(`No se encuentra la medianoche del ${date} en Barcelona.`);
 }
 
+/** Lunes de la semana del día (las semanas van de lunes a domingo). */
+export function weekStart(date: string): string {
+  const [y, m, d] = splitDate(date);
+  const weekday = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0 = domingo
+  return addDays(date, -((weekday + 6) % 7));
+}
+
+/** Los siete días de la semana que empieza en `monday`. */
+export function weekDates(monday: string): string[] {
+  return Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+}
+
 /** Los últimos `count` días de Barcelona hasta el de `toIso`, sin pasar del de `fromIso`. */
 export function lastLocalDays(fromIso: string, toIso: string, count: number): string[] {
   const first = localParts(Date.parse(fromIso)).date;

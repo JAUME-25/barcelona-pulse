@@ -325,6 +325,16 @@ describe('App', () => {
     expect(framesFrom).toEqual(['2026-03-10T07:00:00.000Z', '2026-03-10T08:00:00.000Z']);
     expect(requests.some((u) => u.pathname === '/api/stations')).toBe(false);
 
+    // La semana entera del día: los días sin datos importados se ven, pero no se eligen.
+    expect(screen.getByRole('button', { name: 'mar 10' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'lun 9, sin datos' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    expect(screen.queryByRole('button', { name: 'Semana anterior' })).toBeNull();
+
     // Antes de los datos no hay ceros: el momento dice que no hay datos.
     slider.focus();
     await user.keyboard('{Home}');
@@ -333,6 +343,37 @@ describe('App', () => {
     );
     expect(screen.getByText(/Sin datos en este momento/)).toBeTruthy();
     expect(new URLSearchParams(window.location.search).get('hora')).toBe('00:00');
+  });
+
+  it('con días importados en dos semanas, se pasa de una a otra con las flechas', async () => {
+    const twoWeeks = { ...observedSource, days: ['2026-08-21', '2026-08-24'] };
+    mockApi((path, url) => {
+      if (path === '/api/sources') return json([twoWeeks]);
+      if (path.endsWith('/timeline')) return json(timelineFor(url));
+      if (path.endsWith('/frames')) return json(framesFor(url));
+      return json({ title: 'Petición inesperada' }, 500);
+    });
+    const user = userEvent.setup();
+    window.history.replaceState(null, '', '/?modo=reproducir');
+    renderApp();
+
+    // Por defecto, el último día importado: el lunes 24, en la semana del 24 al 30.
+    const monday = await screen.findByRole('button', { name: 'lun 24' });
+    expect(monday.getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Semana siguiente' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Semana anterior' }));
+    expect(
+      (await screen.findByRole('button', { name: 'vie 21' })).getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(new URLSearchParams(window.location.search).get('dia')).toBe('2026-08-21');
+    expect(screen.getByRole('button', { name: 'jue 20, sin datos' })).toHaveProperty(
+      'disabled',
+      true,
+    );
   });
 
   it('sin fuentes cargadas indica cómo importar la demo', async () => {

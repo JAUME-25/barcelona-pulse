@@ -45,33 +45,73 @@ function MiniDial({
   );
 }
 
+function WeekArrow({ replay, direction }: { replay: Replay; direction: -1 | 1 }) {
+  const target = direction < 0 ? replay.previousWeekDay : replay.nextWeekDay;
+  const label = direction < 0 ? 'Semana anterior' : 'Semana siguiente';
+  return (
+    <button
+      type="button"
+      className="week-dials__arrow"
+      aria-label={label}
+      title={label}
+      disabled={target === undefined}
+      onClick={() => {
+        if (target !== undefined) replay.selectDay(target);
+      }}
+    >
+      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">
+        <path
+          d={direction < 0 ? 'M10 3 5 8l5 5' : 'm6 3 5 5-5 5'}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </button>
+  );
+}
+
 /**
- * La semana en relojes de 24 horas, uno por día, con la misma escala y los mismos colores que
- * el gráfico del día: sirven para ver el patrón de cada día y para elegirlo.
+ * La semana del día elegido en relojes de 24 horas, uno por día, con la misma escala y los
+ * mismos colores que el gráfico del día: sirven para ver el patrón de cada día y para elegirlo.
+ * Los días sin datos importados se ven, pero no se pueden elegir. Si hay más semanas, flechas.
  */
 export function WeekDials({ replay }: { replay: Replay }) {
   const scale = weekScale(replay);
+  const available = useMemo(() => new Set(replay.days), [replay.days]);
+  const moreWeeks = replay.previousWeekDay !== undefined || replay.nextWeekDay !== undefined;
   return (
-    <div className="week-dials" role="group" aria-label="Día">
-      {replay.days.map((d) => (
-        <button
-          key={d}
-          type="button"
-          className="week-dials__day"
-          aria-pressed={d === replay.day}
-          aria-label={dayLabel(d)}
-          onClick={() => {
-            replay.selectDay(d);
-          }}
-        >
-          <MiniDial points={replay.weekByDay.get(d)} scale={scale} />
-          <span aria-hidden="true">
-            {formatShortWeekday(d)}
-            <br />
-            {dayOfMonth(d)}
-          </span>
-        </button>
-      ))}
+    <div className="week-dials">
+      {moreWeeks && <WeekArrow replay={replay} direction={-1} />}
+      <div className="week-dials__days" role="group" aria-label="Día">
+        {replay.week.map((d) => {
+          const hasData = available.has(d);
+          return (
+            <button
+              key={d}
+              type="button"
+              className="week-dials__day"
+              aria-pressed={d === replay.day}
+              aria-label={hasData ? dayLabel(d) : `${dayLabel(d)}, sin datos`}
+              title={hasData ? undefined : 'Sin datos importados'}
+              disabled={!hasData}
+              onClick={() => {
+                replay.selectDay(d);
+              }}
+            >
+              <MiniDial points={replay.weekByDay.get(d)} scale={scale} />
+              <span aria-hidden="true">
+                {formatShortWeekday(d)}
+                <br />
+                {dayOfMonth(d)}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      {moreWeeks && <WeekArrow replay={replay} direction={1} />}
     </div>
   );
 }

@@ -1,6 +1,9 @@
+using System.Net.Http.Json;
+using System.Text.Json;
 using BarcelonaPulse.Api.Features.Ingestion;
 using BarcelonaPulse.Api.Features.Ingestion.Demo;
 using BarcelonaPulse.Api.Features.Sources;
+using BarcelonaPulse.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using static BarcelonaPulse.Api.Tests.TestData;
@@ -10,6 +13,15 @@ namespace BarcelonaPulse.Api.Tests.Integration;
 public sealed class IngestionTests(PostgisDatabase database) : IClassFixture<PostgisDatabase>
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 5, 12, 0, 0, TimeSpan.Zero);
+
+    private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
+
+    private static JsonSerializerOptions CreateJsonOptions()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        ServiceRegistration.ConfigureApiJson(options);
+        return options;
+    }
 
     private async Task<IngestionRun> IngestAsync(IngestionBatch batch)
     {
@@ -254,6 +266,29 @@ public sealed class IngestionTests(PostgisDatabase database) : IClassFixture<Pos
 
         await using var db = database.CreateContext();
         Assert.Equal(SourceKind.Synthetic, (await db.DataSources.SingleAsync(s => s.Id == "kind")).Kind);
+    }
+
+    [Fact]
+    public async Task The_days_to_replay_come_from_finished_ingestions_not_from_old_observations()
+    {
+        database.RequireAvailable();
+        var source = Source("days");
+        CoveredPeriod Day(int d) => new(
+            LocalDay.For(new DateOnly(2026, 8, d)).StartUtc, LocalDay.For(new DateOnly(2026, 8, d)).EndUtc);
+        // Una estación publica un dato de 2025: no por eso 2025 es un día que reproducir.
+        var oldObservation = Observation("s1", new DateTimeOffset(2025, 6, 12, 8, 54, 16, TimeSpan.Zero));
+        await IngestAsync(Batch([Station("s1")], [oldObservation], source: source) with { Covers = Day(21) });
+        await IngestAsync(Batch([Station("s1")], source: source) with { Covers = Day(19) });
+        // Una ingesta fallida no deja días.
+        await Record.ExceptionAsync(() => IngestAsync(
+            Batch([Station("s2", name: new string('x', 300))], source: source) with { Covers = Day(20) }));
+
+        await using var factory = new ApiFactory(database.ConnectionString);
+        var sources = await factory.CreateClient().GetFromJsonAsync<List<SourceSummary>>(
+            "/api/sources", JsonOptions, TestContext.Current.CancellationToken);
+
+        var days = sources!.Single(s => s.Id == "days").Days;
+        Assert.Equal([new DateOnly(2026, 8, 19), new DateOnly(2026, 8, 21)], days);
     }
 
     [Fact]

@@ -327,7 +327,48 @@
 .week-dials {
   display: flex;
   gap: 2px;
+  align-items: center;
+  min-width: 0;
+}
+
+.week-dials__days {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 2px;
   justify-content: space-between;
+  min-width: 0;
+}
+
+.week-dials__arrow {
+  display: inline-grid;
+  flex: none;
+  width: 28px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.week-dials__arrow:hover:not(:disabled) {
+  background: var(--panel-2);
+}
+
+.week-dials__arrow:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* Un día sin datos importados se ve (la semana entera), pero no se elige. */
+.week-dials__day:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.week-dials__day:disabled:hover {
+  background: transparent;
 }
 
 .week-dials__day {
@@ -436,8 +477,9 @@
   }
 }
 
-/* Escritorio ancho: los relojes de la semana suben junto al momento. */
-@media (min-width: 1200px) {
+/* Escritorio ancho (desde 1360 px, para que quepan con sus flechas): los relojes de la semana
+   suben junto al momento. */
+@media (min-width: 1360px) {
   .replay-deck {
     grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas:

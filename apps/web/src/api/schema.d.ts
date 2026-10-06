@@ -251,17 +251,31 @@ export interface components {
     };
     /** @description Fuente disponible, con el periodo realmente cubierto por sus observaciones. */
     SourceSummary: {
+      /** @description Identificador de la fuente. */
       id: string;
+      /** @description Observada o sintética. */
       kind: components['schemas']['SourceKind'];
+      /** @description Nombre de la fuente. */
       name: string;
+      /** @description Atribución exigida por la licencia. */
       attribution: string;
+      /** @description Licencia de los datos, si la hay. */
       license: null | string;
+      /** @description Página del conjunto de datos, si la hay. */
       url: null | string;
-      /** Format: int32 */
+      /**
+       * Format: int32
+       * @description Antigüedad máxima de una observación para contar como dato.
+       */
       toleranceMinutes: number;
-      /** Format: int32 */
+      /**
+       * Format: int32
+       * @description Estaciones conocidas.
+       */
       stationCount: number;
       period: null | components['schemas']['ObservationPeriod'];
+      /** @description Días (hora de Barcelona) que cubren sus ingestas terminadas, en orden: los que se pueden reproducir. */
+      days: string[];
       lastIngestion: null | components['schemas']['LastIngestionSummary'];
     };
     StationDetailResponse: {
