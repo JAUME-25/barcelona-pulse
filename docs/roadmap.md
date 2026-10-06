@@ -127,9 +127,10 @@ honesta de lo hecho.
      madrugada (02:15 a 04:45) los miércoles 6, 13, 20 y 27.
    - La rejilla tardaba 12,5 s la primera vez que se abría después de arrancar la API (calcula
      las cuatro semanas) y 0,5 s después. Ahora `infra/deploy.sh` la deja calculada
-     (`infra/warm-up.mjs`) y la caché de líneas temporales ya no caduca por tiempo. En local,
-     recién arrancada la API y con el precalentamiento, sale en 0,6 s. En producción falta
-     comprobarlo tras el próximo «Deploy now».
+     (`infra/warm-up.mjs`) y la caché de líneas temporales ya no caduca por tiempo. Comprobado
+     en el despliegue de `6664c93` (6-10-2026, 59 s en total): la API se recreó, el
+     precalentamiento tardó de 3,5 a 4,2 s por semana y, después, la rejilla salió en 0,58 s a
+     la primera.
 4. **Pendiente.** Caso técnico para el portfolio: qué problema resuelve, decisiones, dificultades
    reales, mediciones y límites.
 

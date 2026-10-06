@@ -162,7 +162,8 @@ de Playwright añade el retraso de sus comprobaciones: la lista parecía tardar 
   Desde entonces `infra/deploy.sh` las deja calculadas (`infra/warm-up.mjs`) y la caché de
   líneas temporales no caduca por tiempo: cambia de clave con cada ingesta o purga y la acota
   el límite de 200 entradas. En local, recién arrancada la API: precalentar 6 semanas, 11 s;
-  la rejilla después, 0,6 s.
+  la rejilla después, 0,6 s. En producción (despliegue de `6664c93`): de 3,5 a 4,2 s por
+  semana, unos 15 s las cuatro; la rejilla después, 0,58 s.
 - Fluidez del mapa con la red real, arrastrando y acercando hasta ver los edificios en 3D (6 a
   10 s de gesto): en escritorio, 60 fps en los tres modos y ningún fotograma de más de 50 ms;
   en móvil, 48–49 fps al explorar y al reproducir (p95 de 50 ms, 11–13 fotogramas de más de
