@@ -84,6 +84,28 @@ describe('filterStations', () => {
     expect(filterStations(stations, 'demo-043', all).map((s) => s.id)).toEqual([3]);
   });
 
+  it('con los nombres de Bicing, encuentra igual el nombre que llega y el que se ve', () => {
+    const real = [
+      stationFixture({ id: 10, name: 'AV. PARAL.LEL, 132', sourceStationId: '133' }),
+      stationFixture({ id: 11, name: "C/ DEL COMTE D'URGELL 75 B", sourceStationId: '134' }),
+      stationFixture({
+        id: 12,
+        name: 'JARDINS DE CAN FERRERO/PG.DE LA ZONA FR',
+        address: 'JARDINS DE CAN FERRERO/PG.DE LA ZONA FRANCA',
+        sourceStationId: '135',
+      }),
+    ];
+    const ids = (q: string) => filterStations(real, q, all).map((s) => s.id);
+    expect(ids('paral·lel')).toEqual([10]);
+    expect(ids('parallel')).toEqual([10]);
+    expect(ids('PARAL.LEL')).toEqual([10]);
+    expect(ids('comte d’urgell')).toEqual([11]);
+    expect(ids("comte d'urgell")).toEqual([11]);
+    expect(ids('zona franca')).toEqual([12]); // la fuente lo corta: «ZONA FR»
+    // Ordenadas por el nombre que se ve: «Av. Paral·lel», «C/ del Comte…», «Jardins…».
+    expect(ids('')).toEqual([10, 11, 12]);
+  });
+
   it('oculta las categorías desactivadas', () => {
     const withoutUnknown = new Set(AVAILABILITY_ORDER.filter((c) => c !== 'unknown'));
     expect(filterStations(stations, '', withoutUnknown).map((s) => s.id)).not.toContain(3);

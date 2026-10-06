@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import type { SourceSummary, StationsResponse } from '../../api/client';
 import { formatDateTime, formatMonths, plural } from '../../shared/format';
 import type { Coverage } from '../history/series';
+import { stationName } from '../stations/names';
 import { dayOfMonth, formatLocalDay, formatShortWeekday, weekStart } from '../history/time';
 import {
   CODE_URL,
@@ -185,7 +186,7 @@ function Silent({
             {g.items.map((s) => {
               const content = (
                 <>
-                  <span className="silent-group__name">{s.station.name}</span>
+                  <span className="silent-group__name">{stationName(s.station)}</span>
                   {/* Sin ningún dato, el título del grupo ya lo dice todo. */}
                   {s.silence !== 'never' && (
                     <span className="silent-group__why">{silenceLabel(s, response.at)}</span>

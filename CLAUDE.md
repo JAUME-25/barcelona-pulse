@@ -93,6 +93,10 @@ Jaume ejecuta los comandos en Forge y pega la salida.
 - Una estación sin ninguna observación hasta el momento mostrado no «nunca ha informado»: al
   principio del periodo importado puede no haber empezado aún. Se dice «Ningún dato hasta este
   momento».
+- Los nombres de estación se enseñan con `stationName` (`features/stations/names.ts`): la API y
+  la base de datos guardan el de la fuente («LA RAMBLA, 75») y la pantalla dice «La Rambla, 75».
+  Una prueba que busca una estación en pantalla usa el nombre legible. Una errata nueva de la
+  fuente se corrige en `CORRECTIONS` solo si no admite duda.
 - La fluidez se mide con la compilación de producción y la GPU (`e2e/reproduccion.measure.ts`):
   en el servidor de desarrollo React va varias veces más lento y, sin ventana, Chromium pinta
   WebGL por software.

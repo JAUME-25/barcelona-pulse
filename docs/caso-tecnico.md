@@ -159,8 +159,9 @@ medición: [arquitectura](architecture.md#mediciones).
   memoria), y 71 de la web, unitarias y de componentes. La CI las pasa y comprueba además el
   formato, el lint, los tipos, que el contrato OpenAPI esté al día y que no falte ninguna
   migración.
-- Pruebas de humo con Playwright en escritorio y móvil, y capturas que usan cada pantalla con el
-  mapa real en escritorio, 375 y 320 px. Estas se ejecutan en local, no en la CI.
+- Pruebas de humo con Playwright en escritorio y móvil, también en la CI: levanta la API y
+  PostGIS con Docker Compose e importa el demo. Y capturas que usan cada pantalla con el mapa
+  real en escritorio, 375 y 320 px, que se hacen en local.
 - Casos buscados a propósito: días de 23 y 25 horas en los cambios de hora, huecos, estaciones
   cerradas que publican ceros, recuentos ausentes que no suman cero, cada paso de Reproducir igual
   al mapa en ese instante, un círculo de 300 m que mide lo que debe, dos estaciones en el mismo
@@ -178,8 +179,7 @@ medición: [arquitectura](architecture.md#mediciones).
   probado añadir estaciones, y con Playwright; falta arrastrarlas en un teléfono de verdad.
 - En Experimentar, añadir y mover estaciones necesita ratón o pantalla táctil; con el teclado solo
   se deshace.
-- A escala de ciudad los marcadores se solapan, y los nombres llegan en mayúsculas desde la
-  fuente.
+- A escala de ciudad los marcadores se solapan.
 - El mapa base es un servicio gratuito sin garantía (OpenFreeMap). Si falla, la lista de
   estaciones sigue funcionando.
 - En los primeros segundos tras arrancar la API (unos 15 s con mayo), quien abra «Qué muestra y

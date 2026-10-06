@@ -404,9 +404,10 @@ describe('App', () => {
       within(sheet).getByRole('heading', { level: 4, name: /^Ningún dato hasta este momento/ }),
     ).toBeTruthy();
     const silent = Array.from(sheet.querySelectorAll('button.silent-group__item'));
+    // Con el nombre escrito para leerse: la fuente lo publica en mayúsculas.
     expect(silent.map((b) => b.textContent)).toEqual([
       'Copa América Barcelona - 542',
-      'C/ FERRAN JUNOY, 10Sin datos desde el 17 de agosto',
+      'C/ Ferran Junoy, 10Sin datos desde el 17 de agosto',
     ]);
 
     // Volver deja el foco en el enlace que la abrió.
@@ -418,9 +419,9 @@ describe('App', () => {
 
     // Una estación de la ficha abre su detalle, con la explicación de por qué no hay dato.
     await user.click(screen.getByRole('button', { name: 'Qué muestra y qué no' }));
-    await user.click(screen.getByRole('button', { name: /^C\/ FERRAN JUNOY, 10/ }));
+    await user.click(screen.getByRole('button', { name: /^C\/ Ferran Junoy, 10/ }));
     const detail = screen.getByRole('article');
-    expect(within(detail).getByRole('heading', { name: 'C/ FERRAN JUNOY, 10' })).toBeTruthy();
+    expect(within(detail).getByRole('heading', { name: 'C/ Ferran Junoy, 10' })).toBeTruthy();
     // Con la fecha, porque no es del mismo día: «del 17 de agosto», no «de las 12:00».
     expect(detail.textContent).toMatch(
       /La última observación es del 17 de agosto de 2026.*12:00, 3 días antes del momento mostrado/,
@@ -435,7 +436,7 @@ describe('App', () => {
 
     // En la lista, desde cuándo, con la fecha si no es del mismo día; y las que nunca informaron.
     await user.click(screen.getByRole('button', { name: 'Volver a la lista' }));
-    expect(screen.getByRole('button', { name: /^C\/ FERRAN JUNOY, 10/ }).textContent).toContain(
+    expect(screen.getByRole('button', { name: /^C\/ Ferran Junoy, 10/ }).textContent).toContain(
       'Sin dato reciente desde el 17 de agosto',
     );
     expect(

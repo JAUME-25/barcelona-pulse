@@ -7,6 +7,7 @@ import {
   QUALITY_FLAG_LABEL,
   STATUS_LABEL,
 } from './availability';
+import { districtName, stationName } from './names';
 import { OctagonGlyph } from './OctagonGlyph';
 
 interface StationDetailProps {
@@ -73,12 +74,12 @@ export function StationDetail({ station, response, onBack, focusOnOpen }: Statio
       </button>
 
       <h2 id="station-detail-name" className="station-detail__name" tabIndex={-1} ref={headingRef}>
-        {station.name}
+        {stationName(station)}
       </h2>
       {station.neighbourhood !== null && (
         <p className="station-detail__area">
           {station.neighbourhood}
-          {station.district !== null && `, ${station.district}`}
+          {station.district !== null && `, ${districtName(station.district)}`}
         </p>
       )}
       <p className="station-detail__status">

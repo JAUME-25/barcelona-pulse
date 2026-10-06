@@ -1,4 +1,5 @@
 import type { StationItem, StationState } from '../../api/client';
+import { stationName } from './names';
 
 /**
  * Categoría que se dibuja en el mapa y en la lista. Es presentación: la decide el
@@ -85,10 +86,13 @@ export function countByAvailability(
 /** Comparación de nombres en español: «Pl. d'Espanya» junto a «Pl. de…», acentos sin peso. */
 const collator = new Intl.Collator('es', { sensitivity: 'base', ignorePunctuation: true });
 
+/** Sin acentos ni mayúsculas, y sin los signos que se escriben de varias formas: «paral·lel»,
+ *  «paral.lel» y «parallel» son lo mismo, y «d’Urgell» y «d'Urgell» también. */
 export function normalizeForSearch(text: string): string {
   return text
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
+    .replace(/[·.'’`´]/g, '')
     .toLowerCase();
 }
 
@@ -98,13 +102,19 @@ export function filterStations(
   visible: ReadonlySet<Availability>,
 ): StationItem[] {
   const q = normalizeForSearch(query.trim());
-  return stations
-    .filter((s) => visible.has(availabilityOf(s.state)))
-    .filter(
-      (s) =>
-        q === '' ||
-        normalizeForSearch(s.name).includes(q) ||
-        normalizeForSearch(s.sourceStationId).includes(q),
-    )
-    .sort((a, b) => collator.compare(a.name, b.name));
+  return (
+    stations
+      .filter((s) => visible.has(availabilityOf(s.state)))
+      .map((s) => ({ s, name: stationName(s) }))
+      // Por el nombre que se ve y por el que publica la fuente, que puede traer palabras cortadas.
+      .filter(
+        ({ s, name }) =>
+          q === '' ||
+          normalizeForSearch(name).includes(q) ||
+          normalizeForSearch(s.name).includes(q) ||
+          normalizeForSearch(s.sourceStationId).includes(q),
+      )
+      .sort((a, b) => collator.compare(a.name, b.name))
+      .map(({ s }) => s)
+  );
 }

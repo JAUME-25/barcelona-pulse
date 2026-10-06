@@ -79,8 +79,9 @@ test('limites: la ficha lleva a una estación sin dato y a reproducir un día', 
 
     // Una estación sin dato (la de La Rambla, sin datos desde 2025) abre su detalle y se marca
     // en el mapa.
-    await page.getByRole('button', { name: /^LA RAMBLA, 75/ }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'LA RAMBLA, 75' })).toBeVisible();
+    // La fuente lo publica como «LA RAMBLA, 75»; se ve escrito para leerse.
+    await page.getByRole('button', { name: /^La Rambla, 75/ }).click();
+    await expect(page.getByRole('heading', { level: 2, name: 'La Rambla, 75' })).toBeVisible();
     await expect(page).not.toHaveURL(/vista=limites/);
     await page.waitForTimeout(1200);
     await shot(page, `${name}-estacion`);

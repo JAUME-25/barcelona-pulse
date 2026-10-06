@@ -112,6 +112,28 @@ completa en un solo sitio y, junto a cada dato, lo justo para no malinterpretarl
   Competía con la leyenda, que ya filtra, y en móvil los rótulos se cortaban en los bordes. Su
   idea, el motivo de cada estación, está en la ficha.
 
+## Nombres de estación
+
+Elegido el 6 de octubre de 2026 entre tres formas (como en la placa, calle completa y solo
+arreglado): **como en la placa**. La fuente publica casi todos los nombres en mayúsculas
+(«AV. CAN MARCET, 3»); la web los escribe para leerse («Av. Can Marcet, 3») sin cambiar el dato
+guardado (`features/stations/names.ts`):
+
+- Mayúscula al principio de cada palabra; «de», «del», «la», «les», «i», «d’», «l’» en minúscula
+  salvo al empezar el nombre o la calle que sigue a «|» o « / ».
+- Las abreviaturas como vienen («C/», «Av.», «Pg.», «Pl.»), los números romanos y las siglas en
+  mayúsculas, «bis» en minúscula. Las palabras que ya vienen en minúscula no se tocan.
+- Espacios y comas arreglados, la ela geminada («PARAL.LEL» → «Paral·lel») y las palabras
+  pegadas («AV.DIAGONAL»).
+- Si la fuente corta el nombre (hacia los 40 caracteres) y su dirección lo trae entero, se usa la
+  dirección; si sigue cortado, acaba en «…».
+- Erratas corregidas a mano solo si no admiten duda («DEDUARD» → «d’Eduard», «FORUM» →
+  «Fòrum», acentos que faltan en «Guinardó» o «Marítim»). Las que tienen forma catalana y
+  castellana (Marqués y Marquès, Ramón y Ramon) se dejan como vienen.
+- Los distritos que llegan pegados («SantMartí») se separan.
+- El buscador encuentra la estación por los dos nombres, sin acentos y sin «·», puntos ni
+  apóstrofos: «parallel» encuentra «Av. Paral·lel».
+
 ## Encuadre
 
 Al abrir, las estaciones ocupan la parte del mapa que no tapan el panel, la leyenda y, al

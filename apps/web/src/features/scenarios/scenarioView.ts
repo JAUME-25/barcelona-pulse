@@ -1,4 +1,5 @@
 import type { CoverageResponse, StationItem } from '../../api/client';
+import { stationName } from '../stations/names';
 import { hypotheticalName, type Scenario } from './scenario';
 
 /** Herramienta activa sobre el mapa. Sin herramienta, el mapa solo se mira. */
@@ -142,7 +143,10 @@ export function changeItems(
   actions: { removeHypothetical: (id: string) => void; restoreStation: (id: number) => void },
 ): ChangeItem[] {
   const byId = new Map(stations.map((s) => [s.id, s]));
-  const nameOf = (id: number) => byId.get(id)?.name ?? `Estación ${String(id)}`;
+  const nameOf = (id: number) => {
+    const station = byId.get(id);
+    return station === undefined ? `Estación ${String(id)}` : stationName(station);
+  };
   return [
     ...scenario.added.map((h): ChangeItem => ({
       key: `a-${h.id}`,

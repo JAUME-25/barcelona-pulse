@@ -155,11 +155,19 @@ honesta de lo hecho.
    - Se llega desde «Programas a medida»: en «Lo que ya he hecho», después del CRM y de Cuadra,
      y en su cierre (decidido por Jaume el 6-10-2026, que también dio por buenas las
      traducciones). Falta publicarla cuando Jaume lo diga.
-5. **Hecho en local.** Pruebas de humo en la CI: un trabajo nuevo levanta PostGIS, las
-   migraciones y la API con Docker Compose (como en local), importa el demo y las áreas de
-   estudio y pasa las 8 pruebas de humo en escritorio y móvil. Si falla, deja el registro de la
-   API y las trazas de Playwright. Ensayado el 6-10-2026 desde una base vacía (proyecto
-   `bp-ci`, otros puertos): 16 de 16. Falta verlo en GitHub.
+5. **Hecho.** Pruebas de humo en la CI: un trabajo nuevo levanta PostGIS, las migraciones y la
+   API con Docker Compose (como en local), importa el demo y las áreas de estudio y pasa las 8
+   pruebas de humo en escritorio y móvil. Si falla, deja el registro de la API y las trazas de
+   Playwright. Ensayado el 6-10-2026 desde una base vacía (proyecto `bp-ci`, otros puertos) y
+   en GitHub con `a6a3b06`: 16 de 16 en 18,5 s; el trabajo entero, 2 min 9 s, en paralelo con
+   los otros dos.
+6. **Hecho en local.** Nombres de estación legibles, elegidos por Jaume el 6-10-2026 entre tres
+   formas: «como en la placa» («Av. Can Marcet, 3») y las erratas de la fuente corregidas
+   (`docs/design.md`, `features/stations/names.ts`). Pasado por los 548 nombres de mayo sin
+   ningún caso raro; 53 cambian algo más que mayúsculas y espacios (7 nombres cortados que se
+   completan con su dirección). El dato guardado no cambia y el buscador encuentra los dos.
+   Revisado en la lista, el detalle, «Qué muestra y qué no» y Experimentar, en escritorio, 375 y
+   320 px. Sin desplegar.
 
 ## Backlog
 
@@ -168,8 +176,6 @@ honesta de lo hecho.
   peticiones o guardar un resumen por día y hora en cada ingesta.
 - Mapa: los marcadores sin dato son discretos a propósito; si se filtran solo esos, cuesta
   verlos a escala de ciudad.
-- Web: los nombres reales llegan en mayúsculas («AV. CAN MARCET, 3»); valorar un formato de
-  lectura que respete partículas catalanas, sin cambiar el dato guardado.
 - Web: a escala de ciudad, 540 marcadores se solapan; valorar una vista agregada que no esconda
   estados.
 - Web: idiomas (ca, en) cuando haya textos estables; hoy solo es.

@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useRef } from 'react';
 import type { StationItem } from '../../api/client';
 import { formatSince } from '../../shared/format';
 import { AVAILABILITY_LABEL, availabilityOf, type Availability } from './availability';
+import { stationName } from './names';
 import { OctagonGlyph } from './OctagonGlyph';
 
 interface StationListProps {
@@ -119,7 +120,7 @@ export function StationList({ stations, at, selectedId, onSelect }: StationListP
           <StationRow
             key={station.id}
             id={station.id}
-            name={station.name}
+            name={stationName(station)}
             category={category}
             summaryText={summary(station, at)}
             bikes={known ? station.state.bikesAvailable : null}
