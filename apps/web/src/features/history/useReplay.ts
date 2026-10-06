@@ -14,11 +14,6 @@ const MAX_DAYS = 7;
 
 export type Speed = 'lenta' | 'normal' | 'rapida';
 export const SPEEDS: readonly Speed[] = ['lenta', 'normal', 'rapida'];
-export const SPEED_LABEL: Record<Speed, string> = {
-  lenta: 'Lenta',
-  normal: 'Normal',
-  rapida: 'Rápida',
-};
 /**
  * Milisegundos por paso de 5 minutos: un día entero en 3 min 22 s, 1 min 41 s o 43 s. Los
  * estados llegan en fotogramas de una hora (`useFrames`): a la velocidad más alta son unas 33

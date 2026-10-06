@@ -1,0 +1,493 @@
+import type { ReactNode } from 'react';
+import type { Messages } from './es';
+import {
+  dayParts,
+  dayRuns,
+  daysByMonth,
+  durationParts,
+  formatDay,
+  formatDayMonth,
+  formatTime,
+  joinList,
+  monthName,
+  monthsByYear,
+  sameLocalDay,
+  sameLocalYear,
+  yearsOf,
+} from './intl';
+import type { AvailabilityKey, GapInput, NoEffectInput, Origin } from './types';
+
+// English. Same shape as the Spanish messages (Messages): TypeScript flags anything missing or extra.
+
+const list = (items: readonly string[]) => joinList(items, 'and');
+const count = (n: number, one: string, many: string) => `${String(n)} ${n === 1 ? one : many}`;
+
+/** «23:39» the same day, «28 May» the same year and, otherwise, «12 June 2025». */
+function sinceWhen(iso: string, reference: string): string {
+  if (sameLocalDay(iso, reference)) return formatTime(iso);
+  if (sameLocalYear(iso, reference)) return formatDayMonth(iso);
+  return formatDay(iso);
+}
+
+function duration(fromIso: string, toIso: string): string {
+  const { minutes, hours, rest, days } = durationParts(fromIso, toIso);
+  if (minutes < 1) return 'less than 1 min';
+  if (hours === 0) return `${String(minutes)} min`;
+  if (hours >= 48) return `${String(days)} days`;
+  return rest === 0 ? `${String(hours)} h` : `${String(hours)} h ${String(rest)} min`;
+}
+
+/** «4–31 May», with the year if asked. */
+function runText([first, last]: [string, string], withYear: boolean): string {
+  const a = dayParts(first);
+  const b = dayParts(last);
+  const year = (y: string) => (withYear ? ` ${y}` : '');
+  if (first === last) return `${String(a.d)} ${a.m}${year(a.y)}`;
+  if (a.y === b.y && a.m === b.m) return `${String(a.d)}–${String(b.d)} ${b.m}${year(b.y)}`;
+  if (a.y === b.y) return `${String(a.d)} ${a.m} – ${String(b.d)} ${b.m}${year(b.y)}`;
+  return `${String(a.d)} ${a.m} ${a.y} – ${String(b.d)} ${b.m} ${b.y}`;
+}
+
+const AVAILABILITY_LABEL: Record<AvailabilityKey, string> = {
+  available: 'With bikes',
+  few: 'Few bikes',
+  empty: 'No bikes',
+  full: 'Full',
+  outOfService: 'Out of service',
+  unknown: 'No recent data',
+};
+
+/** The assumptions of the «cobertura-geometrica» v1 model, in the order the API gives them. */
+const COVERAGE_ASSUMPTIONS = [
+  'Straight-line distance from each station, not walking along streets: it is not an isochrone.',
+  'Each station covers a circle of the chosen radius; overlaps are counted only once.',
+  'Areas in EPSG:25831 (metres), rounded to the square metre. Each circle is a 64-sided polygon: 0.16% less area.',
+  'The percentage is of the chosen study area, not of the population or any other area.',
+  'Every station with a location valid at the reference time is included, whether it is operating or not.',
+  'Capacity does not change coverage. None of this says how many trips, waits or how much demand there would be.',
+  'Geometries are simplified by 1 m to draw them; areas are calculated without simplifying.',
+];
+
+export const en: Messages = {
+  languages: { label: 'Language' },
+  brand: { tagline: 'Bicing stations on the map' },
+  modes: { label: 'Mode', explore: 'Explore', replay: 'Replay', experiment: 'Experiment' },
+
+  format: {
+    duration,
+    months: (days) => {
+      const byYear = monthsByYear(days);
+      if (byYear.length === 0) return null;
+      return list(byYear.map(([year, names]) => `${list(names)} ${year}`));
+    },
+    count,
+  },
+
+  map: {
+    failed: 'The base map could not be loaded. The station list is still available.',
+    unsupported:
+      'This browser cannot draw the map because it does not support WebGL2. The station list is still available.',
+    degraded: 'Part of the base map did not load.',
+    region: 'Station map',
+    pitch: '3D view',
+    zoomIn: 'Zoom in',
+    zoomOut: 'Zoom out',
+    resetBearing: 'Point north',
+    attribution: 'Show attributions',
+    title: 'Map',
+  },
+
+  app: {
+    sourcesError: 'The data sources could not be loaded.',
+    retry: 'Try again',
+    noData: 'No data loaded yet.',
+    noDataHint: (command: ReactNode): ReactNode => <>Locally, import the demo with {command}.</>,
+    stationsError: 'The stations could not be loaded.',
+    loading: 'Loading stations…',
+    search: 'Search for a station',
+    count: (shown, total) =>
+      shown === total
+        ? count(total, 'station', 'stations')
+        : `${String(shown)} of ${String(total)} stations`,
+    noMatch: 'No station matches the search and the filters.',
+    showAll: 'Show all',
+    listTitle: 'Stations',
+    source: 'Source',
+    demoSuffix: '(demo)',
+  },
+
+  api: {
+    tooMany: 'The API has received too many requests in a row. Wait a minute and try again.',
+    status: (status) => `The API answered ${status}.`,
+    noStatus: 'with no status',
+    unreachable: 'The API could not be reached. Check the connection and try again.',
+  },
+
+  source: {
+    timeZone: 'Barcelona time',
+    demoBadge: 'Demo',
+    demoLead: 'Made-up data for trying out the app. Not Bicing’s real availability.',
+    shownMoment: 'Moment shown',
+    realBadge: 'Real data',
+    past: 'This is a moment in the past, not the current state.',
+    historical: (months) => `Historical data · ${months}. Not the current state.`,
+    noObservations: 'No observations at this moment.',
+    lastObservation: 'Last observation',
+    license: (license) => `Licence ${license}.`,
+    dataset: 'See the dataset',
+    limits: 'What it shows and what it doesn’t',
+    texts: {
+      'bicing-bcn': {
+        name: 'Bicing, Barcelona City Council archive',
+        attribution:
+          'Data source: Barcelona City Council. Transformed data: normalised monthly archive.',
+      },
+      demo: {
+        name: 'Synthetic demo',
+        attribution:
+          'Synthetic data from Barcelona Pulse. Approximate locations; these are not real stations.',
+      },
+    },
+  },
+
+  availability: {
+    label: AVAILABILITY_LABEL,
+    hint: (category, fewMax) => {
+      switch (category) {
+        case 'available':
+          return `${String(fewMax + 1)} or more`;
+        case 'few':
+          return `1 to ${String(fewMax)}`;
+        case 'empty':
+          return 'none left';
+        case 'full':
+          return 'no free docks';
+        case 'outOfService':
+          return 'not operating';
+        case 'unknown':
+          return 'not zero';
+      }
+    },
+    status: {
+      in_service: 'In service',
+      maintenance: 'Under maintenance',
+      closed: 'Closed',
+      planned: 'Planned',
+      unknown: 'Unknown',
+    },
+    quality: {
+      counts_exceed_capacity: 'Bikes and docks add up to more than the published capacity.',
+      bike_types_mismatch: 'Mechanical and electric bikes don’t add up to the published total.',
+    },
+    legend: 'What each marker means',
+    legendHelp: 'Tap a category to hide or show it.',
+  },
+
+  list: {
+    staleSince: (label, iso, at) => `${label} since ${sinceWhen(iso, at)}`,
+    never: 'No data up to this moment',
+    noRenting: (label) => `${label}, no renting`,
+    noReturning: (label) => `${label}, no returns`,
+    srBikes: (n) => (n === 1 ? '1 bike' : `${String(n)} bikes`),
+    srDocks: (n) => (n === 1 ? '1 free dock' : `${String(n)} free docks`),
+    unitBikes: (n) => (n === 1 ? 'bike' : 'bikes'),
+    unitDocks: 'free',
+  },
+
+  detail: {
+    back: 'Back to the list',
+    neverReported: 'This station has not sent any observation up to the moment shown.',
+    lastObservation: (p) => (
+      <>
+        The last observation is from {p.when}, {p.duration} before the moment shown. After{' '}
+        {p.tolerance} min without data, the state is treated as unknown: the station is not assumed
+        to be empty.
+      </>
+    ),
+    docks: (n) => count(n, 'dock', 'docks'),
+    bikes: (n) => count(n, 'bike', 'bikes'),
+    and: 'and',
+    bikeSplit: (mechanical, electric) =>
+      `${String(mechanical)} mechanical and ${String(electric)} electric`,
+    noSplit: 'No breakdown by type',
+    observedAt: ({ time, day }) => (
+      <>
+        Data from {time} on {day}
+      </>
+    ),
+    bikesAvailable: 'Bikes available',
+    docksFree: 'Free docks',
+    capacityOf: (capacity) => `capacity ${String(capacity)}`,
+    outOfService:
+      'The station is not operating. These are the figures it publishes, but it may not be possible to take or return bikes.',
+    notRenting: 'Right now the station does not allow taking bikes, even if it has some.',
+    notReturning: 'Right now the station does not accept returns, even if it has free docks.',
+    unavailable: 'Unavailable',
+    capacity: 'Published capacity',
+    notPublished: 'Not published',
+    last: 'Last observation',
+    none: 'None',
+    source: 'Source',
+    demoSource: 'Demo with made-up data',
+    id: (id) => ` (ID ${id})`,
+    metadataAssumed:
+      'The name, location and capacity come from a publication later than this moment.',
+  },
+
+  replay: {
+    deck: 'Replay a day',
+    slider: 'Time of day',
+    empty: 'No bikes',
+    full: 'Full',
+    scale: (n) => `scale: ${String(n)} stations`,
+    play: 'Play the day',
+    pause: 'Pause',
+    stepBack: (minutes) => `${String(minutes)} minutes earlier`,
+    stepForward: (minutes) => `${String(minutes)} minutes later`,
+    speed: 'Speed',
+    speeds: { lenta: 'Slow', normal: 'Normal', rapida: 'Fast' },
+    loadingDay: 'Loading the day…',
+    noData: 'No data at this moment: no station had reported.',
+    countEmpty: (n) => <>{n} with no bikes</>,
+    countFull: (n) => <>{n} full</>,
+    withDataNote: (tolerance) =>
+      `Those that reported in the previous ${tolerance} minutes. The rest count as neither empty nor full.`,
+    withData: (withData, known) => `${String(withData)} of ${String(known)} with data`,
+    valueLoading: 'Loading',
+    valueNoData: (moment) => `${moment}. No data.`,
+    value: (moment, empty, full, withData, known) =>
+      `${moment}. ${String(empty)} with no bikes, ${String(full)} full, ${String(withData)} of ${String(known)} with data.`,
+    previousWeek: 'Previous week',
+    nextWeek: 'Next week',
+    dayGroup: 'Day',
+    dayNoData: (label) => `${label}, no data`,
+    noImported: 'No imported data',
+  },
+
+  limits: {
+    coverage: {
+      complete: 'almost all with data',
+      partial: 'some missing',
+      none: 'none with data',
+    },
+    silenceTitle: {
+      never: ['No data up to this moment', 'No data up to this moment'],
+      days: ['Has not reported for days', 'Have not reported for days'],
+      hours: ['Has not reported for hours', 'Have not reported for hours'],
+      minutes: ['Has just stopped reporting', 'Have just stopped reporting'],
+    },
+    month: (year, month) => `${monthName(year, month)} ${String(year)}`,
+    dayRow: (day, coverage) => `${day}: ${coverage} at the worst moment. Replay that day.`,
+    measuring: 'Measuring the gaps…',
+    holesError: 'The gaps could not be measured.',
+    average: (share, step) =>
+      `On average, ${share} of the stations have data at each ${String(step)}-minute step.`,
+    noneBelow: 'No step below 95%.',
+    below: (n, steps, days) => `${String(n)} of ${String(steps)} steps below 95%: ${days}.`,
+    legend: 'What each cell means',
+    legendComplete: '95% or more with data',
+    legendPartial: 'Some missing',
+    legendNone: 'None',
+    gridNote: (step) =>
+      `Each row is a day and each cell, an hour (measured every ${String(step)} minutes). Tap a day to replay it.`,
+    allWithData: (when, total) => `${when}: all ${String(total)} stations have data.`,
+    someSilent: (when, silent, total) =>
+      `${when}: ${String(silent)} of ${String(total)} stations without data. They do not count as empty: their state is unknown.`,
+    back: 'Back',
+    title: 'What it shows and what it doesn’t',
+    lead: (stations, period) =>
+      `The ${String(stations)} Bicing stations as they were on ${period ?? ''}, according to the archive published by Barcelona City Council. This is the past, not what is happening now.`,
+    data: 'The data',
+    holes: 'Gaps',
+    silent: 'No data at this moment',
+    notSaidTitle: 'What it doesn’t say',
+    originsTitle: 'Where everything comes from',
+    period: 'Period',
+    periodValue: (period, days) => `${period ?? ''} (${count(days, 'day', 'days')})`,
+    lastData: 'Latest data',
+    rhythm: 'Frequency',
+    rhythmValue: 'A snapshot of the whole network every 5 minutes',
+    expiry: 'Expiry',
+    expiryValue: (tolerance) =>
+      `After ${String(tolerance)} minutes without reporting, a station’s state becomes unknown`,
+    stations: 'Stations',
+    dataset: 'The Bicing dataset on Open Data BCN',
+    code: 'Code, decisions and measurements:',
+    silentNever: 'No data up to this moment',
+    silentSince: (iso, at) => `No data since ${sinceWhen(iso, at)}`,
+    silentFor: (iso, at) => `${duration(iso, at)} without data`,
+    periodOf: (days) => {
+      const runs = dayRuns(days);
+      if (runs.length === 0) return null;
+      const years = yearsOf(days);
+      const oneYear = years.length === 1;
+      const joined = list(runs.map((r) => runText(r, !oneYear)));
+      return oneYear ? `${joined} ${years[0] ?? ''}` : joined;
+    },
+    listDays: (days) => list(daysByMonth(days).map(([m, ds]) => `${list(ds.map(String))} ${m}`)),
+    gap: (g: GapInput) => {
+      if (g.allNone) return 'No data all day.';
+      const ranges = g.ranges.map((r) =>
+        r.to === null ? `at ${r.from}` : `from ${r.from} to ${r.to}`,
+      );
+      if (ranges.length === 0) return `Data from ${g.share} of the stations or more all day.`;
+      const shown = ranges.slice(0, 3);
+      const rest = ranges.length - shown.length;
+      const text =
+        rest > 0
+          ? `${shown.join(', ')} and ${count(rest, 'more stretch', 'more stretches')}`
+          : list(shown);
+      return `Fewer than ${g.share} of the stations with data ${text}.`;
+    },
+    notSaid: (tolerance) => [
+      'It is not real time: it is an archive of the past.',
+      `No data is not zero: a station that has not reported for more than ${String(tolerance)} minutes shows as unknown, not as empty.`,
+      'A change in the number of bikes is not a trip: nobody knows where they come from or where they go.',
+      'Coverage is straight-line geometry. It is not walking distance, population or demand.',
+      'It does not predict or recommend anything.',
+    ],
+    origins: (months): Origin[] => {
+      const when = months === null ? '' : `, ${months}`;
+      return [
+        {
+          what: 'Station status',
+          who: `Barcelona City Council, Open Data BCN${when}`,
+          terms: 'CC BY 4.0, transformed data',
+        },
+        {
+          what: 'Name, location and capacity',
+          who: `Barcelona City Council, Open Data BCN${when}`,
+          terms: 'CC BY 4.0',
+        },
+        {
+          what: 'Districts for coverage',
+          who: 'Barcelona City Council, Open Data BCN (2017)',
+          terms: 'CC BY 4.0',
+        },
+        {
+          what: 'Base map and buildings',
+          who: 'OpenFreeMap, OpenMapTiles and OpenStreetMap',
+          terms: 'ODbL',
+        },
+        { what: 'Hypothetical stations', who: 'You place them', terms: 'Not stored' },
+      ];
+    },
+  },
+
+  stamp: {
+    demo: 'Demo',
+    demoValue: 'Made-up data',
+    network: 'Real network on',
+    historical: 'Historical, not real time',
+    hypothetical: 'with hypothetical changes',
+  },
+
+  scope: {
+    straight: {
+      term: 'In a straight line',
+      note: 'Straight-line distance from each station, not walking along streets: it is not an isochrone.',
+    },
+    surface: {
+      term: 'Area, not population',
+      note: 'The percentage is of the chosen study area, not of the population or any other area.',
+    },
+    trips: {
+      term: 'Does not measure trips',
+      note: 'Capacity does not change coverage. None of this says how many trips, waits or how much demand there would be.',
+    },
+  },
+
+  scenario: {
+    deck: 'Coverage scenario',
+    real: 'Real network',
+    stations: (n) => `${String(n)} stations`,
+    label: 'Scenario',
+    gains: (area) => `gains ${area}`,
+    loses: (area) => `loses ${area}`,
+    of: (area, size, radius) =>
+      `Share of the ${area} area (${size}) within ${String(radius)} m in a straight line.`,
+    undo: 'Undo',
+    reset: 'Back to the real network',
+    panelTitle: 'Coverage scenario',
+    panelLead:
+      'Which part of the city is close to a station, in a straight line. Change the network on the map and compare. It measures geometry: it does not say how many trips there would be.',
+    reference: (when, n) => `Real network on ${when}: ${String(n)} stations.`,
+    changes: 'Changes',
+    empty: 'It is still the real network. Choose Add, Move or Remove and tap the map.',
+    assumptions: 'Calculation assumptions',
+    toolsLabel: 'Scenario tools',
+    tools: {
+      add: { label: 'Add', hint: 'Tap the map where you want a new station.' },
+      move: { label: 'Move', hint: 'Drag a station, real or new, somewhere else.' },
+      remove: { label: 'Remove', hint: 'Tap a station to take it out of the scenario.' },
+    },
+    toolDefault: 'Choose a tool to change the network.',
+    radius: 'Radius',
+    radiusValue: (radius) => `${String(radius)} metres`,
+    area: 'Study area',
+    districts: 'Districts',
+    hypothetical: 'Hypothetical',
+    up: 'Up',
+    down: 'Down',
+    what: { added: 'added', moved: 'moved', removed: 'removed' },
+    undoChange: { added: 'Remove', moved: 'Put back', removed: 'Restore' },
+    stationFallback: (id) => `Station ${String(id)}`,
+    newStation: (n) => `New ${n}`,
+    model: (name, version) => `Model “${name}”, version ${String(version)}.`,
+    assumptionsOf: (model, version, fromApi) =>
+      model === 'cobertura-geometrica' &&
+      version === 1 &&
+      fromApi.length === COVERAGE_ASSUMPTIONS.length
+        ? COVERAGE_ASSUMPTIONS
+        : fromApi,
+    legend: {
+      title: 'What you see on the map',
+      covered: 'Covered by the real network',
+      gained: 'What the scenario gains',
+      lost: 'What it loses',
+      boundary: 'Study area boundary',
+      real: 'Real station',
+      added: 'New station (hypothetical)',
+      reach: 'Reach of a new or moved one',
+      removed: 'Removed station',
+    },
+    error: 'The coverage could not be calculated.',
+    calculating: 'Calculating the coverage…',
+    recalculating: 'Recalculating…',
+    noChange: 'no change',
+    lessThan100: 'less than 100 m²',
+    points: (value) => `${value} points`,
+    lessThanAPoint: 'less than 0.01 points',
+    noEffect: (n: NoEffectInput) => {
+      const radius = `${String(n.radius)} m`;
+      const inside = n.municipality ? `in ${n.areaName}` : 'in the district';
+      const outsideOf = n.municipality ? `outside ${n.areaName}` : 'outside the district';
+      if (n.moved === 0 && n.removed === 0) {
+        if (n.addedOutside) {
+          return n.added === 1
+            ? `This station is ${outsideOf}: it does not count towards the percentage.`
+            : `These stations are ${outsideOf}: they do not count towards the percentage.`;
+        }
+        return n.added === 1
+          ? `This station adds no area: ${inside}, everything within ${radius} of it is already covered by the real network.`
+          : `These stations add no area: ${inside}, everything within ${radius} of them is already covered by the real network.`;
+      }
+      if (n.added === 0 && n.moved === 0) {
+        if (n.removedOutside) {
+          return n.removed === 1
+            ? `This station is ${outsideOf}: removing it does not change the percentage.`
+            : `These stations are ${outsideOf}: removing them does not change the percentage.`;
+        }
+        return n.removed === 1
+          ? `Removing it takes away no area: ${inside}, what it covered is also covered by other stations.`
+          : `Removing them takes away no area: ${inside}, what they covered is also covered by other stations.`;
+      }
+      if (n.added === 0 && n.removed === 0) {
+        return n.moved === 1
+          ? `Moving it does not change the area: ${inside}, what it leaves and what it reaches are also covered by other stations.`
+          : `Moving them does not change the area: ${inside}, what they leave and what they reach are also covered by other stations.`;
+      }
+      return `These changes do not move the area covered ${inside}.`;
+    },
+  },
+};

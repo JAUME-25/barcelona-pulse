@@ -7,6 +7,7 @@ import {
   type StationsResponse,
   type TimelineResponse,
 } from '../../api/client';
+import { t } from '../../i18n';
 
 export type Remote<T> =
   { status: 'loading' } | { status: 'error'; error: ApiError } | { status: 'ready'; data: T };
@@ -18,9 +19,7 @@ interface Keyed<T> {
 
 export function asApiError(error: unknown): ApiError {
   if (error instanceof ApiError) return error;
-  return new ApiError(
-    'No se ha podido contactar con la API. Comprueba la conexión y vuelve a intentarlo.',
-  );
+  return new ApiError(t().api.unreachable);
 }
 
 /**

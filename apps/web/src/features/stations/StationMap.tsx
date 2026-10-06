@@ -14,6 +14,7 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { useEffect, useRef, useState } from 'react';
 import type { StationItem } from '../../api/client';
 import { THEME } from '../../app/theme';
+import { t } from '../../i18n';
 import { AVAILABILITY_ORDER, availabilityOf, type Availability } from './availability';
 import { loadNightStyle } from './basemap';
 import {
@@ -354,11 +355,11 @@ export function StationMap({
           hash: CAMERA_HASH,
           canvasContextAttributes: { antialias: true },
           locale: {
-            'NavigationControl.ZoomIn': 'Acercar',
-            'NavigationControl.ZoomOut': 'Alejar',
-            'NavigationControl.ResetBearing': 'Orientar al norte',
-            'AttributionControl.ToggleAttribution': 'Mostrar atribuciones',
-            'Map.Title': 'Mapa',
+            'NavigationControl.ZoomIn': t().map.zoomIn,
+            'NavigationControl.ZoomOut': t().map.zoomOut,
+            'NavigationControl.ResetBearing': t().map.resetBearing,
+            'AttributionControl.ToggleAttribution': t().map.attribution,
+            'Map.Title': t().map.title,
           },
         });
       } catch (error) {
@@ -494,7 +495,7 @@ export function StationMap({
         ref={containerRef}
         className="station-map__canvas"
         role="region"
-        aria-label="Mapa de estaciones"
+        aria-label={t().map.region}
       />
       <button
         type="button"
@@ -502,7 +503,7 @@ export function StationMap({
         aria-pressed={oblique}
         onClick={togglePitch}
       >
-        Vista 3D
+        {t().map.pitch}
       </button>
     </div>
   );

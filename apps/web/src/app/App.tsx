@@ -44,8 +44,11 @@ import {
   useSources,
   useStations,
 } from '../features/stations/useStationData';
-import { formatMonths, plural } from '../shared/format';
+import { sourceName } from '../features/stations/sources';
+import { t } from '../i18n';
+import { formatMonths } from '../shared/format';
 import { readParam, writeParam } from '../shared/url';
+import { LanguageSwitch } from './LanguageSwitch';
 import './App.css';
 
 // MapLibre es casi todo el JavaScript: el mapa llega en su propio fragmento y el panel y la lista
@@ -87,24 +90,24 @@ const writeStationParam = (value: string | null) => {
 };
 
 function MapStatusMessage({ status }: { status: MapStatus }) {
+  const m = t().map;
   switch (status.kind) {
     case 'failed':
       return (
         <p className="map-message" role="status">
-          No se ha podido cargar el mapa base. La lista de estaciones sigue disponible.
+          {m.failed}
         </p>
       );
     case 'unsupported':
       return (
         <p className="map-message" role="status">
-          Este navegador no puede dibujar el mapa porque no tiene WebGL2. La lista de estaciones
-          sigue disponible.
+          {m.unsupported}
         </p>
       );
     case 'degraded':
       return (
         <p className="map-message map-message--soft" role="status">
-          Parte del mapa base no ha cargado.
+          {m.degraded}
         </p>
       );
     default:
@@ -301,39 +304,44 @@ export function App() {
   };
 
   const mapUnavailable = mapStatus.kind === 'failed' || mapStatus.kind === 'unsupported';
+  const m = t().app;
 
   let body: ReactNode;
   if (sourcesState.status === 'error') {
     body = (
       <div className="panel-status" role="alert">
-        <p>No se han podido cargar las fuentes de datos. {sourcesState.error.message}</p>
+        <p>
+          {m.sourcesError} {sourcesState.error.message}
+        </p>
         <button type="button" className="button" onClick={retrySources}>
-          Reintentar
+          {m.retry}
         </button>
       </div>
     );
   } else if (sourcesState.status === 'ready' && sourceId === null) {
     body = (
       <div className="panel-status">
-        <p>Todavía no hay datos cargados.</p>
+        <p>{m.noData}</p>
         <p className="panel-status__hint">
-          En local, importa la demo con <code>docker compose run --rm api ingest demo</code>.
+          {m.noDataHint(<code>docker compose run --rm api ingest demo</code>)}
         </p>
       </div>
     );
   } else if (stationsState.status === 'error') {
     body = (
       <div className="panel-status" role="alert">
-        <p>No se han podido cargar las estaciones. {stationsState.error.message}</p>
+        <p>
+          {m.stationsError} {stationsState.error.message}
+        </p>
         <button type="button" className="button" onClick={retryStations}>
-          Reintentar
+          {m.retry}
         </button>
       </div>
     );
   } else if (response === null) {
     body = (
       <p className="panel-status" role="status">
-        Cargando estaciones…
+        {m.loading}
       </p>
     );
   } else if (sheet !== null && source?.kind === 'observed') {
@@ -359,7 +367,7 @@ export function App() {
         <div className="panel-tools">
           <div className="search">
             <label htmlFor="station-search" className="search__label">
-              Buscar estación
+              {m.search}
             </label>
             <input
               id="station-search"
@@ -374,9 +382,7 @@ export function App() {
             />
           </div>
           <p className="panel-tools__count" aria-live="polite">
-            {filtered.length === all.length
-              ? plural(all.length, 'estación', 'estaciones')
-              : `${filtered.length} de ${all.length} estaciones`}
+            {m.count(filtered.length, all.length)}
           </p>
         </div>
         {selected !== undefined ? (
@@ -388,14 +394,14 @@ export function App() {
           />
         ) : filtered.length === 0 ? (
           <div className="panel-status">
-            <p>Ninguna estación coincide con la búsqueda y los filtros.</p>
+            <p>{m.noMatch}</p>
             <button type="button" className="button" onClick={resetFilters}>
-              Mostrar todas
+              {m.showAll}
             </button>
           </div>
         ) : (
           <>
-            <h2 className="list-title">Estaciones</h2>
+            <h2 className="list-title">{m.listTitle}</h2>
             <StationList
               stations={filtered}
               at={response.at}
@@ -421,13 +427,14 @@ export function App() {
           <BrandMark />
           <div>
             <h1 className="brand__name">Barcelona Pulse</h1>
-            <p className="brand__tagline">Estaciones de Bicing en el mapa</p>
+            <p className="brand__tagline">{t().brand.tagline}</p>
           </div>
+          <LanguageSwitch />
         </div>
         <ModeSwitch mode={shownMode} onChange={changeMode} />
         {sources.length > 1 && (
           <label className="source-picker">
-            Fuente
+            {m.source}
             <select
               value={sourceId ?? ''}
               onChange={(e) => {
@@ -438,7 +445,7 @@ export function App() {
             >
               {sources.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.kind === 'synthetic' ? `${s.name} (demo)` : s.name}
+                  {s.kind === 'synthetic' ? `${sourceName(s)} ${m.demoSuffix}` : sourceName(s)}
                 </option>
               ))}
             </select>

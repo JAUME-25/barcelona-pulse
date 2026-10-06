@@ -134,6 +134,28 @@ guardado (`features/stations/names.ts`):
 - El buscador encuentra la estación por los dos nombres, sin acentos y sin «·», puntos ni
   apóstrofos: «parallel» encuentra «Av. Paral·lel».
 
+## Idiomas
+
+Castellano, catalán e inglés. El selector, elegido el 6 de octubre de 2026 entre tres (en la
+cabecera, una fila «Idioma» como la de la fuente o un botón sobre el mapa): **ES · CA · EN en
+la cabecera**, a la derecha y en su fila bajo el nombre en los tres idiomas. En la misma línea
+que el título partía «Barcelona Pulse» a 320 px.
+
+- El idioma va en la URL (`?idioma=ca`) y en el `lang` de la página. Sin parámetro, el primero
+  del navegador que tenga la aplicación; si no tiene ninguno, inglés.
+- Al cambiarlo, la aplicación se vuelve a montar: lo que va en la URL (modo, día, hora, estación,
+  escenario, ficha) se conserva y el foco queda en el idioma elegido.
+- Los textos están en `src/i18n` (`es.tsx`, `ca.tsx`, `en.tsx`), con la misma forma: TypeScript
+  avisa si a un idioma le falta un texto. Fechas y cifras, con `Intl` en hora de Barcelona
+  (`i18n/intl.ts`).
+- Los datos no se traducen: nombres de estación, barrios, distritos y áreas de estudio salen como
+  los publica la fuente.
+- La API habla en castellano. En catalán e inglés, la web traduce el nombre y la atribución de
+  las fuentes que conoce (por su id) y los supuestos de la cobertura solo si el modelo y su
+  versión son los que conoce; si no, deja el texto de la API.
+- Catalán: «la 01:30» pero «les 10:54», «d’agost», «de l’Eixample», «del 2026» (como `Intl`).
+  Inglés: «4–31 May 2026», cifras con punto decimal.
+
 ## Encuadre
 
 Al abrir, las estaciones ocupan la parte del mapa que no tapan el panel, la leyenda y, al

@@ -1,4 +1,5 @@
 import createClient from 'openapi-fetch';
+import { t } from '../i18n';
 import type { components, paths } from './schema';
 
 // Tipos derivados del contrato OpenAPI (src/api/schema.d.ts se genera con `npm run gen:api`).
@@ -41,16 +42,13 @@ interface ProblemLike {
 }
 
 export function toApiError(error: unknown, response: Response | undefined): ApiError {
-  if (response?.status === 429) {
-    return new ApiError(
-      'La API ha recibido demasiadas peticiones seguidas. Espera un minuto y vuelve a intentarlo.',
-      429,
-    );
-  }
+  const m = t().api;
+  if (response?.status === 429) return new ApiError(m.tooMany, 429);
+  // El detalle de la API va en castellano: es el de un error que no debería verse.
   const problem = (error ?? {}) as ProblemLike;
   const detail = problem.detail ?? problem.title;
   return new ApiError(
-    detail ?? `La API respondió ${response?.status.toString() ?? 'sin estado'}.`,
+    detail ?? m.status(response?.status.toString() ?? m.noStatus),
     response?.status,
   );
 }

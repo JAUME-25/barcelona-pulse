@@ -19,6 +19,8 @@ import {
   stationFixture,
   stationsResponse,
 } from '../test/fixtures';
+import { setLang } from '../i18n';
+import { LanguageRoot } from '../i18n/LanguageRoot';
 import { App } from './App';
 
 // MapLibre necesita WebGL: en jsdom se sustituye por un mapa mínimo que expone sus
@@ -217,6 +219,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  setLang('es');
 });
 
 describe('App', () => {
@@ -623,5 +626,39 @@ describe('App', () => {
     renderApp();
 
     expect(await screen.findByText('Todavía no hay datos cargados.')).toBeTruthy();
+  });
+
+  it('el selector de idioma cambia toda la interfaz y conserva lo que va en la URL', async () => {
+    mockApi((path) => json(path === '/api/sources' ? [demoSource] : stationsResponse(stations)));
+    window.history.replaceState(null, '', '/?estacion=demo-024');
+    const user = userEvent.setup();
+    render(<LanguageRoot>{(lang) => <App key={lang} />}</LanguageRoot>);
+    // La hora va en un <time> dentro de la frase: se comprueba el texto completo del detalle.
+    expect((await screen.findByRole('article')).textContent).toMatch(
+      /La última observación es de las 07:45/,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Català' }));
+
+    // La estación abierta sigue abierta, ahora en catalán.
+    expect(await screen.findByText(/Dades inventades per provar l’aplicació/)).toBeTruthy();
+    expect((await screen.findByRole('article')).textContent).toMatch(
+      /L’última observació és de les 07:45, 2 h 15 min abans/,
+    );
+    expect(new URLSearchParams(window.location.search).get('idioma')).toBe('ca');
+    expect(new URLSearchParams(window.location.search).get('estacion')).toBe('demo-024');
+    expect(document.documentElement.lang).toBe('ca');
+    const catala = screen.getByRole('button', { name: 'Català' });
+    expect(catala.getAttribute('aria-pressed')).toBe('true');
+    // El foco no se pierde al volver a montar: queda en el idioma elegido.
+    expect(document.activeElement).toBe(catala);
+
+    await user.click(screen.getByRole('button', { name: 'Tornar a la llista' }));
+    await user.click(screen.getByRole('button', { name: 'English' }));
+
+    expect(await screen.findByText(/Made-up data for trying out the app/)).toBeTruthy();
+    expect(screen.getByText('3 stations')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^No recent data/ })).toBeTruthy();
+    expect(new URLSearchParams(window.location.search).get('idioma')).toBe('en');
   });
 });

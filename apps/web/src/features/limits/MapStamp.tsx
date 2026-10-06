@@ -1,4 +1,5 @@
 import type { SourceKind } from '../../api/client';
+import { t } from '../../i18n';
 import { formatDateTime } from '../../shared/format';
 import './limits.css';
 
@@ -17,23 +18,20 @@ export function MapStamp({
   experiment: boolean;
   hypothetical: boolean;
 }) {
+  const m = t().stamp;
   if (kind === 'synthetic') {
     return (
       <p className="map-stamp map-stamp--demo">
-        <span className="map-stamp__label">Demo</span>
-        <span className="map-stamp__value">Datos inventados</span>
+        <span className="map-stamp__label">{m.demo}</span>
+        <span className="map-stamp__value">{m.demoValue}</span>
       </p>
     );
   }
   return (
     <p className="map-stamp">
-      <span className="map-stamp__label">
-        {experiment ? 'Red real del' : 'Histórico, no es tiempo real'}
-      </span>
+      <span className="map-stamp__label">{experiment ? m.network : m.historical}</span>
       <span className="map-stamp__value">{at === undefined ? '…' : formatDateTime(at)}</span>
-      {experiment && hypothetical && (
-        <span className="map-stamp__extra">con cambios hipotéticos</span>
-      )}
+      {experiment && hypothetical && <span className="map-stamp__extra">{m.hypothetical}</span>}
     </p>
   );
 }

@@ -68,7 +68,9 @@ Con datos reales, la web los muestra por defecto. La URL admite `?fuente=demo` o
 `?fuente=bicing-bcn`, `&estacion=<id de origen>` y `#mapa=zoom/lat/lon/rumbo/inclinación`. Para
 reproducir un día: `&modo=reproducir&dia=2026-08-20&hora=08:30` (hora de Barcelona). Para un
 escenario: `&modo=experimentar&radio=300&area=barcelona&nuevas=2.166,41.3635&quitadas=48`
-(`movidas=409:2.152,41.356` para mover una estación real).
+(`movidas=409:2.152,41.356` para mover una estación real). La interfaz está en castellano,
+catalán e inglés: `&idioma=es`, `ca` o `en`; sin él, la del navegador y, si no es ninguna de
+las tres, inglés.
 
 ## Pruebas
 

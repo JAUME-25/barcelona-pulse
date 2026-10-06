@@ -156,8 +156,9 @@ de Playwright añade el retraso de sus comprobaciones: la lista parecía tardar 
 - MapLibre llega en su propio fragmento: el JavaScript inicial pesa 297 KB (90 KB comprimido)
   y el del mapa 1,04 MB (273 KB) más su worker, 511 KB (143 KB). Con todo en un paquete, el
   mismo método daba en móvil con la red real el HTML a 242 ms y la lista a 885 ms; el mapa,
-  igual (2,1 s). Con los límites visibles, el inicial pasa a 313 KB (97 KB comprimido; tiempos
-  sin volver a medir).
+  igual (2,1 s). Con los límites visibles, el inicial pasa a 313 KB (97 KB comprimido) y, con
+  los nombres legibles y los tres idiomas, a 353 KB (107 KB comprimido); tiempos sin volver a
+  medir.
 - «Qué muestra y qué no» en producción (VPS de Forge, 6-10-2026): la rejilla de huecos salía a
   los 12,5 s la primera vez después de arrancar la API, que calcula a la vez las cuatro semanas
   de mayo cada 15 min, y a los 0,5 s cuando ya las tiene en memoria (cada semana, 56–190 ms).

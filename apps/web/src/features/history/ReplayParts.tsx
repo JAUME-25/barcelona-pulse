@@ -1,31 +1,29 @@
 import type { TimelinePoint } from '../../api/client';
+import { t } from '../../i18n';
 import { Term, TermGroup } from '../limits/Notes';
 import { OctagonGlyph } from '../stations/OctagonGlyph';
 import { formatLocalDay, localClock } from './time';
-import { DAY_STEP_MINUTES, SPEED_LABEL, SPEEDS, type Replay, type Speed } from './useReplay';
+import { DAY_STEP_MINUTES, SPEEDS, type Replay, type Speed } from './useReplay';
 import './replay.css';
 
 export type Mode = 'explore' | 'replay' | 'experiment';
 
-const MODES: { mode: Mode; label: string }[] = [
-  { mode: 'explore', label: 'Explorar' },
-  { mode: 'replay', label: 'Reproducir' },
-  { mode: 'experiment', label: 'Experimentar' },
-];
+const MODES: readonly Mode[] = ['explore', 'replay', 'experiment'];
 
 export function ModeSwitch({ mode, onChange }: { mode: Mode; onChange: (mode: Mode) => void }) {
+  const m = t().modes;
   return (
-    <div className="mode-switch" role="group" aria-label="Modo">
-      {MODES.map((m) => (
+    <div className="mode-switch" role="group" aria-label={m.label}>
+      {MODES.map((value) => (
         <button
-          key={m.mode}
+          key={value}
           type="button"
-          aria-pressed={mode === m.mode}
+          aria-pressed={mode === value}
           onClick={() => {
-            onChange(m.mode);
+            onChange(value);
           }}
         >
-          {m.label}
+          {m[value]}
         </button>
       ))}
     </div>
@@ -33,7 +31,7 @@ export function ModeSwitch({ mode, onChange }: { mode: Mode; onChange: (mode: Mo
 }
 
 export function PlayButton({ replay }: { replay: Replay }) {
-  const label = replay.playing ? 'Pausar' : 'Reproducir el día';
+  const label = replay.playing ? t().replay.pause : t().replay.play;
   return (
     <button
       type="button"
@@ -56,8 +54,9 @@ export function PlayButton({ replay }: { replay: Replay }) {
 
 /** Un paso atrás o adelante: para examinar un cambio concreto. */
 export function StepButton({ replay, direction }: { replay: Replay; direction: -1 | 1 }) {
+  const m = t().replay;
   const minutes = String(DAY_STEP_MINUTES);
-  const label = direction < 0 ? `${minutes} minutos antes` : `${minutes} minutos después`;
+  const label = direction < 0 ? m.stepBack(DAY_STEP_MINUTES) : m.stepForward(DAY_STEP_MINUTES);
   const atEdge = direction < 0 ? replay.index <= 0 : replay.index >= replay.points.length - 1;
   return (
     <button
@@ -76,9 +75,10 @@ export function StepButton({ replay, direction }: { replay: Replay; direction: -
 }
 
 export function SpeedSelect({ replay }: { replay: Replay }) {
+  const m = t().replay;
   return (
     <label className="speed-select">
-      <span className="speed-select__label">Velocidad</span>
+      <span className="speed-select__label">{m.speed}</span>
       <select
         value={replay.speed}
         onChange={(e) => {
@@ -87,7 +87,7 @@ export function SpeedSelect({ replay }: { replay: Replay }) {
       >
         {SPEEDS.map((s) => (
           <option key={s} value={s}>
-            {SPEED_LABEL[s]}
+            {m.speeds[s]}
           </option>
         ))}
       </select>
@@ -118,31 +118,26 @@ export function Counts({
   point: TimelinePoint | undefined;
   toleranceMinutes?: number | null;
 }) {
+  const m = t().replay;
   if (point === undefined) {
-    return <p className="replay-counts replay-counts--note">Cargando el día…</p>;
+    return <p className="replay-counts replay-counts--note">{m.loadingDay}</p>;
   }
   if (point.stationsWithData === 0) {
-    return (
-      <p className="replay-counts replay-counts--note">
-        Sin datos en este momento: ninguna estación había informado.
-      </p>
-    );
+    return <p className="replay-counts replay-counts--note">{m.noData}</p>;
   }
   const list = (
     <ul className="replay-counts">
       <li>
         <OctagonGlyph category="empty" size={16} />
-        <strong>{point.stationsEmpty}</strong> sin bicis
+        {m.countEmpty(<strong>{point.stationsEmpty}</strong>)}
       </li>
       <li>
         <OctagonGlyph category="full" size={16} />
-        <strong>{point.stationsFull}</strong> llenas
+        {m.countFull(<strong>{point.stationsFull}</strong>)}
       </li>
       <li className="replay-counts__coverage">
-        <Term
-          note={`Las que informaron en los ${String(toleranceMinutes ?? '')} minutos anteriores. Las demás no cuentan como vacías ni como llenas.`}
-        >
-          {point.stationsWithData} de {point.stationsKnown} con dato
+        <Term note={m.withDataNote(String(toleranceMinutes ?? ''))}>
+          {m.withData(point.stationsWithData, point.stationsKnown)}
         </Term>
       </li>
     </ul>

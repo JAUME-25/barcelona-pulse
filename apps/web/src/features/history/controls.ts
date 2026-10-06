@@ -1,15 +1,23 @@
 import type { KeyboardEvent } from 'react';
+import { t } from '../../i18n';
 import { niceMax } from './series';
 import { dayOfMonth, formatLocalDay, formatShortWeekday, localClock } from './time';
 import { STEPS_PER_HOUR, type Replay } from './useReplay';
 
 /** Lo que lee un lector de pantalla en el control de tiempo. */
 export function valueText(replay: Replay): string {
+  const m = t().replay;
   const { point, day } = replay;
-  if (point === undefined || day === null) return 'Cargando';
+  if (point === undefined || day === null) return m.valueLoading;
   const moment = `${localClock(point.at)}, ${formatLocalDay(day)}`;
-  if (point.stationsWithData === 0) return `${moment}. Sin datos.`;
-  return `${moment}. ${String(point.stationsEmpty)} sin bicis, ${String(point.stationsFull)} llenas, ${String(point.stationsWithData)} de ${String(point.stationsKnown)} con dato.`;
+  if (point.stationsWithData === 0) return m.valueNoData(moment);
+  return m.value(
+    moment,
+    point.stationsEmpty,
+    point.stationsFull,
+    point.stationsWithData,
+    point.stationsKnown,
+  );
 }
 
 /** Teclado de los controles de tiempo: flechas, una hora con Re Pág/Av Pág, inicio y fin. */

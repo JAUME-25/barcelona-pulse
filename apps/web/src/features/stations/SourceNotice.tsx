@@ -1,5 +1,7 @@
 import type { StationsResponse } from '../../api/client';
+import { t } from '../../i18n';
 import { formatDay, formatTime } from '../../shared/format';
+import { sourceAttribution, sourceName } from './sources';
 import '../limits/limits.css';
 
 function Moment({ label, iso }: { label: string; iso: string }) {
@@ -9,7 +11,7 @@ function Moment({ label, iso }: { label: string; iso: string }) {
       <time className="source-notice__time" dateTime={iso}>
         {formatDay(iso)}, <strong>{formatTime(iso)}</strong>
       </time>
-      <span className="source-notice__tz">hora de Barcelona</span>
+      <span className="source-notice__tz">{t().source.timeZone}</span>
     </p>
   );
 }
@@ -32,16 +34,17 @@ export function SourceNotice({
   /** Abre «Qué muestra y qué no», que lleva también el enlace al conjunto de datos. */
   onLimits?: () => void;
 }) {
+  const m = t().source;
   const { source } = response;
 
   if (source.kind === 'synthetic') {
     return (
       <div className="source-notice source-notice--demo">
         <p className="source-notice__lead">
-          <span className="source-notice__badge">Demo</span>
-          Datos inventados para probar la aplicación. No es la disponibilidad real de Bicing.
+          <span className="source-notice__badge">{m.demoBadge}</span>
+          {m.demoLead}
         </p>
-        {!compact && <Moment label="Momento mostrado" iso={response.at} />}
+        {!compact && <Moment label={m.shownMoment} iso={response.at} />}
       </div>
     );
   }
@@ -50,40 +53,36 @@ export function SourceNotice({
   const historical = response.atBasis === 'requested';
   const latest = response.stations
     .map((s) => s.state.lastObservedAt)
-    .filter((t): t is string => t !== null)
+    .filter((x): x is string => x !== null)
     .sort()
     .at(-1);
 
   return (
     <div className="source-notice source-notice--observed">
       <p className="source-notice__lead">
-        <span className="source-notice__badge source-notice__badge--real">Datos reales</span>
-        {!historical
-          ? `${source.name}.`
-          : months === null
-            ? 'Es un momento del pasado, no el estado actual.'
-            : `Datos históricos · ${months}. No es el estado actual.`}
+        <span className="source-notice__badge source-notice__badge--real">{m.realBadge}</span>
+        {!historical ? `${sourceName(source)}.` : months === null ? m.past : m.historical(months)}
       </p>
       {compact ? null : historical ? (
-        <Moment label="Momento mostrado" iso={response.at} />
+        <Moment label={m.shownMoment} iso={response.at} />
       ) : latest === undefined ? (
-        <p className="source-notice__moment">Sin observaciones en este momento.</p>
+        <p className="source-notice__moment">{m.noObservations}</p>
       ) : (
-        <Moment label="Última observación" iso={latest} />
+        <Moment label={m.lastObservation} iso={latest} />
       )}
       <p className="source-notice__credit">
-        {source.attribution}
-        {source.license !== null && <> Licencia {source.license}.</>}{' '}
+        {sourceAttribution(source)}
+        {source.license !== null && <> {m.license(source.license)}</>}{' '}
         {onLimits === undefined && source.url !== null && (
           <a href={source.url} target="_blank" rel="noreferrer">
-            Ver el conjunto de datos
+            {m.dataset}
           </a>
         )}
       </p>
       {onLimits !== undefined && (
         <p className="source-notice__limits">
           <button type="button" className="limits-link" onClick={onLimits}>
-            Qué muestra y qué no
+            {m.limits}
           </button>
         </p>
       )}

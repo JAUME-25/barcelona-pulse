@@ -161,13 +161,19 @@ honesta de lo hecho.
    Playwright. Ensayado el 6-10-2026 desde una base vacía (proyecto `bp-ci`, otros puertos) y
    en GitHub con `a6a3b06`: 16 de 16 en 18,5 s; el trabajo entero, 2 min 9 s, en paralelo con
    los otros dos.
-6. **Hecho en local.** Nombres de estación legibles, elegidos por Jaume el 6-10-2026 entre tres
+6. **Hecho.** Nombres de estación legibles, elegidos por Jaume el 6-10-2026 entre tres
    formas: «como en la placa» («Av. Can Marcet, 3») y las erratas de la fuente corregidas
    (`docs/design.md`, `features/stations/names.ts`). Pasado por los 548 nombres de mayo sin
    ningún caso raro; 53 cambian algo más que mayúsculas y espacios (7 nombres cortados que se
    completan con su dirección). El dato guardado no cambia y el buscador encuentra los dos.
    Revisado en la lista, el detalle, «Qué muestra y qué no» y Experimentar, en escritorio, 375 y
-   320 px. Sin desplegar.
+   320 px. En `743c39c`; sin desplegar.
+7. **Hecho.** La aplicación en catalán e inglés (`docs/design.md`, «Idiomas»), con el
+   selector que eligió Jaume el 6-10-2026 (ES · CA · EN en la cabecera). Pruebas: unitarias de
+   textos de los dos idiomas y de la detección, una de la app con el selector y una de humo
+   (catalán por la URL, inglés con el selector). Usada en el navegador con la red real en las
+   cuatro vistas, en escritorio, 375 y 320 px, sin errores, sin scroll lateral y sin palabras en
+   otro idioma fuera de los datos (`e2e/idiomas.capture.ts`). Sin desplegar.
 
 ## Backlog
 
@@ -178,7 +184,6 @@ honesta de lo hecho.
   verlos a escala de ciudad.
 - Web: a escala de ciudad, 540 marcadores se solapan; valorar una vista agregada que no esconda
   estados.
-- Web: idiomas (ca, en) cuando haya textos estables; hoy solo es.
 - Experimentar: añadir y mover estaciones sin ratón ni pantalla táctil (hoy solo se deshace con
   el teclado). Probar el arrastre con el dedo en un teléfono de verdad (en Playwright solo se ha
   probado el toque para añadir).

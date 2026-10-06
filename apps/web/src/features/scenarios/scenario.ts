@@ -1,4 +1,5 @@
 import type { CoverageRequest } from '../../api/client';
+import { t } from '../../i18n';
 
 /** Estación inventada para el escenario: no existe y nunca se guarda (ADR 0013). */
 export interface Hypothetical {
@@ -137,7 +138,7 @@ export function coverageRequest(
 
 /** «Nueva 3» para la etiqueta «h3». */
 export function hypotheticalName(id: string): string {
-  return `Nueva ${id.replace(/^h/, '')}`;
+  return t().scenario.newStation(id.replace(/^h/, ''));
 }
 
 /** Siguiente etiqueta libre: h1, h2… */

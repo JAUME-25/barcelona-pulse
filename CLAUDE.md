@@ -97,6 +97,13 @@ Jaume ejecuta los comandos en Forge y pega la salida.
   la base de datos guardan el de la fuente («LA RAMBLA, 75») y la pantalla dice «La Rambla, 75».
   Una prueba que busca una estación en pantalla usa el nombre legible. Una errata nueva de la
   fuente se corrige en `CORRECTIONS` solo si no admite duda.
+- Un texto nuevo de la interfaz va en `src/i18n/es.tsx`, `ca.tsx` y `en.tsx` (TypeScript avisa si
+  falta en uno) y se lee con `t()` al pintar, no en una constante de módulo: al cambiar de idioma
+  la app se vuelve a montar, pero una constante se quedaría en el idioma de entrada. Las pruebas
+  van en castellano (Vitest por defecto; Playwright con `locale: 'es-ES'`).
+- Las traducciones de los supuestos de la cobertura van por posición y solo para
+  `cobertura-geometrica` v1 con 7 supuestos: si cambian en `CoverageQuery.Model`, sube la versión
+  o cambia también `ca.tsx` y `en.tsx`, o saldrán supuestos que no son.
 - La fluidez se mide con la compilación de producción y la GPU (`e2e/reproduccion.measure.ts`):
   en el servidor de desarrollo React va varias veces más lento y, sin ventana, Chromium pinta
   WebGL por software.

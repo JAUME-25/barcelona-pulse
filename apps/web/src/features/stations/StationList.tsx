@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useRef } from 'react';
 import type { StationItem } from '../../api/client';
-import { formatSince } from '../../shared/format';
-import { AVAILABILITY_LABEL, availabilityOf, type Availability } from './availability';
+import { t } from '../../i18n';
+import { availabilityLabel, availabilityOf, type Availability } from './availability';
 import { stationName } from './names';
 import { OctagonGlyph } from './OctagonGlyph';
 
@@ -14,19 +14,16 @@ interface StationListProps {
 }
 
 function summary(station: StationItem, at: string): string {
+  const m = t().list;
   const category = availabilityOf(station.state);
-  const label = AVAILABILITY_LABEL[category];
+  const label = availabilityLabel(category);
   const last = station.state.lastObservedAt;
   // Con la fecha si no es del mismo día: «desde las 10:54» no puede querer decir junio de 2025.
-  if (station.state.freshness === 'stale' && last !== null) {
-    return `${label} desde ${formatSince(last, at)}`;
-  }
-  if (station.state.freshness === 'none') return 'Ningún dato hasta este momento';
-  if (category !== 'outOfService' && station.state.isRenting === false) {
-    return `${label}, sin préstamo`;
-  }
+  if (station.state.freshness === 'stale' && last !== null) return m.staleSince(label, last, at);
+  if (station.state.freshness === 'none') return m.never;
+  if (category !== 'outOfService' && station.state.isRenting === false) return m.noRenting(label);
   if (category !== 'outOfService' && station.state.isReturning === false) {
-    return `${label}, sin devoluciones`;
+    return m.noReturning(label);
   }
   return label;
 }
@@ -65,6 +62,7 @@ const StationRow = memo(function StationRow({
   current,
   onSelect,
 }: StationRowProps) {
+  const m = t().list;
   return (
     <li>
       <button
@@ -83,16 +81,15 @@ const StationRow = memo(function StationRow({
             {summaryText}
             {bikes !== null && (
               <span className="visually-hidden">
-                , {bikes === 1 ? '1 bici' : `${bikes} bicis`}
-                {docks !== null &&
-                  `, ${docks === 1 ? '1 anclaje libre' : `${docks} anclajes libres`}`}
+                , {m.srBikes(bikes)}
+                {docks !== null && `, ${m.srDocks(docks)}`}
               </span>
             )}
           </span>
         </span>
         <span className="station-list__figures" aria-hidden="true">
-          <Figure value={bikes} unit={bikes === 1 ? 'bici' : 'bicis'} />
-          <Figure value={docks} unit="libres" />
+          <Figure value={bikes} unit={m.unitBikes(bikes ?? 0)} />
+          <Figure value={docks} unit={m.unitDocks} />
         </span>
       </button>
     </li>

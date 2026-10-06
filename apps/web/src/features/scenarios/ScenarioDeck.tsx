@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
 import type { StationItem, StudyAreaItem } from '../../api/client';
+import { t } from '../../i18n';
 import { formatDateTime } from '../../shared/format';
 import { ScopeNotes } from '../limits/Notes';
 import { figuresOf } from './figures';
@@ -51,8 +52,9 @@ export function ScenarioDeck({ state, areas, tool, onTool }: ScenarioViewProps) 
     };
   }, []);
 
+  const m = t().scenario;
   return (
-    <section ref={deckRef} className="scenario-deck" aria-label="Escenario de cobertura">
+    <section ref={deckRef} className="scenario-deck" aria-label={m.deck}>
       <div className="scenario-deck__controls">
         <ToolButtons tool={tool} onChange={onTool} />
         <ToolHint tool={tool} />
@@ -68,9 +70,9 @@ export function ScenarioDeck({ state, areas, tool, onTool }: ScenarioViewProps) 
           <>
             <div className="scenario-deck__compare">
               <p className="scenario-deck__side">
-                <span className="scenario-deck__label">Red real</span>
+                <span className="scenario-deck__label">{m.real}</span>
                 <span className="scenario-deck__share">{f.baseShare}</span>
-                <span className="scenario-deck__sub">{f.baseStations} estaciones</span>
+                <span className="scenario-deck__sub">{m.stations(f.baseStations)}</span>
               </p>
               <svg
                 className="scenario-deck__arrow"
@@ -89,22 +91,20 @@ export function ScenarioDeck({ state, areas, tool, onTool }: ScenarioViewProps) 
               </svg>
               <p className="scenario-deck__side scenario-deck__side--scenario">
                 <span className="scenario-deck__label">
-                  Escenario <HypotheticalBadge />
+                  {m.label} <HypotheticalBadge />
                 </span>
                 <span className="scenario-deck__share">{f.scenarioShare}</span>
-                <span className="scenario-deck__sub">{f.scenarioStations} estaciones</span>
+                <span className="scenario-deck__sub">{m.stations(f.scenarioStations)}</span>
               </p>
             </div>
             <p className="scenario-deck__diff">
               <Delta figures={f} />
-              <span>gana {f.gained}</span>
-              <span>pierde {f.lost}</span>
+              <span>{m.gains(f.gained)}</span>
+              <span>{m.loses(f.lost)}</span>
               <PendingNote pending={state.pending} />
             </p>
             <NoEffectNote state={state} />
-            <p className="scenario-deck__of">
-              Del área de {f.areaName} ({f.areaSize}) a menos de {f.radius} m en línea recta.
-            </p>
+            <p className="scenario-deck__of">{m.of(f.areaName, f.areaSize, f.radius)}</p>
             <ScopeNotes />
           </>
         )}
@@ -115,7 +115,7 @@ export function ScenarioDeck({ state, areas, tool, onTool }: ScenarioViewProps) 
             disabled={!state.canUndo}
             onClick={state.undo}
           >
-            Deshacer
+            {m.undo}
           </button>
           <button
             type="button"
@@ -123,7 +123,7 @@ export function ScenarioDeck({ state, areas, tool, onTool }: ScenarioViewProps) 
             disabled={!hasChanges(state.scenario)}
             onClick={state.reset}
           >
-            Volver a la red real
+            {m.reset}
           </button>
         </div>
       </div>
@@ -133,30 +133,25 @@ export function ScenarioDeck({ state, areas, tool, onTool }: ScenarioViewProps) 
 
 /** Panel de «Experimentar»: qué se mide, los cambios hechos y los supuestos. */
 export function ScenarioPanel({ state, stations }: ScenarioViewProps) {
+  const m = t().scenario;
   const items = changeItems(state.scenario, stations, state);
   const reference = state.shown?.reference;
   return (
     <div className="scenario-panel">
-      <h2 className="scenario-panel__title">Escenario de cobertura</h2>
-      <p className="scenario-panel__lead">
-        Qué parte de la ciudad queda cerca de una estación, en línea recta. Cambia la red sobre el
-        mapa y compara. Mide geometría: no dice cuántos viajes habría.
-      </p>
+      <h2 className="scenario-panel__title">{m.panelTitle}</h2>
+      <p className="scenario-panel__lead">{m.panelLead}</p>
       {reference !== undefined && (
         <p className="scenario-panel__reference">
-          Red real del {formatDateTime(reference.at)}: {reference.stations} estaciones.
+          {m.reference(formatDateTime(reference.at), reference.stations)}
         </p>
       )}
       <h3 className="scenario-panel__heading">
-        Cambios <span className="scenario-panel__count">{items.length}</span>
+        {m.changes} <span className="scenario-panel__count">{items.length}</span>
       </h3>
-      <ChangesList
-        items={items}
-        empty="Todavía es la red real. Elige Añadir, Mover o Quitar y toca el mapa."
-      />
+      <ChangesList items={items} empty={m.empty} />
       {state.shown !== undefined && (
         <details className="scenario-panel__details">
-          <summary>Supuestos del cálculo</summary>
+          <summary>{m.assumptions}</summary>
           <Assumptions model={state.shown.model} />
         </details>
       )}

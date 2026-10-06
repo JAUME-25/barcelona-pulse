@@ -1,4 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, type PointerEvent } from 'react';
+import { t } from '../../i18n';
 import { GapCaption } from '../limits/Notes';
 import { onTimeKey, sliderProps } from './controls';
 import { Clock, Counts, PlayButton, SpeedSelect, StepButton } from './ReplayParts';
@@ -61,8 +62,9 @@ export function ReplayDeck({ replay }: { replay: Replay }) {
     replay.seek(((e.clientX - rect.left) / rect.width) * last);
   };
 
+  const m = t().replay;
   return (
-    <section ref={deckRef} className="replay-deck" aria-label="Reproducir un día">
+    <section ref={deckRef} className="replay-deck" aria-label={m.deck}>
       <div className="replay-deck__transport">
         <div className="replay-deck__buttons">
           <StepButton replay={replay} direction={-1} />
@@ -83,7 +85,7 @@ export function ReplayDeck({ replay }: { replay: Replay }) {
       <div
         ref={trackRef}
         className="replay-deck__track"
-        {...sliderProps(replay, 'Momento del día')}
+        {...sliderProps(replay, m.slider)}
         onKeyDown={onTimeKey(replay)}
         onPointerDown={(e) => {
           e.currentTarget.setPointerCapture(e.pointerId);
@@ -94,13 +96,13 @@ export function ReplayDeck({ replay }: { replay: Replay }) {
         }}
       >
         <span className="replay-deck__label replay-deck__label--empty" aria-hidden="true">
-          Sin bicis
+          {m.empty}
         </span>
         <span className="replay-deck__label replay-deck__label--full" aria-hidden="true">
-          Llenas
+          {m.full}
         </span>
         <span className="replay-deck__scale" aria-hidden="true">
-          escala: {scale} estaciones
+          {m.scale(scale)}
         </span>
         <svg
           className="replay-deck__wave"

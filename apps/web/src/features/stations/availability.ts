@@ -1,4 +1,5 @@
 import type { StationItem, StationState } from '../../api/client';
+import { t } from '../../i18n';
 import { stationName } from './names';
 
 /**
@@ -19,23 +20,15 @@ export const AVAILABILITY_ORDER: readonly Availability[] = [
   'unknown',
 ];
 
-export const AVAILABILITY_LABEL: Record<Availability, string> = {
-  available: 'Con bicis',
-  few: 'Pocas bicis',
-  empty: 'Sin bicis',
-  full: 'Llena',
-  outOfService: 'Fuera de servicio',
-  unknown: 'Sin dato reciente',
-};
+/** «Con bicis», «Sin dato reciente»… en el idioma de la interfaz. */
+export function availabilityLabel(category: Availability): string {
+  return t().availability.label[category];
+}
 
-export const AVAILABILITY_HINT: Record<Availability, string> = {
-  available: `${FEW_BIKES_MAX + 1} o más`,
-  few: `de 1 a ${FEW_BIKES_MAX}`,
-  empty: 'ninguna libre',
-  full: 'sin anclajes libres',
-  outOfService: 'no opera',
-  unknown: 'no es cero',
-};
+/** «4 o más», «no es cero»… */
+export function availabilityHint(category: Availability): string {
+  return t().availability.hint(category, FEW_BIKES_MAX);
+}
 
 /**
  * Precedencia: sin dato fiable → desconocido; estación no operativa → fuera de servicio
@@ -55,18 +48,14 @@ export function availabilityOf(state: StationState): Availability {
   return 'available';
 }
 
-export const STATUS_LABEL: Record<StationState['status'], string> = {
-  in_service: 'En servicio',
-  maintenance: 'En mantenimiento',
-  closed: 'Cerrada',
-  planned: 'Prevista',
-  unknown: 'Desconocido',
-};
+export function statusLabel(status: StationState['status']): string {
+  return t().availability.status[status];
+}
 
-export const QUALITY_FLAG_LABEL: Record<string, string> = {
-  counts_exceed_capacity: 'Bicis y anclajes suman más que la capacidad publicada.',
-  bike_types_mismatch: 'Mecánicas y eléctricas no suman el total publicado.',
-};
+/** Explicación de una marca de calidad; si no se conoce, la marca tal cual. */
+export function qualityFlagLabel(flag: string): string {
+  return t().availability.quality[flag] ?? flag;
+}
 
 export function countByAvailability(
   stations: readonly StationItem[],

@@ -1,4 +1,7 @@
-import { DISPLAY_TIME_ZONE } from '../../shared/format';
+import { DISPLAY_TIME_ZONE } from '../../i18n/intl';
+
+// Los nombres de los días van en el idioma de la interfaz.
+export { formatLocalDay, formatShortWeekday } from '../../i18n/intl';
 
 // Días y horas de Barcelona, sea cual sea la zona del navegador. Un «día» es una fecha
 // AAAA-MM-DD del calendario de Barcelona; los de cambio de hora duran 23 o 25 horas.
@@ -76,31 +79,6 @@ export function lastLocalDays(fromIso: string, toIso: string, count: number): st
     days.unshift(day);
   }
   return days;
-}
-
-// Con el año: en una reproducción histórica, «domingo, 23 de agosto» no basta.
-const longDay = new Intl.DateTimeFormat('es-ES', {
-  timeZone: 'UTC',
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-});
-const shortWeekday = new Intl.DateTimeFormat('es-ES', { timeZone: 'UTC', weekday: 'short' });
-
-function noon(date: string): Date {
-  const [y, m, d] = splitDate(date);
-  return new Date(Date.UTC(y, m - 1, d, 12));
-}
-
-/** «jueves, 20 de agosto de 2026» */
-export function formatLocalDay(date: string): string {
-  return longDay.format(noon(date));
-}
-
-/** «jue» */
-export function formatShortWeekday(date: string): string {
-  return shortWeekday.format(noon(date));
 }
 
 export function dayOfMonth(date: string): number {

@@ -34,7 +34,8 @@ responde a tres preguntas sin hacerlo:
   56 % a 300 m) y cuánto gana o pierde si se añaden, mueven o quitan estaciones.
 
 Una ficha, «Qué muestra y qué no», reúne de cuándo son los datos, los huecos de cada día y hora,
-qué estaciones no informan y por qué, y lo que la aplicación no dice.
+qué estaciones no informan y por qué, y lo que la aplicación no dice. Todo, en castellano,
+catalán e inglés.
 
 ## Decisiones
 
@@ -150,13 +151,14 @@ software, así que la fluidez se mide con la GPU.
 | Despliegue completo | 43 s |
 
 Los tiempos de carga se midieron con 297 KB de JavaScript inicial (90 KB comprimido); con los
-límites visibles son 313 KB (97 KB) y no se han vuelto a medir. Detalle y cómo repetir cada
+límites visibles, los nombres legibles y los tres idiomas son 353 KB (107 KB) y no se han vuelto
+a medir. Detalle y cómo repetir cada
 medición: [arquitectura](architecture.md#mediciones).
 
 ## Pruebas
 
 - 153 pruebas de backend, unitarias y de integración contra PostGIS real (no un proveedor en
-  memoria), y 71 de la web, unitarias y de componentes. La CI las pasa y comprueba además el
+  memoria), y 104 de la web, unitarias y de componentes. La CI las pasa y comprueba además el
   formato, el lint, los tipos, que el contrato OpenAPI esté al día y que no falte ninguna
   migración.
 - Pruebas de humo con Playwright en escritorio y móvil, también en la CI: levanta la API y
@@ -184,7 +186,9 @@ medición: [arquitectura](architecture.md#mediciones).
   estaciones sigue funcionando.
 - En los primeros segundos tras arrancar la API (unos 15 s con mayo), quien abra «Qué muestra y
   qué no» aún espera a que se calcule la rejilla de huecos.
-- Solo en español.
+- La interfaz está en castellano, catalán e inglés, pero la API responde en castellano: la web
+  traduce los textos de la API que conoce (fuentes y supuestos de la cobertura) y uno nuevo
+  saldría en castellano hasta traducirlo.
 
 ## Ficha técnica
 

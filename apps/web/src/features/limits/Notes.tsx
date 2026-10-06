@@ -1,5 +1,6 @@
 import { createContext, useContext, useId, useMemo, useState, type ReactNode } from 'react';
 import type { TimelinePoint } from '../../api/client';
+import { t } from '../../i18n';
 import { gapText } from './limits';
 import './limits.css';
 
@@ -69,18 +70,13 @@ export function Term({ children, note }: { children: ReactNode; note: string }) 
 
 /** En «Experimentar», junto al resultado: qué mide el porcentaje y qué no (supuestos del modelo). */
 export function ScopeNotes() {
+  const m = t().scope;
   return (
     <TermGroup className="scope-notes">
       <p className="scope-notes__terms">
-        <Term note="Distancia en línea recta desde cada estación, no a pie por calles: no es una isócrona.">
-          En línea recta
-        </Term>
-        <Term note="El porcentaje es sobre el área de estudio elegida, no sobre la población ni sobre otra zona.">
-          Superficie, no población
-        </Term>
-        <Term note="La capacidad no cambia la cobertura. Nada de esto dice cuántos viajes, esperas o demanda habría.">
-          No mide viajes
-        </Term>
+        <Term note={m.straight.note}>{m.straight.term}</Term>
+        <Term note={m.surface.note}>{m.surface.term}</Term>
+        <Term note={m.trips.note}>{m.trips.term}</Term>
       </p>
     </TermGroup>
   );

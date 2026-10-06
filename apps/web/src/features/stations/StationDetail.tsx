@@ -1,14 +1,11 @@
 import { useEffect, useRef } from 'react';
 import type { StationItem, StationsResponse } from '../../api/client';
-import { formatDateTime, formatDay, formatDuration, formatTime, plural } from '../../shared/format';
-import {
-  AVAILABILITY_LABEL,
-  availabilityOf,
-  QUALITY_FLAG_LABEL,
-  STATUS_LABEL,
-} from './availability';
+import { t } from '../../i18n';
+import { formatDateTime, formatDay, formatDuration, formatTime } from '../../shared/format';
+import { availabilityLabel, availabilityOf, qualityFlagLabel, statusLabel } from './availability';
 import { districtName, stationName } from './names';
 import { OctagonGlyph } from './OctagonGlyph';
+import { sourceName } from './sources';
 
 interface StationDetailProps {
   station: StationItem;
@@ -25,28 +22,28 @@ function UnknownExplanation({
   station: StationItem;
   response: StationsResponse;
 }) {
+  const m = t().detail;
   const last = station.state.lastObservedAt;
   if (last === null) {
-    return (
-      <p className="station-detail__explain">
-        Esta estación no ha enviado ninguna observación hasta el momento mostrado.
-      </p>
-    );
+    return <p className="station-detail__explain">{m.neverReported}</p>;
   }
   // «de las 07:45» el mismo día; si no, con la fecha: «del 12 de junio de 2025, 10:54».
   const sameDay = formatDay(last) === formatDay(response.at);
   return (
     <p className="station-detail__explain">
-      La última observación es {sameDay ? 'de las' : 'del'}{' '}
-      <time dateTime={last}>{sameDay ? formatTime(last) : formatDateTime(last)}</time>,{' '}
-      {formatDuration(last, response.at)} antes del momento mostrado. Pasados{' '}
-      {response.toleranceMinutes} min sin datos, el estado se da por desconocido: no se supone que
-      esté vacía.
+      {m.lastObservation({
+        sameDay,
+        when: <time dateTime={last}>{sameDay ? formatTime(last) : formatDateTime(last)}</time>,
+        clock: formatTime(last),
+        duration: formatDuration(last, response.at),
+        tolerance: response.toleranceMinutes,
+      })}
     </p>
   );
 }
 
 export function StationDetail({ station, response, onBack, focusOnOpen }: StationDetailProps) {
+  const m = t().detail;
   const headingRef = useRef<HTMLHeadingElement>(null);
   const { state } = station;
   const category = availabilityOf(state);
@@ -58,19 +55,19 @@ export function StationDetail({ station, response, onBack, focusOnOpen }: Statio
   }, [station.id, focusOnOpen]);
 
   const unavailable = [
-    state.docksDisabled ? plural(state.docksDisabled, 'anclaje', 'anclajes') : null,
-    state.bikesDisabled ? plural(state.bikesDisabled, 'bici', 'bicis') : null,
+    state.docksDisabled ? m.docks(state.docksDisabled) : null,
+    state.bikesDisabled ? m.bikes(state.bikesDisabled) : null,
   ].filter((x): x is string => x !== null);
 
   const bikeSplit =
     state.mechanicalBikesAvailable !== null && state.ebikesAvailable !== null
-      ? `${state.mechanicalBikesAvailable} mecánicas y ${state.ebikesAvailable} eléctricas`
-      : 'Sin desglose por tipo';
+      ? m.bikeSplit(state.mechanicalBikesAvailable, state.ebikesAvailable)
+      : m.noSplit;
 
   return (
     <article className="station-detail" aria-labelledby="station-detail-name">
       <button type="button" className="station-detail__back" onClick={onBack}>
-        Volver a la lista
+        {m.back}
       </button>
 
       <h2 id="station-detail-name" className="station-detail__name" tabIndex={-1} ref={headingRef}>
@@ -85,17 +82,19 @@ export function StationDetail({ station, response, onBack, focusOnOpen }: Statio
       <p className="station-detail__status">
         <OctagonGlyph category={category} size={26} />
         <span>
-          {AVAILABILITY_LABEL[category]}
-          {category === 'outOfService' && <> ({STATUS_LABEL[state.status].toLowerCase()})</>}
+          {availabilityLabel(category)}
+          {category === 'outOfService' && <> ({statusLabel(state.status).toLowerCase()})</>}
         </span>
       </p>
 
       {current && state.lastObservedAt !== null && (
         <p className="station-detail__observed">
-          Dato de las{' '}
           <time dateTime={state.lastObservedAt}>
-            <strong>{formatTime(state.lastObservedAt)}</strong> del{' '}
-            {formatDay(state.lastObservedAt)}
+            {m.observedAt({
+              time: <strong>{formatTime(state.lastObservedAt)}</strong>,
+              day: formatDay(state.lastObservedAt),
+              clock: formatTime(state.lastObservedAt),
+            })}
           </time>
         </p>
       )}
@@ -103,15 +102,15 @@ export function StationDetail({ station, response, onBack, focusOnOpen }: Statio
       {current && state.bikesAvailable !== null ? (
         <dl className="station-detail__figures">
           <div>
-            <dt>Bicis disponibles</dt>
+            <dt>{m.bikesAvailable}</dt>
             <dd className="station-detail__figure">{state.bikesAvailable}</dd>
             <dd className="station-detail__sub">{bikeSplit}</dd>
           </div>
           <div>
-            <dt>Anclajes libres</dt>
+            <dt>{m.docksFree}</dt>
             <dd className="station-detail__figure">{state.docksAvailable ?? '–'}</dd>
             {station.capacity !== null && (
-              <dd className="station-detail__sub">de {station.capacity} de capacidad</dd>
+              <dd className="station-detail__sub">{m.capacityOf(station.capacity)}</dd>
             )}
           </div>
         </dl>
@@ -119,69 +118,49 @@ export function StationDetail({ station, response, onBack, focusOnOpen }: Statio
         <UnknownExplanation station={station} response={response} />
       )}
 
-      {category === 'outOfService' && (
-        <p className="station-detail__explain">
-          La estación no está operativa. Las cifras son las que publica, pero puede que no se puedan
-          coger ni devolver bicis.
-        </p>
-      )}
+      {category === 'outOfService' && <p className="station-detail__explain">{m.outOfService}</p>}
 
       {current && category !== 'outOfService' && state.isRenting === false && (
-        <p className="station-detail__explain">
-          En este momento la estación no permite coger bicis, aunque tenga.
-        </p>
+        <p className="station-detail__explain">{m.notRenting}</p>
       )}
       {current && category !== 'outOfService' && state.isReturning === false && (
-        <p className="station-detail__explain">
-          En este momento la estación no admite devoluciones, aunque tenga anclajes libres.
-        </p>
+        <p className="station-detail__explain">{m.notReturning}</p>
       )}
 
       <dl className="station-detail__facts">
         {current && unavailable.length > 0 && (
           <>
-            <dt>No disponibles</dt>
-            <dd>{unavailable.join(' y ')}</dd>
+            <dt>{m.unavailable}</dt>
+            <dd>{unavailable.join(` ${m.and} `)}</dd>
           </>
         )}
         {!current && (
           <>
-            <dt>Capacidad publicada</dt>
-            <dd>
-              {station.capacity === null
-                ? 'No publicada'
-                : plural(station.capacity, 'anclaje', 'anclajes')}
-            </dd>
-            <dt>Última observación</dt>
+            <dt>{m.capacity}</dt>
+            <dd>{station.capacity === null ? m.notPublished : m.docks(station.capacity)}</dd>
+            <dt>{m.last}</dt>
             <dd>
               {state.lastObservedAt === null ? (
-                'Ninguna'
+                m.none
               ) : (
                 <time dateTime={state.lastObservedAt}>{formatDateTime(state.lastObservedAt)}</time>
               )}
             </dd>
           </>
         )}
-        <dt>Fuente</dt>
+        <dt>{m.source}</dt>
         <dd>
-          {response.source.kind === 'synthetic'
-            ? 'Demo con datos inventados'
-            : response.source.name}
-          <span className="station-detail__id"> (identificador {station.sourceStationId})</span>
+          {response.source.kind === 'synthetic' ? m.demoSource : sourceName(response.source)}
+          <span className="station-detail__id">{m.id(station.sourceStationId)}</span>
         </dd>
       </dl>
 
       {(state.qualityFlags.length > 0 || station.metadataAssumed) && (
         <ul className="station-detail__notes">
           {state.qualityFlags.map((flag) => (
-            <li key={flag}>{QUALITY_FLAG_LABEL[flag] ?? flag}</li>
+            <li key={flag}>{qualityFlagLabel(flag)}</li>
           ))}
-          {station.metadataAssumed && (
-            <li>
-              El nombre, la ubicación y la capacidad son de una publicación posterior a este
-              momento.
-            </li>
-          )}
+          {station.metadataAssumed && <li>{m.metadataAssumed}</li>}
         </ul>
       )}
     </article>

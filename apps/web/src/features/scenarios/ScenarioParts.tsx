@@ -1,6 +1,7 @@
 import { useId } from 'react';
 import type { CoverageResponse, StudyAreaItem } from '../../api/client';
 import { THEME } from '../../app/theme';
+import { t } from '../../i18n';
 import { octagonPoints, svgPath } from '../stations/octagon';
 import type { Figures } from './figures';
 import { RADIUS_MAX, RADIUS_MIN, RADIUS_STEP } from './scenario';
@@ -126,21 +127,22 @@ function ToolIcon({ tool }: { tool: Exclude<Tool, null> }) {
 
 /** Herramientas del mapa. Pulsar la activa la suelta. */
 export function ToolButtons({ tool, onChange }: { tool: Tool; onChange: (tool: Tool) => void }) {
+  const m = t().scenario;
   return (
-    <div className="tool-buttons" role="group" aria-label="Herramientas del escenario">
-      {TOOLS.map((t) => (
+    <div className="tool-buttons" role="group" aria-label={m.toolsLabel}>
+      {TOOLS.map((id) => (
         <button
-          key={t.id}
+          key={id}
           type="button"
           className="tool-button"
-          aria-pressed={tool === t.id}
-          title={t.hint}
+          aria-pressed={tool === id}
+          title={m.tools[id].hint}
           onClick={() => {
-            onChange(tool === t.id ? null : t.id);
+            onChange(tool === id ? null : id);
           }}
         >
-          <ToolIcon tool={t.id} />
-          <span>{t.label}</span>
+          <ToolIcon tool={id} />
+          <span>{m.tools[id].label}</span>
         </button>
       ))}
     </div>
@@ -149,11 +151,10 @@ export function ToolButtons({ tool, onChange }: { tool: Tool; onChange: (tool: T
 
 /** Qué hace la herramienta activa; sin herramienta, cómo empezar. */
 export function ToolHint({ tool }: { tool: Tool }) {
-  const hint =
-    TOOLS.find((t) => t.id === tool)?.hint ?? 'Elige una herramienta para cambiar la red.';
+  const m = t().scenario;
   return (
     <p className="tool-hint" aria-live="polite">
-      {hint}
+      {tool === null ? m.toolDefault : m.tools[tool].hint}
     </p>
   );
 }
@@ -166,10 +167,11 @@ export function RadiusField({
   onChange: (radius: number) => void;
 }) {
   const id = useId();
+  const m = t().scenario;
   return (
     <div className="radius-field">
       <label htmlFor={id} className="radius-field__label">
-        Radio
+        {m.radius}
         <output htmlFor={id} className="radius-field__value">
           {radius} m
         </output>
@@ -181,7 +183,7 @@ export function RadiusField({
         max={RADIUS_MAX}
         step={RADIUS_STEP}
         value={radius}
-        aria-valuetext={`${String(radius)} metros`}
+        aria-valuetext={m.radiusValue(radius)}
         onChange={(e) => {
           onChange(Number(e.target.value));
         }}
@@ -207,7 +209,7 @@ export function AreaField({
   return (
     <div className="area-field">
       <label htmlFor={id} className="area-field__label">
-        Área de estudio
+        {t().scenario.area}
       </label>
       <select
         id={id}
@@ -223,7 +225,7 @@ export function AreaField({
           </option>
         ))}
         {districts.length > 0 && (
-          <optgroup label="Distritos">
+          <optgroup label={t().scenario.districts}>
             {districts.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
@@ -238,7 +240,7 @@ export function AreaField({
 
 /** Marca de lo inventado: el escenario nunca se presenta como dato observado. */
 export function HypotheticalBadge() {
-  return <span className="hypothetical-badge">Hipotético</span>;
+  return <span className="hypothetical-badge">{t().scenario.hypothetical}</span>;
 }
 
 /** Diferencia entre la red real y el escenario, con el signo y una flecha. */
@@ -254,7 +256,9 @@ export function Delta({ figures }: { figures: Figures }) {
               fill="currentColor"
             />
           </svg>
-          <span className="visually-hidden">{direction === 'up' ? 'Sube' : 'Baja'}</span>
+          <span className="visually-hidden">
+            {direction === 'up' ? t().scenario.up : t().scenario.down}
+          </span>
         </>
       )}
       {figures.delta}
@@ -282,65 +286,69 @@ export function NoEffectNote({ state }: { state: ScenarioState }) {
 }
 
 function ChangeGlyph({ what }: { what: ChangeItem['what'] }) {
-  if (what === 'añadida') return <DiamondGlyph size={16} />;
-  return <GhostGlyph cross={what === 'quitada'} size={16} />;
+  if (what === 'added') return <DiamondGlyph size={16} />;
+  return <GhostGlyph cross={what === 'removed'} size={16} />;
 }
 
 export function ChangesList({ items, empty }: { items: readonly ChangeItem[]; empty: string }) {
+  const m = t().scenario;
   if (items.length === 0) return <p className="changes-list changes-list--empty">{empty}</p>;
   return (
     <ul className="changes-list">
-      {items.map((item) => (
-        <li key={item.key}>
-          <ChangeGlyph what={item.what} />
-          <span className="changes-list__name">{item.name}</span>
-          <span className="changes-list__what">{item.what}</span>
-          <button
-            type="button"
-            className="changes-list__undo"
-            aria-label={`${item.undoLabel}: ${item.name}`}
-            onClick={item.undo}
-          >
-            {item.undoLabel}
-          </button>
-        </li>
-      ))}
+      {items.map((item) => {
+        const undo = m.undoChange[item.what];
+        return (
+          <li key={item.key}>
+            <ChangeGlyph what={item.what} />
+            <span className="changes-list__name">{item.name}</span>
+            <span className="changes-list__what">{m.what[item.what]}</span>
+            <button
+              type="button"
+              className="changes-list__undo"
+              aria-label={`${undo}: ${item.name}`}
+              onClick={item.undo}
+            >
+              {undo}
+            </button>
+          </li>
+        );
+      })}
     </ul>
   );
 }
 
 export function Assumptions({ model }: { model: CoverageModel }) {
+  const m = t().scenario;
   return (
     <div className="assumptions">
       <ul>
-        {model.assumptions.map((a) => (
+        {m.assumptionsOf(model.name, model.version, model.assumptions).map((a) => (
           <li key={a}>{a}</li>
         ))}
       </ul>
-      <p className="assumptions__model">
-        Modelo «{model.name}», versión {model.version}.
-      </p>
+      <p className="assumptions__model">{m.model(model.name, model.version)}</p>
     </div>
   );
 }
 
 /** Leyenda del mapa en modo escenario. */
 export function CoverageLegend() {
+  const m = t().scenario.legend;
   return (
     <div className="coverage-legend">
-      <p className="coverage-legend__title">Qué se ve en el mapa</p>
+      <p className="coverage-legend__title">{m.title}</p>
       <ul>
         <li>
           <span className="swatch" style={{ background: LIT, opacity: 0.5 }} aria-hidden="true" />
-          Cubierto por la red real
+          {m.covered}
         </li>
         <li>
           <span className="swatch" style={{ background: BRIGHT }} aria-hidden="true" />
-          Lo que gana el escenario
+          {m.gained}
         </li>
         <li>
           <span className="swatch swatch--hatch" aria-hidden="true" />
-          Lo que pierde
+          {m.lost}
         </li>
         <li>
           <span
@@ -348,23 +356,23 @@ export function CoverageLegend() {
             style={{ borderColor: THEME.tokens['--ink-2'] }}
             aria-hidden="true"
           />
-          Límite del área de estudio
+          {m.boundary}
         </li>
         <li>
           <NetworkGlyph size={16} />
-          Estación real
+          {m.real}
         </li>
         <li>
           <DiamondGlyph size={16} />
-          Estación nueva (hipotética)
+          {m.added}
         </li>
         <li>
           <ReachGlyph size={16} />
-          Alcance de una nueva o movida
+          {m.reach}
         </li>
         <li>
           <GhostGlyph size={16} />
-          Estación quitada
+          {m.removed}
         </li>
       </ul>
     </div>

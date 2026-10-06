@@ -135,3 +135,27 @@ test('reproducir la demo: momento en hora de Barcelona, pasos de 5 min y horas s
   await expect(page.getByText(/Sin datos en este momento/)).toBeVisible();
   expect(new URL(page.url()).searchParams.get('hora')).toBe('00:00');
 });
+
+test('en catalán por la URL y en inglés con el selector, sin perder la estación abierta', async ({
+  page,
+}) => {
+  await openWithoutBasemap(page, '&idioma=ca&estacion=demo-024');
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'ca');
+  await expect(page.getByText('Dades inventades per provar l’aplicació.')).toBeVisible();
+  await expect(page.locator('.source-notice__time')).toContainText('10 de març del 2026, 10:00');
+  await expect(page.locator('.station-detail__explain')).toContainText(
+    /L’última observació és de les 07:45, 2 h 15 min abans/,
+  );
+
+  await page.getByRole('button', { name: 'English' }).click();
+  await expect(page.getByRole('button', { name: 'English' })).toBeFocused();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page.getByText('Made-up data for trying out the app.')).toBeVisible();
+  await expect(page.locator('.source-notice__time')).toContainText('10 March 2026, 10:00');
+  await expect(page.getByRole('heading', { level: 2, name: 'Pl. de Lesseps' })).toBeVisible();
+  await expect(page.locator('.station-detail__status')).toHaveText('No recent data');
+  const url = new URL(page.url());
+  expect(url.searchParams.get('idioma')).toBe('en');
+  expect(url.searchParams.get('estacion')).toBe('demo-024');
+});

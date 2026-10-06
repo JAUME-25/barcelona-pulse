@@ -1,13 +1,17 @@
+import { t } from '../../i18n';
 import type { ScenarioState } from './useScenario';
 
 /** Primer cálculo, error o recálculo en curso. Con un resultado a la vista, no dice nada. */
 export function ScenarioStatus({ state }: { state: ScenarioState }) {
+  const m = t().scenario;
   if (state.result.status === 'error') {
     return (
       <div className="scenario-status scenario-status--error" role="alert">
-        <p>No se ha podido calcular la cobertura. {state.result.error.message}</p>
+        <p>
+          {m.error} {state.result.error.message}
+        </p>
         <button type="button" className="button" onClick={state.retry}>
-          Reintentar
+          {t().app.retry}
         </button>
       </div>
     );
@@ -15,7 +19,7 @@ export function ScenarioStatus({ state }: { state: ScenarioState }) {
   if (state.shown === undefined) {
     return (
       <p className="scenario-status" role="status">
-        Calculando la cobertura…
+        {m.calculating}
       </p>
     );
   }
@@ -26,7 +30,7 @@ export function ScenarioStatus({ state }: { state: ScenarioState }) {
 export function PendingNote({ pending }: { pending: boolean }) {
   return (
     <span className="pending-note" role="status" aria-live="polite">
-      {pending ? 'Recalculando…' : ''}
+      {pending ? t().scenario.recalculating : ''}
     </span>
   );
 }

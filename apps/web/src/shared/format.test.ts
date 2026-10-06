@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { formatDuration, formatMonths, formatSince, formatTime } from './format';
+import { t } from '../i18n';
+import { formatDuration, formatMonths, formatTime } from './format';
+
+const since = (iso: string, at: string) => t().limits.silentSince(iso, at);
 
 describe('meses de los datos', () => {
   it('nombra los meses que cubren los días importados', () => {
@@ -31,17 +34,19 @@ describe('horas en Europe/Madrid', () => {
 
   it('el cambio de día se decide en hora de Barcelona', () => {
     // 23:30 UTC del día 9 ya es día 10 en Barcelona.
-    expect(formatSince('2026-03-09T23:30:00Z', '2026-03-10T09:00:00Z')).toBe('las 00:30');
-    expect(formatSince('2026-03-09T22:30:00Z', '2026-03-10T09:00:00Z')).toBe('el 9 de marzo');
+    expect(since('2026-03-09T23:30:00Z', '2026-03-10T09:00:00Z')).toBe('Sin datos desde las 00:30');
+    expect(since('2026-03-09T22:30:00Z', '2026-03-10T09:00:00Z')).toBe(
+      'Sin datos desde el 9 de marzo',
+    );
   });
 
   it('desde cuándo: la hora el mismo día, el día el mismo año y, si no, la fecha entera', () => {
     const at = '2026-05-31T21:55:00Z';
-    expect(formatSince('2026-05-31T21:39:00Z', at)).toBe('las 23:39');
-    expect(formatSince('2026-05-28T03:04:45Z', at)).toBe('el 28 de mayo');
-    expect(formatSince('2025-06-12T08:54:16Z', at)).toBe('el 12 de junio de 2025');
+    expect(since('2026-05-31T21:39:00Z', at)).toBe('Sin datos desde las 23:39');
+    expect(since('2026-05-28T03:04:45Z', at)).toBe('Sin datos desde el 28 de mayo');
+    expect(since('2025-06-12T08:54:16Z', at)).toBe('Sin datos desde el 12 de junio de 2025');
     // 23:30 UTC del 30 de mayo ya es día 31 en Barcelona.
-    expect(formatSince('2026-05-30T23:30:00Z', at)).toBe('las 01:30');
+    expect(since('2026-05-30T23:30:00Z', at)).toBe('Sin datos desde las 01:30');
   });
 });
 

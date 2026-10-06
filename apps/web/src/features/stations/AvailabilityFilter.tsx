@@ -1,6 +1,7 @@
+import { t } from '../../i18n';
 import {
-  AVAILABILITY_HINT,
-  AVAILABILITY_LABEL,
+  availabilityHint,
+  availabilityLabel,
   AVAILABILITY_ORDER,
   type Availability,
 } from './availability';
@@ -14,9 +15,10 @@ interface AvailabilityFilterProps {
 
 /** La leyenda es también el filtro: cada categoría se muestra u oculta en mapa y lista. */
 export function AvailabilityFilter({ counts, visible, onToggle }: AvailabilityFilterProps) {
+  const m = t().availability;
   return (
     <fieldset className="availability-filter">
-      <legend className="availability-filter__legend">Qué significa cada marcador</legend>
+      <legend className="availability-filter__legend">{m.legend}</legend>
       <ul className="availability-filter__list">
         {AVAILABILITY_ORDER.map((category) => {
           const on = visible.has(category);
@@ -32,8 +34,8 @@ export function AvailabilityFilter({ counts, visible, onToggle }: AvailabilityFi
               >
                 <OctagonGlyph category={category} size={18} />
                 <span className="availability-filter__text">
-                  <span className="availability-filter__label">{AVAILABILITY_LABEL[category]}</span>
-                  <span className="availability-filter__hint">{AVAILABILITY_HINT[category]}</span>
+                  <span className="availability-filter__label">{availabilityLabel(category)}</span>
+                  <span className="availability-filter__hint">{availabilityHint(category)}</span>
                 </span>
                 <span className="availability-filter__count">{counts[category]}</span>
               </button>
@@ -41,7 +43,7 @@ export function AvailabilityFilter({ counts, visible, onToggle }: AvailabilityFi
           );
         })}
       </ul>
-      <p className="availability-filter__help">Pulsa una categoría para ocultarla o mostrarla.</p>
+      <p className="availability-filter__help">{m.legendHelp}</p>
     </fieldset>
   );
 }

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { SourceSummary, StationsResponse } from '../../api/client';
-import { formatDateTime, formatMonths, plural } from '../../shared/format';
-import type { Coverage } from '../history/series';
-import { stationName } from '../stations/names';
+import { t } from '../../i18n';
+import { numberFormat } from '../../i18n/intl';
+import { formatDateTime, formatMonths } from '../../shared/format';
 import { dayOfMonth, formatLocalDay, formatShortWeekday, weekStart } from '../history/time';
+import { stationName } from '../stations/names';
 import {
   CODE_URL,
   listDays,
@@ -17,28 +18,13 @@ import {
 import { hourGrid, qualitySummary, QUALITY_STEP_MINUTES, useQuality, type DayRow } from './quality';
 import './limits.css';
 
-const COVERAGE_TEXT: Record<Coverage, string> = {
-  complete: 'casi todas con dato',
-  partial: 'faltan algunas',
-  none: 'ninguna con dato',
-};
-
-const SILENCE_TITLE: Record<Silence, [string, string]> = {
-  never: ['Ningún dato hasta este momento', 'Ningún dato hasta este momento'],
-  days: ['Lleva días sin informar', 'Llevan días sin informar'],
-  hours: ['Lleva horas sin informar', 'Llevan horas sin informar'],
-  minutes: ['Acaba de dejar de informar', 'Acaban de dejar de informar'],
-};
 const SILENCE_ORDER: readonly Silence[] = ['never', 'days', 'hours', 'minutes'];
 
-const monthName = new Intl.DateTimeFormat('es-ES', { month: 'long', timeZone: 'UTC' });
-
+/** «mayo de 2026», sobre cada mes de la rejilla. */
 function monthOf(day: string): string {
   const [y = '', m = '1'] = day.split('-');
-  return `${monthName.format(Date.UTC(Number(y), Number(m) - 1, 15))} de ${y}`;
+  return t().limits.month(Number(y), Number(m));
 }
-
-const percent = new Intl.NumberFormat('es-ES', { style: 'percent', maximumFractionDigits: 1 });
 
 /** Rejilla de huecos: un día por fila, una hora por casilla; pulsar un día lo reproduce. */
 function HoleGrid({
@@ -48,6 +34,7 @@ function HoleGrid({
   rows: readonly DayRow[];
   onPickDay: (day: string) => void;
 }) {
+  const m = t().limits;
   return (
     <div className="hole-grid">
       <div className="hole-grid__hours" aria-hidden="true">
@@ -66,7 +53,7 @@ function HoleGrid({
               type="button"
               className="hole-grid__row"
               data-week-start={weekStart(r.day) === r.day ? '' : undefined}
-              aria-label={`${formatLocalDay(r.day)}: ${COVERAGE_TEXT[r.worst]} en el peor momento. Reproducir ese día.`}
+              aria-label={m.dayRow(formatLocalDay(r.day), m.coverage[r.worst])}
               onClick={() => {
                 onPickDay(r.day);
               }}
@@ -87,6 +74,7 @@ function HoleGrid({
 
 /** Los huecos de todo lo importado: resumen, rejilla y leyenda. */
 function Holes({ source, onPickDay }: { source: SourceSummary; onPickDay: (day: string) => void }) {
+  const m = t().limits;
   const { state, retry } = useQuality(source);
   const points = state.status === 'ready' ? state.data : null;
   const rows = useMemo(
@@ -101,49 +89,48 @@ function Holes({ source, onPickDay }: { source: SourceSummary; onPickDay: (day: 
   if (state.status === 'loading') {
     return (
       <p className="limits-sheet__note" role="status">
-        Midiendo los huecos…
+        {m.measuring}
       </p>
     );
   }
   if (state.status === 'error' || summary === null) {
     return (
       <div className="limits-sheet__note" role="alert">
-        <p>No se han podido medir los huecos. {state.status === 'error' && state.error.message}</p>
+        <p>
+          {m.holesError} {state.status === 'error' && state.error.message}
+        </p>
         <button type="button" className="button" onClick={retry}>
-          Reintentar
+          {t().app.retry}
         </button>
       </div>
     );
   }
   const below = summary.incomplete + summary.empty;
+  const average = numberFormat({ style: 'percent', maximumFractionDigits: 1 }).format(
+    summary.average,
+  );
   return (
     <>
       <p className="limits-sheet__text">
-        De media, el {percent.format(summary.average)} de las estaciones tienen dato en cada paso de{' '}
-        {QUALITY_STEP_MINUTES} minutos.{' '}
-        {below === 0
-          ? 'Ningún paso por debajo del 95 %.'
-          : `${String(below)} de ${String(summary.steps)} pasos por debajo del 95 %: ${listDays(summary.daysWithGaps)}.`}
+        {m.average(average, QUALITY_STEP_MINUTES)}{' '}
+        {below === 0 ? m.noneBelow : m.below(below, summary.steps, listDays(summary.daysWithGaps))}
       </p>
       <HoleGrid rows={rows} onPickDay={onPickDay} />
-      <ul className="hole-legend" aria-label="Qué significa cada casilla">
+      <ul className="hole-legend" aria-label={m.legend}>
         <li>
           <span className="hole-grid__cell hole-grid__cell--complete" aria-hidden="true" />
-          95 % o más con dato
+          {m.legendComplete}
         </li>
         <li>
           <span className="hole-grid__cell hole-grid__cell--partial" aria-hidden="true" />
-          Faltan algunas
+          {m.legendPartial}
         </li>
         <li>
           <span className="hole-grid__cell hole-grid__cell--none" aria-hidden="true" />
-          Ninguna
+          {m.legendNone}
         </li>
       </ul>
-      <p className="limits-sheet__note">
-        Cada fila es un día y cada casilla, una hora (medida cada {QUALITY_STEP_MINUTES} minutos).
-        Pulsa un día para reproducirlo.
-      </p>
+      <p className="limits-sheet__note">{m.gridNote(QUALITY_STEP_MINUTES)}</p>
     </>
   );
 }
@@ -156,13 +143,12 @@ function Silent({
   response: StationsResponse;
   onSelectStation?: (id: number) => void;
 }) {
+  const m = t().limits;
   const silent = silentStations(response.stations, response.at);
   const total = response.stations.length;
   if (silent.length === 0) {
     return (
-      <p className="limits-sheet__text">
-        {formatDateTime(response.at)}: las {total} estaciones tienen dato.
-      </p>
+      <p className="limits-sheet__text">{m.allWithData(formatDateTime(response.at), total)}</p>
     );
   }
   const groups = SILENCE_ORDER.map((silence) => ({
@@ -173,13 +159,12 @@ function Silent({
   return (
     <>
       <p className="limits-sheet__text">
-        {formatDateTime(response.at)}: {silent.length} de {total} estaciones sin dato. No cuentan
-        como vacías: su estado es desconocido.
+        {m.someSilent(formatDateTime(response.at), silent.length, total)}
       </p>
       {groups.map((g) => (
         <section key={g.silence} className="silent-group">
           <h4 className="silent-group__title">
-            {SILENCE_TITLE[g.silence][g.items.length === 1 ? 0 : 1]}{' '}
+            {m.silenceTitle[g.silence][g.items.length === 1 ? 0 : 1]}{' '}
             <span className="silent-group__count">{g.items.length}</span>
           </h4>
           <ul className="silent-group__list">
@@ -240,6 +225,7 @@ export function LimitsSheet({
   /** Abre la estación (detalle y marca en el mapa). Sin ella (al experimentar), solo texto. */
   onSelectStation?: (id: number) => void;
 }) {
+  const m = t().limits;
   const headingRef = useRef<HTMLHeadingElement>(null);
   const months = formatMonths(source.days);
   const period = periodText(source.days);
@@ -251,53 +237,45 @@ export function LimitsSheet({
   return (
     <article className="limits-sheet" aria-labelledby="limits-sheet-title">
       <button type="button" className="station-detail__back" onClick={onClose}>
-        Volver
+        {m.back}
       </button>
       <h2 id="limits-sheet-title" className="limits-sheet__title" tabIndex={-1} ref={headingRef}>
-        Qué muestra y qué no
+        {m.title}
       </h2>
-      <p className="limits-sheet__lead">
-        Cómo estaban las {source.stationCount} estaciones de Bicing {period}, según el archivo que
-        publica el Ajuntament de Barcelona. Es el pasado: no lo que pasa ahora.
-      </p>
+      <p className="limits-sheet__lead">{m.lead(source.stationCount, period)}</p>
 
-      <h3 className="limits-sheet__heading">Los datos</h3>
+      <h3 className="limits-sheet__heading">{m.data}</h3>
       <dl className="limits-facts">
-        <dt>Periodo</dt>
-        <dd>
-          {period} ({plural(source.days.length, 'día', 'días')})
-        </dd>
+        <dt>{m.period}</dt>
+        <dd>{m.periodValue(period, source.days.length)}</dd>
         {source.period !== null && (
           <>
-            <dt>Último dato</dt>
+            <dt>{m.lastData}</dt>
             <dd>{formatDateTime(source.period.to)}</dd>
           </>
         )}
-        <dt>Ritmo</dt>
-        <dd>Una foto de toda la red cada 5 minutos</dd>
-        <dt>Caducidad</dt>
-        <dd>
-          A los {source.toleranceMinutes} minutos sin informar, el estado de una estación pasa a
-          desconocido
-        </dd>
-        <dt>Estaciones</dt>
+        <dt>{m.rhythm}</dt>
+        <dd>{m.rhythmValue}</dd>
+        <dt>{m.expiry}</dt>
+        <dd>{m.expiryValue(source.toleranceMinutes)}</dd>
+        <dt>{m.stations}</dt>
         <dd>{source.stationCount}</dd>
       </dl>
 
-      <h3 className="limits-sheet__heading">Huecos</h3>
+      <h3 className="limits-sheet__heading">{m.holes}</h3>
       <Holes source={source} onPickDay={onPickDay} />
 
-      <h3 className="limits-sheet__heading">Sin dato en este momento</h3>
+      <h3 className="limits-sheet__heading">{m.silent}</h3>
       <Silent response={response} onSelectStation={onSelectStation} />
 
-      <h3 className="limits-sheet__heading">Lo que no dice</h3>
+      <h3 className="limits-sheet__heading">{m.notSaidTitle}</h3>
       <ul className="limits-sheet__list">
         {notSaid(source.toleranceMinutes).map((text) => (
           <li key={text}>{text}</li>
         ))}
       </ul>
 
-      <h3 className="limits-sheet__heading">De dónde sale cada cosa</h3>
+      <h3 className="limits-sheet__heading">{m.originsTitle}</h3>
       <dl className="limits-origins">
         {origins(months).map((o) => (
           <div key={o.what}>
@@ -312,12 +290,12 @@ export function LimitsSheet({
       {source.url !== null && (
         <p className="limits-sheet__text">
           <a href={source.url} target="_blank" rel="noreferrer">
-            El conjunto de datos de Bicing en Open Data BCN
+            {m.dataset}
           </a>
         </p>
       )}
       <p className="limits-sheet__text">
-        Código, decisiones y mediciones:{' '}
+        {m.code}{' '}
         <a href={CODE_URL} target="_blank" rel="noreferrer">
           github.com/JAUME-25/barcelona-pulse
         </a>

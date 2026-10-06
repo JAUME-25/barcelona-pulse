@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { TimelinePoint } from '../../api/client';
+import { t } from '../../i18n';
 import { dayLabel, weekScale } from './controls';
 import { dialPaths, type DialShape } from './dial';
 import { dayOfMonth, formatShortWeekday } from './time';
@@ -47,7 +48,7 @@ function MiniDial({
 
 function WeekArrow({ replay, direction }: { replay: Replay; direction: -1 | 1 }) {
   const target = direction < 0 ? replay.previousWeekDay : replay.nextWeekDay;
-  const label = direction < 0 ? 'Semana anterior' : 'Semana siguiente';
+  const label = direction < 0 ? t().replay.previousWeek : t().replay.nextWeek;
   return (
     <button
       type="button"
@@ -79,13 +80,14 @@ function WeekArrow({ replay, direction }: { replay: Replay; direction: -1 | 1 })
  * Los días sin datos importados se ven, pero no se pueden elegir. Si hay más semanas, flechas.
  */
 export function WeekDials({ replay }: { replay: Replay }) {
+  const m = t().replay;
   const scale = weekScale(replay);
   const available = useMemo(() => new Set(replay.days), [replay.days]);
   const moreWeeks = replay.previousWeekDay !== undefined || replay.nextWeekDay !== undefined;
   return (
     <div className="week-dials">
       {moreWeeks && <WeekArrow replay={replay} direction={-1} />}
-      <div className="week-dials__days" role="group" aria-label="Día">
+      <div className="week-dials__days" role="group" aria-label={m.dayGroup}>
         {replay.week.map((d) => {
           const hasData = available.has(d);
           return (
@@ -94,8 +96,8 @@ export function WeekDials({ replay }: { replay: Replay }) {
               type="button"
               className="week-dials__day"
               aria-pressed={d === replay.day}
-              aria-label={hasData ? dayLabel(d) : `${dayLabel(d)}, sin datos`}
-              title={hasData ? undefined : 'Sin datos importados'}
+              aria-label={hasData ? dayLabel(d) : m.dayNoData(dayLabel(d))}
+              title={hasData ? undefined : m.noImported}
               disabled={!hasData}
               onClick={() => {
                 replay.selectDay(d);

@@ -1,15 +1,14 @@
 import type { CoverageResponse, StationItem } from '../../api/client';
+import { t } from '../../i18n';
+import type { ChangeKind } from '../../i18n/types';
 import { stationName } from '../stations/names';
 import { hypotheticalName, type Scenario } from './scenario';
 
 /** Herramienta activa sobre el mapa. Sin herramienta, el mapa solo se mira. */
 export type Tool = 'add' | 'move' | 'remove' | null;
 
-export const TOOLS: { id: Exclude<Tool, null>; label: string; hint: string }[] = [
-  { id: 'add', label: 'Añadir', hint: 'Toca el mapa donde quieras una estación nueva.' },
-  { id: 'move', label: 'Mover', hint: 'Arrastra una estación, real o nueva, a otro sitio.' },
-  { id: 'remove', label: 'Quitar', hint: 'Toca una estación para sacarla del escenario.' },
-];
+/** Las herramientas, en el orden de los botones. Nombre y ayuda: `t().scenario.tools`. */
+export const TOOLS: readonly Exclude<Tool, null>[] = ['add', 'move', 'remove'];
 
 export const EMPTY_GEOJSON: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
 
@@ -91,48 +90,26 @@ export function noEffectMessage(s: Scenario, r: CoverageResponse): string | null
   const { gainedSquareMeters: gained, lostSquareMeters: lost } = r.difference;
   if (added + moved + removed === 0 || gained !== 0 || lost !== 0) return null;
 
-  const radius = `${String(r.radiusMeters)} m`;
-  const municipality = r.studyArea.kind === 'municipality';
-  const inside = municipality ? `en ${r.studyArea.name}` : 'en el distrito';
-  const outsideOf = municipality ? `fuera de ${r.studyArea.name}` : 'fuera del distrito';
   const allOutside = (kind: 'added' | 'removed') => {
     const reach = r.geometries.reach.filter((x) => x.kind === kind);
     return reach.length > 0 && reach.every((x) => x.squareMetersInArea === 0);
   };
-
-  if (moved === 0 && removed === 0) {
-    if (allOutside('added')) {
-      return added === 1
-        ? `Esta estación queda ${outsideOf}: no cuenta para el porcentaje.`
-        : `Estas estaciones quedan ${outsideOf}: no cuentan para el porcentaje.`;
-    }
-    return added === 1
-      ? `Esta estación no añade superficie: ${inside}, todo lo que está a menos de ${radius} de ella ya lo cubre la red real.`
-      : `Estas estaciones no añaden superficie: ${inside}, todo lo que está a menos de ${radius} de ellas ya lo cubre la red real.`;
-  }
-  if (added === 0 && moved === 0) {
-    if (allOutside('removed')) {
-      return removed === 1
-        ? `Esta estación queda ${outsideOf}: quitarla no cambia el porcentaje.`
-        : `Estas estaciones quedan ${outsideOf}: quitarlas no cambia el porcentaje.`;
-    }
-    return removed === 1
-      ? `Quitarla no resta superficie: ${inside}, lo que cubría lo cubren también otras estaciones.`
-      : `Quitarlas no resta superficie: ${inside}, lo que cubrían lo cubren también otras estaciones.`;
-  }
-  if (added === 0 && removed === 0) {
-    return moved === 1
-      ? `Moverla no cambia la superficie: ${inside}, lo que deja y lo que alcanza lo cubren también otras estaciones.`
-      : `Moverlas no cambia la superficie: ${inside}, lo que dejan y lo que alcanzan lo cubren también otras estaciones.`;
-  }
-  return `Estos cambios no mueven la superficie cubierta ${inside}.`;
+  return t().scenario.noEffect({
+    added,
+    moved,
+    removed,
+    municipality: r.studyArea.kind === 'municipality',
+    areaName: r.studyArea.name,
+    radius: r.radiusMeters,
+    addedOutside: allOutside('added'),
+    removedOutside: allOutside('removed'),
+  });
 }
 
 export interface ChangeItem {
   key: string;
   name: string;
-  what: 'añadida' | 'movida' | 'quitada';
-  undoLabel: string;
+  what: ChangeKind;
   undo: () => void;
 }
 
@@ -145,14 +122,13 @@ export function changeItems(
   const byId = new Map(stations.map((s) => [s.id, s]));
   const nameOf = (id: number) => {
     const station = byId.get(id);
-    return station === undefined ? `Estación ${String(id)}` : stationName(station);
+    return station === undefined ? t().scenario.stationFallback(id) : stationName(station);
   };
   return [
     ...scenario.added.map((h): ChangeItem => ({
       key: `a-${h.id}`,
       name: hypotheticalName(h.id),
-      what: 'añadida',
-      undoLabel: 'Quitar',
+      what: 'added',
       undo: () => {
         actions.removeHypothetical(h.id);
       },
@@ -160,8 +136,7 @@ export function changeItems(
     ...scenario.moved.map((m): ChangeItem => ({
       key: `m-${String(m.station)}`,
       name: nameOf(m.station),
-      what: 'movida',
-      undoLabel: 'Devolver',
+      what: 'moved',
       undo: () => {
         actions.restoreStation(m.station);
       },
@@ -169,8 +144,7 @@ export function changeItems(
     ...scenario.removed.map((id): ChangeItem => ({
       key: `r-${String(id)}`,
       name: nameOf(id),
-      what: 'quitada',
-      undoLabel: 'Recuperar',
+      what: 'removed',
       undo: () => {
         actions.restoreStation(id);
       },
