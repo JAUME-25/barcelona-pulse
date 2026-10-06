@@ -43,19 +43,41 @@ Cada paso en Forge o en Cloudflare se hace mirando la pantalla real (los paneles
 1. **DNS en Cloudflare**: registro `A` `pulse` → la IP del servidor, solo DNS (nube gris), como
    `jaumeperez.com`.
 2. **Docker en el servidor**, como root (receta de Forge o SSH con sudo), desde el repositorio
-   oficial de Docker para Ubuntu, y el usuario `forge` en el grupo `docker`:
+   oficial de Docker para Ubuntu (pasos de docs.docker.com comprobados el 6-10-2026; admite
+   Ubuntu 22.04, 24.04 y 26.04), y el usuario `forge` en el grupo `docker`:
 
    ```bash
-   apt-get update && apt-get install -y ca-certificates curl
+   set -eu
+   export DEBIAN_FRONTEND=noninteractive
+   . /etc/os-release
+   echo "Sistema: $PRETTY_NAME"
+   case "${UBUNTU_CODENAME:-$VERSION_CODENAME}" in
+     jammy|noble|resolute) ;;
+     *) echo "Docker no admite esta versión de Ubuntu: no se instala nada." >&2; exit 1 ;;
+   esac
+   apt-get update
+   apt-get install -y ca-certificates curl
    install -m 0755 -d /etc/apt/keyrings
    curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
    chmod a+r /etc/apt/keyrings/docker.asc
-   echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" > /etc/apt/sources.list.d/docker.list
-   apt-get update && apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+   cat > /etc/apt/sources.list.d/docker.sources <<EOF
+   Types: deb
+   URIs: https://download.docker.com/linux/ubuntu
+   Suites: ${UBUNTU_CODENAME:-$VERSION_CODENAME}
+   Components: stable
+   Architectures: $(dpkg --print-architecture)
+   Signed-By: /etc/apt/keyrings/docker.asc
+   EOF
+   apt-get update
+   apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
    usermod -aG docker forge
+   docker --version
+   docker compose version
+   systemctl is-active docker
    ```
 
-   Ocupa unos 100 MB de memoria (el servicio de Docker). Se quita con
+   Ocupa unos 100 MB de memoria (el servicio de Docker). Los puertos que publica Docker se saltan
+   ufw; por eso aquí solo se publica `127.0.0.1:5080`. Se quita con
    `apt-get purge docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin`.
 3. **Sitio en Forge** `pulse.jaumeperez.com`: estático, repositorio `JAUME-25/barcelona-pulse`
    (público), rama `main`, directorio web `/apps/web/dist`, sin despliegue automático al
