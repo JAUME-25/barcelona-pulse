@@ -1,6 +1,6 @@
 # Hoja de ruta
 
-Actualizado el 6 de octubre de 2026.
+Actualizado el 7 de octubre de 2026.
 
 | Bloque | Estado | Criterio de cierre |
 | --- | --- | --- |
@@ -176,6 +176,28 @@ honesta de lo hecho.
    otro idioma fuera de los datos (`e2e/idiomas.capture.ts`). En `0f88dee`, en producción desde
    el 6-10-2026: comprobado desde fuera con esas mismas capturas en los tres idiomas, en
    escritorio, 375 y 320 px, con el selector, sin errores en la consola.
+8. **Hecho.** Revisión de backend y web (6-10-2026) y sus arreglos, en producción desde el
+   7-10-2026 (`4919523` a `236569c`, CI verde):
+   - Edificios en 3D opacos y por encima de las calles: la capa 3D iba antes de `water_name`
+     y MapLibre pintaba calles y plantas encima, así que se veían transparentes. Dirección A
+     (los colores de antes), elegida por Jaume entre tres con capturas; al experimentar, sin
+     3D. De paso, los bosques con su verde.
+   - Ingesta fuera de orden: importar un periodo anterior ya no cambia los atributos de días
+     importados (en local, 463 de 549 estaciones salían en mayo con atributos supuestos;
+     producción no estaba afectada). La base local se rehízo importando en orden.
+   - Reproducir sin pasos de otra hora: el anterior solo se ve dentro de la tolerancia, la
+     reproducción espera a cada paso y un fallo se dice con «Reintentar».
+   - Fallos con salida: errores de pintado, el día que no llega, el contexto WebGL perdido y el
+     aviso del mapa base. La cámara se conserva al cambiar de idioma.
+   - Línea temporal: la semana del cambio de hora de octubre (169 h) ya no da 400; como mucho
+     dos cálculos a la vez, 20 s de tope y sin JIT.
+   - Sin desbordes de 768 a 1179 px, y la leyenda no tapa los controles en ventanas bajas.
+   - Escenarios: enlaces con los identificadores de Bicing (`trasladadas`, `retiradas`),
+     arrastres que no se quedan pegados y «0,00 puntos» si se gana lo mismo que se pierde.
+   - Pruebas: 159 de backend, 112 de la web y 18 de humo. Comprobado en producción desde fuera:
+     `e2e/despliegue.capture.ts` 8 de 8, el 3D y Experimentar en escritorio y móvil, Reproducir
+     con una hora lenta y con un error simulado, y la cámara al cambiar de idioma, sin errores
+     en la consola.
 
 ## Backlog
 
