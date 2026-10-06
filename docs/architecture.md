@@ -97,6 +97,9 @@ Puntos de entrada, por línea de comandos (no hay endpoint HTTP de importación)
   Vite reenvía `/api`.
 - Límite de 120 peticiones por minuto e IP en `/api` (configurable). Consultas acotadas: caja
   máxima de 1° y un máximo de 1 000 estaciones por respuesta (`truncated` lo indica).
+- Detrás de un proxy, la IP del cliente sale de `X-Forwarded-For` solo si la conexión llega de
+  las redes de `ForwardedHeaders:KnownNetworks` (o de localhost); si no, se ignora y nadie puede
+  hacerse pasar por otra IP. En producción, la red de Docker del proyecto (`docs/despliegue.md`).
 - Logs estructurados en JSON fuera de desarrollo. Salud en `/health/live` y `/health/ready`
   (esta comprueba la base de datos). Sin rastreo de visitantes.
 - Imagen de la API: `aspnet:10.0.12-noble-chiseled-extra`, sin shell y con usuario no root;

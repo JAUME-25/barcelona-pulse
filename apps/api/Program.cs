@@ -51,6 +51,7 @@ builder.Services.AddOpenApi(o => o.AddDocumentTransformer((document, _, _) =>
 }));
 builder.Services.AddHealthChecks().AddDbContextCheck<PulseDbContext>("database", tags: ["ready"]);
 builder.Services.AddPulseCors(builder.Configuration);
+builder.Services.AddPulseForwardedHeaders(builder.Configuration);
 builder.Services.AddPulseRateLimiting(builder.Configuration);
 
 var app = builder.Build();
@@ -61,6 +62,8 @@ if (CommandLine.IsCommand(args))
     return await CommandLine.RunAsync(app.Services, args);
 }
 
+// Primero: el resto (límite por IP incluido) ya ve la IP del cliente, no la del proxy.
+app.UseForwardedHeaders();
 app.UseResponseCompression();
 app.UseExceptionHandler();
 app.UseStatusCodePages();

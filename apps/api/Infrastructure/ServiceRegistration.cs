@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 
 namespace BarcelonaPulse.Api.Infrastructure;
@@ -47,6 +48,31 @@ public static class ServiceRegistration
                 policy.WithOrigins(origins).WithMethods("GET").WithHeaders("Content-Type");
             }
         }));
+    }
+
+    /// <summary>
+    /// Detrás de un proxy (nginx en el servidor), la IP del cliente llega en X-Forwarded-For. Solo
+    /// se cree a los proxies de las redes de <c>ForwardedHeaders:KnownNetworks</c> (CIDR separados
+    /// por comas; p. ej. la red de Docker) y a localhost. Sin esto, el límite por IP sería uno solo
+    /// para todas las visitas.
+    /// </summary>
+    public static IServiceCollection AddPulseForwardedHeaders(this IServiceCollection services, IConfiguration configuration)
+    {
+        var networks = (configuration["ForwardedHeaders:KnownNetworks"] ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(System.Net.IPNetwork.Parse)
+            .ToList();
+
+        return services.Configure<ForwardedHeadersOptions>(o =>
+        {
+            o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+            // nginx sustituye la cabecera por la IP que ve ($remote_addr): una sola entrada.
+            o.ForwardLimit = 1;
+            foreach (var network in networks)
+            {
+                o.KnownIPNetworks.Add(network);
+            }
+        });
     }
 
     /// <summary>Límite por IP para la API pública. Sin cola: lo que excede recibe 429.</summary>
