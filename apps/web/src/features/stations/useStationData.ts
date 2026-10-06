@@ -29,7 +29,7 @@ export function asApiError(error: unknown): ApiError {
  * `previous` es el último resultado bueno, sea de la clave que sea: quien lo use comprueba
  * que sigue valiendo (por ejemplo, que es de la misma fuente).
  */
-function useRemote<T>(
+export function useRemote<T>(
   key: string | null,
   load: (signal: AbortSignal) => Promise<T>,
 ): { state: Remote<T>; previous: T | undefined; retry: () => void } {

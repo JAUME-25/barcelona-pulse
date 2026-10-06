@@ -16,6 +16,13 @@ import type { StationItem } from '../../api/client';
 import { THEME } from '../../app/theme';
 import { AVAILABILITY_ORDER, availabilityOf, type Availability } from './availability';
 import { loadNightStyle } from './basemap';
+import {
+  BUILDINGS_LAYER,
+  HALO_LAYER,
+  MARKERS_LAYER,
+  NETWORK_IMAGE,
+  STATIONS_SOURCE,
+} from './mapLayers';
 import { createHaloImage, createMarkerImage, PIXEL_RATIO } from './markerImages';
 import './StationMap.css';
 
@@ -37,16 +44,21 @@ interface StationMapProps {
   frame: readonly StationItem[];
   frameKey: string;
   /** Margen extra que tapan otros controles sobre el mapa (solo escritorio). */
-  framePadding?: { right: number; bottom: number } | undefined;
+  framePadding?: { top?: number; right: number; bottom: number; left?: number } | undefined;
   selectedId: number | null;
+  /**
+   * «availability»: color y número según el estado. «network»: todas iguales y sin número,
+   * para cuando lo que importa es dónde están (escenarios de cobertura).
+   */
+  variant?: MarkerVariant;
   onSelect: (id: number) => void;
   onStatusChange: (status: MapStatus) => void;
+  /** El mapa ya cargado, para quien dibuje sus propias capas encima; null al desmontarse. */
+  onMapReady?: ((map: MapLibreMap | null) => void) | undefined;
 }
 
-const SOURCE_ID = 'bp-stations';
-const MARKERS_LAYER = 'bp-stations';
-const HALO_LAYER = 'bp-stations-halo';
-const BUILDINGS_LAYER = 'bp-buildings-3d';
+export type MarkerVariant = 'availability' | 'network';
+
 const CAMERA_HASH = 'mapa';
 const BARCELONA: [number, number] = [2.165, 41.395];
 const MAX_BOUNDS: [[number, number], [number, number]] = [
@@ -72,6 +84,23 @@ const ICON_SIZE: ExpressionSpecification = [
   1.12,
   17.5,
   1.25,
+];
+
+// En un escenario la estación es solo un punto: más pequeña, para que se vea la cobertura.
+const NETWORK_ICON_SIZE: ExpressionSpecification = [
+  'interpolate',
+  ['linear'],
+  ['zoom'],
+  11,
+  0.24,
+  12.5,
+  0.32,
+  14,
+  0.55,
+  16,
+  0.85,
+  17.5,
+  1,
 ];
 
 const MAX_FIT_ZOOM = 14;
@@ -163,12 +192,33 @@ function byCategory(pick: (c: Availability) => string | number): ExpressionSpeci
   return ['match', ['get', 'cat'], ...pairs, pick('unknown')] as unknown as ExpressionSpecification;
 }
 
-function addLayers(map: MapLibreMap, stations: readonly StationItem[], selectedId: number | null) {
+const MARKER_IMAGE: Record<MarkerVariant, ExpressionSpecification | string> = {
+  availability: ['concat', 'bp-', ['get', 'cat']],
+  network: NETWORK_IMAGE,
+};
+
+const MARKER_TEXT: Record<MarkerVariant, ExpressionSpecification | string> = {
+  availability: ['step', ['zoom'], '', 13, ['get', 'label']],
+  network: '',
+};
+
+const MARKER_SIZE: Record<MarkerVariant, ExpressionSpecification> = {
+  availability: ICON_SIZE,
+  network: NETWORK_ICON_SIZE,
+};
+
+function addLayers(
+  map: MapLibreMap,
+  stations: readonly StationItem[],
+  selectedId: number | null,
+  variant: MarkerVariant,
+) {
   for (const category of AVAILABILITY_ORDER) {
     map.addImage(`bp-${category}`, createMarkerImage(THEME.markers[category]), {
       pixelRatio: PIXEL_RATIO,
     });
   }
+  map.addImage(NETWORK_IMAGE, createMarkerImage(THEME.networkMarker), { pixelRatio: PIXEL_RATIO });
   map.addImage('bp-halo', createHaloImage(), { pixelRatio: PIXEL_RATIO });
 
   // Edificios en 3D desde z14, más claros cuanto más altos para que se lean de noche.
@@ -201,11 +251,11 @@ function addLayers(map: MapLibreMap, stations: readonly StationItem[], selectedI
     );
   }
 
-  map.addSource(SOURCE_ID, { type: 'geojson', data: toFeatureCollection(stations) });
+  map.addSource(STATIONS_SOURCE, { type: 'geojson', data: toFeatureCollection(stations) });
   map.addLayer({
     id: HALO_LAYER,
     type: 'symbol',
-    source: SOURCE_ID,
+    source: STATIONS_SOURCE,
     filter: ['==', ['get', 'id'], selectedId ?? -1],
     layout: {
       'icon-image': 'bp-halo',
@@ -217,14 +267,14 @@ function addLayers(map: MapLibreMap, stations: readonly StationItem[], selectedI
   map.addLayer({
     id: MARKERS_LAYER,
     type: 'symbol',
-    source: SOURCE_ID,
+    source: STATIONS_SOURCE,
     layout: {
-      'icon-image': ['concat', 'bp-', ['get', 'cat']],
-      'icon-size': ICON_SIZE,
+      'icon-image': MARKER_IMAGE[variant],
+      'icon-size': MARKER_SIZE[variant],
       'icon-allow-overlap': true,
       'icon-ignore-placement': true,
       'symbol-sort-key': ['get', 'sort'],
-      'text-field': ['step', ['zoom'], '', 13, ['get', 'label']],
+      'text-field': MARKER_TEXT[variant],
       'text-font': [...THEME.textFont],
       'text-size': ['interpolate', ['linear'], ['zoom'], 13, 10, 15, 12.5, 17.5, 15],
       'text-allow-overlap': true,
@@ -248,18 +298,24 @@ export function StationMap({
   frameKey,
   framePadding,
   selectedId,
+  variant = 'availability',
   onSelect,
   onStatusChange,
+  onMapReady,
 }: StationMapProps) {
+  const padTop = framePadding?.top ?? 48;
   const padRight = framePadding?.right ?? 48;
   const padBottom = framePadding?.bottom ?? 48;
+  const padLeft = framePadding?.left ?? FLOATING_PANEL_PX;
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const loadedRef = useRef(false);
   const stationsRef = useRef(stations);
   const selectedRef = useRef(selectedId);
+  const variantRef = useRef(variant);
   const onSelectRef = useRef(onSelect);
   const onStatusRef = useRef(onStatusChange);
+  const onMapReadyRef = useRef(onMapReady);
   const fittedKeyRef = useRef<string | null>(null);
   // Se mira al montar: en cuanto la cámara se mueve, MapLibre reescribe el hash.
   const cameraFromUrlRef = useRef(hasCameraInUrl());
@@ -270,6 +326,7 @@ export function StationMap({
   useEffect(() => {
     onSelectRef.current = onSelect;
     onStatusRef.current = onStatusChange;
+    onMapReadyRef.current = onMapReady;
   });
 
   // Creación y limpieza del mapa. El estilo se descarga y se adapta antes de crearlo.
@@ -317,9 +374,10 @@ export function StationMap({
 
       instance.on('load', () => {
         loadedRef.current = true;
-        addLayers(instance, stationsRef.current, selectedRef.current);
+        addLayers(instance, stationsRef.current, selectedRef.current, variantRef.current);
         setMapReady(true);
         onStatusRef.current({ kind: 'ready' });
+        onMapReadyRef.current?.(instance);
       });
       instance.on('click', MARKERS_LAYER, (e: MapLayerMouseEvent) => {
         const id: unknown = e.features?.[0]?.properties.id;
@@ -350,6 +408,7 @@ export function StationMap({
 
     return () => {
       controller.abort();
+      if (loadedRef.current) onMapReadyRef.current?.(null);
       mapRef.current = null;
       loadedRef.current = false;
       map?.remove();
@@ -360,10 +419,20 @@ export function StationMap({
   useEffect(() => {
     stationsRef.current = stations;
     const source = loadedRef.current
-      ? mapRef.current?.getSource<GeoJSONSource>(SOURCE_ID)
+      ? mapRef.current?.getSource<GeoJSONSource>(STATIONS_SOURCE)
       : undefined;
     if (source !== undefined) void source.setData(toFeatureCollection(stations));
   }, [stations]);
+
+  // Variante de los marcadores: solo cambia el dibujo de la capa.
+  useEffect(() => {
+    variantRef.current = variant;
+    const map = mapRef.current;
+    if (!mapReady || map === null) return;
+    map.setLayoutProperty(MARKERS_LAYER, 'icon-image', MARKER_IMAGE[variant]);
+    map.setLayoutProperty(MARKERS_LAYER, 'icon-size', MARKER_SIZE[variant]);
+    map.setLayoutProperty(MARKERS_LAYER, 'text-field', MARKER_TEXT[variant]);
+  }, [variant, mapReady]);
 
   // Encuadre inicial: una vez por fuente, abarcando todas sus estaciones.
   useEffect(() => {
@@ -378,11 +447,11 @@ export function StationMap({
     }
     const floatingPanel = window.innerWidth >= 768;
     const padding = floatingPanel
-      ? { top: 48, right: padRight, bottom: padBottom, left: FLOATING_PANEL_PX }
+      ? { top: padTop, right: padRight, bottom: padBottom, left: padLeft }
       : { top: 24, right: 24, bottom: 24, left: 24 };
     frameStations(map, frame, padding);
     fittedKeyRef.current = frameKey;
-  }, [frame, frameKey, mapReady, padRight, padBottom]);
+  }, [frame, frameKey, mapReady, padTop, padRight, padBottom, padLeft]);
 
   // Selección: resalta y, si queda fuera de la vista, centra la estación.
   useEffect(() => {

@@ -1,0 +1,464 @@
+/*
+ * «Experimentar»: escenarios de cobertura. El cian es del escenario (THEME.coverage); el ámbar
+ * sigue siendo de la interfaz y de los datos observados.
+ * Móvil primero: el mando va entre el mapa y la leyenda. En escritorio flota abajo, a la derecha
+ * del panel, como el de Reproducir.
+ */
+
+/* Piezas comunes */
+
+/* Por qué el escenario no mueve la superficie (una estación en zona ya cubierta, por ejemplo). */
+.no-effect-note {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--coverage-3) 55%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--coverage-4) 9%, transparent);
+  font-size: 0.9375rem;
+  line-height: 1.4;
+}
+
+.no-effect-note svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--coverage-4);
+}
+
+.hypothetical-badge {
+  display: inline-block;
+  padding: 0 7px;
+  border: 1px solid var(--coverage-3);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--coverage-4) 14%, transparent);
+  color: var(--coverage-4);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.5;
+  vertical-align: 0.1em;
+}
+
+.tool-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tool-button {
+  display: inline-flex;
+  flex: 1 1 0;
+  gap: 7px;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tool-button svg {
+  flex: none;
+}
+
+.tool-button:hover {
+  background: var(--panel-2);
+}
+
+.tool-button[aria-pressed='true'] {
+  border-color: var(--coverage-4);
+  background: var(--coverage-4);
+  color: var(--bg);
+}
+
+.tool-hint {
+  min-height: 1.45em;
+  margin: 8px 0 0;
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+}
+
+.radius-field__label,
+.area-field__label {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+}
+
+.radius-field__value {
+  color: var(--ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.radius-field input {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--coverage-3);
+}
+
+.area-field select {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-solid);
+}
+
+.delta {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.delta--up {
+  color: var(--coverage-4);
+}
+
+.delta--down,
+.delta--same {
+  color: var(--ink);
+}
+
+.ghost-button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ghost-button:hover:not(:disabled) {
+  background: var(--panel-2);
+}
+
+.ghost-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.changes-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.changes-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 44px;
+  border-top: 1px solid var(--line);
+}
+
+.changes-list li:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.changes-list__name {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.changes-list__what {
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+}
+
+.changes-list__undo {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--coverage-4);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.changes-list__undo:hover {
+  background: var(--panel-2);
+}
+
+.changes-list--empty {
+  color: var(--ink-2);
+}
+
+.assumptions ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.assumptions li {
+  margin: 0 0 6px;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+}
+
+.assumptions__model {
+  margin: 8px 0 0;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+}
+
+.scenario-status {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.scenario-status--error {
+  color: var(--ink);
+}
+
+.scenario-status--error p {
+  margin: 0 0 10px;
+}
+
+.pending-note {
+  color: var(--ink-2);
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+/* Leyenda del escenario */
+.coverage-legend__title {
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+
+.coverage-legend ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  font-size: 0.9375rem;
+  list-style: none;
+}
+
+.coverage-legend li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.swatch {
+  display: inline-block;
+  flex: none;
+  width: 16px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.swatch--hatch {
+  border: 1px solid var(--coverage-3);
+  background: repeating-linear-gradient(-45deg, var(--coverage-4) 0 1.5px, transparent 1.5px 4.5px);
+}
+
+.swatch--line {
+  height: 0;
+  border-top: 2px dashed;
+  border-radius: 0;
+}
+
+@media (max-width: 767px) {
+  .coverage-legend ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 10px;
+    font-size: 0.875rem;
+  }
+}
+
+/* Selector de modo con tres opciones: en móvil ocupa el ancho y se reparte. */
+@media (max-width: 479px) {
+  .mode-switch {
+    display: flex;
+    width: 100%;
+  }
+
+  .mode-switch button {
+    flex: 1 1 auto;
+    padding: 0 8px;
+  }
+}
+
+/* Cursor de la herramienta activa sobre el mapa. */
+.app[data-tool='add'] .maplibregl-canvas-container.maplibregl-interactive {
+  cursor: crosshair;
+}
+
+/* Mando bajo el mapa */
+.scenario-deck {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 16px;
+  padding: 14px 16px 16px;
+  border-top: 1px solid var(--line);
+  background: var(--panel-solid);
+}
+
+.scenario-deck__fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.scenario-deck__result {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.scenario-deck__compare {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.scenario-deck__side {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.scenario-deck__label {
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+}
+
+.scenario-deck__share {
+  margin-top: 2px;
+  font-size: 2.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.scenario-deck__side--scenario .scenario-deck__share {
+  color: var(--coverage-4);
+}
+
+.scenario-deck__sub {
+  margin-top: 4px;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+}
+
+.scenario-deck__arrow {
+  flex: none;
+  color: var(--ink-2);
+}
+
+.scenario-deck__diff {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  align-items: baseline;
+  margin: 0;
+}
+
+.scenario-deck__of {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+}
+
+.scenario-deck__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Panel: qué se mide, los cambios y los supuestos */
+.scenario-panel {
+  padding: 18px 0 0;
+}
+
+.scenario-panel__title {
+  margin: 0 0 6px;
+  font-size: 1.375rem;
+}
+
+.scenario-panel__lead {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.scenario-panel__reference {
+  margin: 10px 0 0;
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+}
+
+.scenario-panel__heading {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  margin: 22px 0 0;
+  font-size: 1.125rem;
+}
+
+.scenario-panel__count {
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.scenario-panel__details {
+  margin-top: 22px;
+}
+
+.scenario-panel__details summary {
+  min-height: 40px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (min-width: 768px) {
+  .scenario-deck {
+    position: absolute;
+    right: 16px;
+    bottom: 40px;
+    left: 452px;
+    grid-template-columns: minmax(300px, 1fr) minmax(320px, 1.15fr);
+    gap: 28px;
+    padding: 16px 22px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--panel);
+    backdrop-filter: blur(12px);
+    box-shadow: var(--panel-shadow);
+  }
+
+  .scenario-deck__result {
+    padding-left: 28px;
+    border-left: 1px solid var(--line);
+  }
+
+  .scenario-deck__share {
+    font-size: 3rem;
+  }
+
+  /* La leyenda sube por encima del mando, como al reproducir. */
+  .app[data-mode='experiment'] .map-legend {
+    bottom: calc(52px + var(--scenario-deck-height, 220px));
+  }
+}

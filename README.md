@@ -3,10 +3,10 @@
 Mapa de las estaciones de Bicing de Barcelona con la disponibilidad de cada una y la procedencia
 de cada dato, reproducción del histórico y escenarios de cobertura con estaciones hipotéticas.
 
-**Estado (6 de octubre de 2026):** B0 a B3 terminados: la aplicación muestra y reproduce días
-reales de Bicing (el histórico público del Ajuntament) y una demo sintética, sin mezclarlos. B4
-(escenarios de cobertura) en curso: el cálculo ya está en la API; falta la pantalla. No está
-desplegada. Detalle en [docs/roadmap.md](docs/roadmap.md).
+**Estado (6 de octubre de 2026):** B0 a B4 terminados: la aplicación muestra y reproduce días
+reales de Bicing (el histórico público del Ajuntament) y una demo sintética, sin mezclarlos, y
+compara la cobertura de la red real con escenarios hipotéticos. No está desplegada. Detalle en
+[docs/roadmap.md](docs/roadmap.md).
 
 ## Qué hay
 
@@ -15,7 +15,9 @@ desplegada. Detalle en [docs/roadmap.md](docs/roadmap.md).
   periodo y la cobertura de escenarios hipotéticos, con OpenAPI.
 - **Ingesta** por línea de comandos, idempotente y con registro de cada ejecución.
 - **Web** React + MapLibre: mapa, leyenda que también filtra, lista accesible y detalle; modo
-  «Reproducir» para recorrer un día del histórico paso a paso, con los huecos a la vista.
+  «Reproducir» para recorrer un día del histórico paso a paso, con los huecos a la vista, y modo
+  «Experimentar» para añadir, mover o quitar estaciones y ver cuánta superficie gana o pierde la
+  cobertura.
 - **Diseño «Fanals»**: Barcelona de noche, con estados que se distinguen por forma, color y
   número. Ver [docs/design.md](docs/design.md).
 
@@ -60,7 +62,9 @@ docker compose run --rm api ingest bicing-archive --from 2026-08-17 --to 2026-08
 
 Con datos reales, la web los muestra por defecto. La URL admite `?fuente=demo` o
 `?fuente=bicing-bcn`, `&estacion=<id de origen>` y `#mapa=zoom/lat/lon/rumbo/inclinación`. Para
-reproducir un día: `&modo=reproducir&dia=2026-08-20&hora=08:30` (hora de Barcelona).
+reproducir un día: `&modo=reproducir&dia=2026-08-20&hora=08:30` (hora de Barcelona). Para un
+escenario: `&modo=experimentar&radio=300&area=barcelona&nuevas=2.166,41.3635&quitadas=48`
+(`movidas=409:2.152,41.356` para mover una estación real).
 
 ## Pruebas
 
@@ -76,7 +80,9 @@ reproducir un día: `&modo=reproducir&dia=2026-08-20&hora=08:30` (hora de Barcel
   definida.
 - La prueba de humo bloquea el mapa base para no depender de un servicio público: comprueba la
   lógica y que la aplicación sigue siendo usable sin mapa. El mapa conectado se revisa con las
-  capturas (`npx playwright test --config e2e/tools.config.ts --grep captura`, desde `apps/web`).
+  capturas, que también usan la pantalla (desde `apps/web`:
+  `npx playwright test --config e2e/tools.config.ts --grep captura`, o `reproducir`, o
+  `experimentar`). Necesitan los datos reales importados.
 
 ## Operación
 

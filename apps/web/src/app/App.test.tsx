@@ -2,7 +2,15 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event';
 import { useEffect } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { FramesResponse, StationItem, TimelinePoint, TimelineResponse } from '../api/client';
+import type {
+  CoverageRequest,
+  CoverageResponse,
+  FramesResponse,
+  StationItem,
+  StudyAreaItem,
+  TimelinePoint,
+  TimelineResponse,
+} from '../api/client';
 import {
   demoSource,
   frameStation,
@@ -138,6 +146,56 @@ function framesFor(url: URL): FramesResponse {
         })),
       };
     }),
+  };
+}
+
+const barcelona: StudyAreaItem = {
+  id: 'barcelona',
+  name: 'Barcelona',
+  kind: 'municipality',
+  areaSquareMeters: 100_000_000,
+  source: 'prueba',
+  attribution: 'prueba',
+  license: null,
+  note: null,
+};
+
+/**
+ * Cobertura de prueba: la red base cubre la mitad del área y cada estación quitada resta
+ * 100 000 m². Devuelve el escenario tal cual se pidió, como la API.
+ */
+function coverageFor(body: CoverageRequest): CoverageResponse {
+  const removed = body.removed ?? [];
+  const lost = removed.length * 100_000;
+  const base = 50_000_000;
+  return {
+    model: { name: 'cobertura-geometrica', version: 1, assumptions: ['No es una isócrona.'] },
+    reference: {
+      source: stationsResponse([]).source,
+      at: '2026-03-10T09:00:00+00:00',
+      atBasis: 'now',
+      stations: stations.length,
+    },
+    studyArea: barcelona,
+    radiusMeters: body.radiusMeters,
+    added: body.added ?? [],
+    moved: body.moved ?? [],
+    removed,
+    base: { stations: stations.length, coveredSquareMeters: base, coveredShare: 0.5 },
+    scenario: {
+      stations: stations.length - removed.length,
+      coveredSquareMeters: base - lost,
+      coveredShare: (base - lost) / barcelona.areaSquareMeters,
+    },
+    difference: { gainedSquareMeters: 0, lostSquareMeters: lost },
+    geometries: {
+      studyArea: null,
+      base: null,
+      scenario: null,
+      gained: null,
+      lost: null,
+      reach: [],
+    },
   };
 }
 
@@ -374,6 +432,60 @@ describe('App', () => {
       'disabled',
       true,
     );
+  });
+
+  it('al experimentar, quitar una estación tocándola cambia el escenario y lo que se calcula', async () => {
+    const bodies: CoverageRequest[] = [];
+    requests.length = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) => {
+        const url = new URL(input.url);
+        requests.push(url);
+        if (url.pathname === '/api/sources') return json([demoSource]);
+        if (url.pathname === '/api/stations') return json(stationsResponse(stations));
+        if (url.pathname === '/api/study-areas') return json([barcelona]);
+        if (url.pathname === '/api/scenarios/coverage') {
+          const body = (await input.json()) as CoverageRequest;
+          bodies.push(body);
+          return json(coverageFor(body));
+        }
+        return json({ title: 'Petición inesperada' }, 500);
+      }),
+    );
+    const user = userEvent.setup();
+    window.history.replaceState(null, '', '/?modo=experimentar');
+    renderApp();
+
+    // Sin cambios, la red real y el escenario coinciden y el escenario va marcado como hipotético.
+    expect(await screen.findByText(/Todavía es la red real/)).toBeTruthy();
+    const deck = screen.getByRole('region', { name: 'Escenario de cobertura' });
+    await waitFor(() => {
+      expect(within(deck).getAllByText('50,0 %')).toHaveLength(2);
+    });
+    expect(within(deck).getByText('Hipotético')).toBeTruthy();
+    expect(within(deck).getByText('sin cambio')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Experimentar' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(bodies[0]).toMatchObject({ source: 'demo', studyArea: 'barcelona', radiusMeters: 300 });
+
+    // Con «Quitar», tocar una estación la saca del mapa y del cálculo.
+    await user.click(within(deck).getByRole('button', { name: 'Quitar' }));
+    await user.click(screen.getByRole('button', { name: 'Marcador Pl. de Catalunya' }));
+    expect(screen.queryByRole('button', { name: 'Marcador Pl. de Catalunya' })).toBeNull();
+    expect(screen.getByText('quitada')).toBeTruthy();
+    expect(new URLSearchParams(window.location.search).get('quitadas')).toBe('11');
+    await waitFor(() => {
+      expect(bodies.at(-1)?.removed).toEqual([11]);
+    });
+    expect(await within(deck).findByText('49,9 %')).toBeTruthy();
+    expect(within(deck).getByText('pierde 0,10 km²')).toBeTruthy();
+
+    // Recuperarla la devuelve al mapa y a la red.
+    await user.click(screen.getByRole('button', { name: 'Recuperar: Pl. de Catalunya' }));
+    expect(screen.getByRole('button', { name: 'Marcador Pl. de Catalunya' })).toBeTruthy();
+    expect(new URLSearchParams(window.location.search).get('quitadas')).toBeNull();
   });
 
   it('sin fuentes cargadas indica cómo importar la demo', async () => {

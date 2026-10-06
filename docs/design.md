@@ -34,7 +34,7 @@ que los separa de cualquier fondo, también de los edificios claros en 3D.
 
 Cian (`--coverage-1` a `--coverage-4`: `#0f3b47`, `#16707f`, `#26a9b8`, `#7fe3ea`). Ningún estado
 de estación lo usa, para que un escenario hipotético (B4) nunca se confunda con una observación.
-Las estaciones hipotéticas tendrán además su propia forma.
+Las estaciones hipotéticas tienen además su propia forma: un rombo con una cruz.
 
 ## Reproducir
 
@@ -59,10 +59,34 @@ Pletina, con los relojes de la semana y los pasos de 5 minutos de Rellotge.
 - En escritorio la leyenda sube por encima del reproductor y se compacta; en móvil, el
   reproductor va entre el mapa y la leyenda.
 
+## Experimentar
+
+Elegido el 6 de octubre de 2026 entre tres propuestas (Consola, Lienzo y Cuaderno): la base es
+Consola, un mando bajo el mapa como el de Reproducir.
+
+- El mando: Añadir, Mover y Quitar (pulsar la activa la suelta) con lo que hace cada una, el radio
+  (50 a 1000 m) y el área de estudio (Barcelona o un distrito). Al otro lado, la comparación
+  grande «Red real 56,0 % → Escenario 56,3 %», con la etiqueta «Hipotético» en el escenario, lo
+  que gana y lo que pierde, Deshacer y Volver a la red real.
+- El panel explica qué se mide (geometría en línea recta, no demanda), de qué día es la red real,
+  la lista de cambios (cada uno se deshace por separado) y los supuestos del modelo, plegados.
+- En el mapa, las estaciones reales son octógonos grises pequeños, sin estado ni número: aquí
+  importa dónde están. La cobertura de la red real es un charco de luz cian tenue; lo que gana el
+  escenario, cian intenso; lo que pierde, rayado. El área de estudio, en discontinuo gris.
+- Una estación nueva es un rombo; una quitada deja su octógono en discontinuo con aspa; una
+  movida, sin aspa y con una línea hasta su sitio nuevo. La nueva y la movida llevan siempre su
+  círculo de alcance en discontinuo, aunque no ganen nada.
+- Si un cambio no mueve la superficie (estación en zona ya cubierta o fuera del área de estudio),
+  un aviso junto a los números dice por qué: sin él parecía que no había pasado nada.
+- «Sin cambio» solo si no se gana ni se pierde nada; las superficies pequeñas van en m².
+- Todo el escenario va en la URL (`&radio=…&area=…&nuevas=…&movidas=…&quitadas=…`).
+- En escritorio la leyenda sube por encima del mando; en móvil, el mando va entre el mapa y la
+  leyenda, y el panel debajo.
+
 ## Encuadre
 
 Al abrir, las estaciones ocupan la parte del mapa que no tapan el panel, la leyenda y, al
-reproducir, el reproductor. `fitBounds` no tiene en cuenta la cámara inclinada y dejaba mucho
+reproducir o experimentar, el mando. `fitBounds` no tiene en cuenta la cámara inclinada y dejaba mucho
 municipio vecino y mar: después se ajusta con dónde caen las estaciones en pantalla.
 
 ## Mapa base

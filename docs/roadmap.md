@@ -8,7 +8,7 @@ Actualizado el 6 de octubre de 2026.
 | **B1** Primera funcionalidad completa | Hecho | PostGIS, demo idempotente, API de estaciones, mapa, lista y detalle, pruebas. |
 | **B2** Ingesta observada | Hecho | Una muestra real entra y se consulta con origen y fecha; repetirla no duplica. |
 | **B3** Reproducción histórica | Hecho | Reproduce un periodo real respetando huecos y de forma determinista. |
-| **B4** Escenarios de cobertura | En curso | Cálculo espacial comprobado, sin solapes duplicados ni conclusiones de demanda. |
+| **B4** Escenarios de cobertura | Hecho | Cálculo espacial comprobado, sin solapes duplicados ni conclusiones de demanda. |
 | B5 Demo y portfolio | Pendiente | Demo estable y desplegada, rendimiento medido, caso técnico. |
 
 ## Decisiones tomadas
@@ -23,6 +23,8 @@ Actualizado el 6 de octubre de 2026.
   minutos de otra de las propuestas (`docs/design.md`).
 - **Retención:** periodos elegidos, sin borrado automático; unas 4 semanas para el despliegue y
   `purge` para quitar días (ADR 0012).
+- **Experimentar:** el mando bajo el mapa, como en Reproducir, de las tres propuestas
+  (`docs/design.md`).
 
 ## B2: cómo se cerró
 
@@ -65,19 +67,26 @@ Actualizado el 6 de octubre de 2026.
    regla que el mapa (ADR 0010). Un día entero a la velocidad más alta, con todos los pasos de
    5 min: 43,7 s, 23 peticiones y ningún 429.
 
-## B4: estado
+## B4: cómo se cerró
 
 1. **Hecho.** Áreas de estudio: los 10 distritos oficiales del Ajuntament y Barcelona como su
    unión (101,702 km²), con `ingest study-areas` (ADR 0013).
 2. **Hecho.** Cálculo: `POST /api/scenarios/coverage`, modelo `cobertura-geometrica` v1, sin
    guardar escenarios. Comprobado con PostGIS (un círculo exacto, estaciones coincidentes,
    solapes, recorte al área, capacidad que no cambia nada, mismo resultado al repetir) y medido
-   con la red real: 0,33–0,37 s; el 56 % de Barcelona a menos de 300 m.
-3. **Siguiente.** Pantalla «Experimentar»: dos o tres direcciones para elegir antes de
-   construirla. Colocar, mover y quitar estaciones; radio y área; base y escenario comparados
-   con los números y los supuestos a la vista; cian solo para la cobertura y forma propia para
-   las hipotéticas; el escenario en la URL.
-4. **Pendiente.** Pruebas de la interfaz y de humo.
+   con la red real: 0,33–0,37 s; el 56 % de Barcelona a menos de 300 m. Superficies al metro
+   cuadrado: una estación en zona ya cubierta dejaba restos de coma flotante (1e-8 m²).
+3. **Hecho.** Pantalla «Experimentar» (`?modo=experimentar`), elegida entre tres propuestas
+   (`docs/design.md`): añadir, mover y quitar estaciones en el mapa (ratón y dedo), radio y área,
+   la comparación con la red real, los supuestos y el escenario en la URL. Cada nueva o movida
+   enseña su círculo de alcance (`geometries.reach`) y un aviso explica por qué un cambio no
+   mueve la superficie: al probarla, una estación nueva en Navas no ganaba nada y parecía que no
+   pasaba nada.
+4. **Hecho.** Pruebas: de backend (cero exacto en zona cubierta, círculos del cálculo, estación
+   fuera del área), unitarias (cifras, aviso, círculos vigentes), de componentes (quitar tocando
+   el mapa cambia lo que se calcula), de humo con la demo y capturas con el mapa real que también
+   la usan (añadir con ratón y con el dedo, mover, quitar, recuperar, radio, área y aviso) en
+   escritorio, 375 y 320 px.
 
 ## Backlog
 
@@ -87,6 +96,9 @@ Actualizado el 6 de octubre de 2026.
 - Web: a escala de ciudad, 540 marcadores se solapan; valorar una vista agregada que no esconda
   estados.
 - Web: idiomas (ca, en) cuando haya textos estables; hoy solo es.
+- Experimentar: añadir y mover estaciones sin ratón ni pantalla táctil (hoy solo se deshace con
+  el teclado). Probar el arrastre con el dedo en un teléfono de verdad (en Playwright solo se ha
+  probado el toque para añadir).
 - Web: E2E en CI (Compose con API y PostGIS) cuando haya despliegue.
 - Tiempo real con el token de Open Data BCN (`Authorization: <token>`; un 302 a `/tokens` es un
   fallo de autenticación): tarea programada y «Última observación» con frescura medida.

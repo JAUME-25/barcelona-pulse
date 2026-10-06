@@ -1,9 +1,19 @@
+import type { Map as MapLibreMap } from 'maplibre-gl';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { StationItem } from '../api/client';
 import { ReplayDeck } from '../features/history/ReplayDeck';
 import { ModeSwitch, type Mode } from '../features/history/ReplayParts';
 import { useFrames } from '../features/history/useFrames';
 import { useReplay } from '../features/history/useReplay';
+import {
+  ScenarioDeck,
+  ScenarioPanel,
+  type ScenarioViewProps,
+} from '../features/scenarios/ScenarioDeck';
+import { ScenarioLayers } from '../features/scenarios/ScenarioLayers';
+import { CoverageLegend } from '../features/scenarios/ScenarioParts';
+import type { Tool } from '../features/scenarios/scenarioView';
+import { useScenario, useStudyAreas } from '../features/scenarios/useScenario';
 import { AvailabilityFilter } from '../features/stations/AvailabilityFilter';
 import {
   AVAILABILITY_ORDER,
@@ -29,15 +39,27 @@ import './App.css';
 const STATION_PARAM = 'estacion';
 const SOURCE_PARAM = 'fuente';
 const MODE_PARAM = 'modo';
-const REPLAY_MODE = 'reproducir';
+const MODE_IN_URL: Record<Mode, string | null> = {
+  explore: null,
+  replay: 'reproducir',
+  experiment: 'experimentar',
+};
 const NO_STATIONS: readonly StationItem[] = [];
+
+function modeFromUrl(): Mode {
+  const value = readParam(MODE_PARAM);
+  if (value === MODE_IN_URL.replay) return 'replay';
+  if (value === MODE_IN_URL.experiment) return 'experiment';
+  return 'explore';
+}
 
 /**
  * Lo que tapan los controles sobre el mapa en escritorio, para que el encuadre inicial use solo
- * la parte que se ve: la leyenda a la derecha y, al reproducir, el reproductor abajo.
+ * la parte que se ve: la leyenda a la derecha y, al reproducir o experimentar, el mando abajo.
  */
 const EXPLORE_FRAME = { right: 312, bottom: 48 };
 const REPLAY_FRAME = { right: 312, bottom: 330 };
+const EXPERIMENT_FRAME = { right: 312, bottom: 300 };
 
 const readStationParam = () => readParam(STATION_PARAM);
 const writeStationParam = (value: string | null) => {
@@ -82,12 +104,12 @@ export function App() {
     sources.find((s) => s.id === chosenSourceId) ?? pickDefaultSource(sources) ?? undefined;
   const sourceId = source?.id ?? null;
 
-  const [mode, setMode] = useState<Mode>(() =>
-    readParam(MODE_PARAM) === REPLAY_MODE ? 'replay' : 'explore',
-  );
+  const [mode, setMode] = useState<Mode>(modeFromUrl);
   const [initialMoment] = useState(() => ({ day: readParam('dia'), time: readParam('hora') }));
   // Solo se reproduce una fuente con datos; sin ellos, la vista es la de explorar.
   const replaying = mode === 'replay' && (source?.period ?? null) !== null;
+  const experimenting = mode === 'experiment' && sourceId !== null;
+  const shownMode: Mode = replaying ? 'replay' : experimenting ? 'experiment' : 'explore';
   // Si no llega el estado de las estaciones, la reproducción se para.
   const stationsFailedRef = useRef(false);
   const replay = useReplay(
@@ -138,6 +160,39 @@ export function App() {
     selectedKey === null ? undefined : all.find((s) => s.sourceStationId === selectedKey);
   const selectedId = selected?.id ?? null;
 
+  // Experimentar: la red real del instante y los cambios del escenario sobre ella.
+  const scenario = useScenario(experimenting ? sourceId : null, instantFor(source, now));
+  const { state: areasState } = useStudyAreas(experimenting);
+  const areas = areasState.status === 'ready' ? areasState.data : [];
+  const [map, setMap] = useState<MapLibreMap | null>(null);
+  const [tool, setTool] = useState<Tool>(null);
+  const { removed, moved } = scenario.scenario;
+  const scenarioStations = useMemo(() => {
+    if (removed.length === 0 && moved.length === 0) return all;
+    const gone = new Set(removed);
+    const movedTo = new Map(moved.map((m) => [m.station, m]));
+    return all
+      .filter((s) => !gone.has(s.id))
+      .map((s) => {
+        const m = movedTo.get(s.id);
+        return m === undefined ? s : { ...s, longitude: m.longitude, latitude: m.latitude };
+      });
+  }, [all, removed, moved]);
+  const { removeStation } = scenario;
+  const tapStation = useCallback(
+    (id: number) => {
+      if (tool === 'remove') removeStation(id);
+    },
+    [tool, removeStation],
+  );
+  const scenarioView: ScenarioViewProps = {
+    state: scenario,
+    areas,
+    stations: all,
+    tool,
+    onTool: setTool,
+  };
+
   const select = useCallback(
     (id: number) => {
       const station = all.find((s) => s.id === id);
@@ -187,7 +242,8 @@ export function App() {
 
   const changeMode = (next: Mode) => {
     setMode(next);
-    writeParam(MODE_PARAM, next === 'replay' ? REPLAY_MODE : null);
+    setTool(null);
+    writeParam(MODE_PARAM, MODE_IN_URL[next]);
   };
 
   const mapUnavailable = mapStatus.kind === 'failed' || mapStatus.kind === 'unsupported';
@@ -226,6 +282,8 @@ export function App() {
         Cargando estaciones…
       </p>
     );
+  } else if (experimenting) {
+    body = <ScenarioPanel {...scenarioView} />;
   } else {
     body = (
       <>
@@ -282,7 +340,8 @@ export function App() {
       className="app"
       data-map={mapUnavailable ? 'unavailable' : 'available'}
       data-map-status={mapStatus.kind}
-      data-mode={replaying ? 'replay' : 'explore'}
+      data-mode={shownMode}
+      data-tool={experimenting ? (tool ?? undefined) : undefined}
     >
       <header className="panel-head">
         <div className="brand">
@@ -292,7 +351,7 @@ export function App() {
             <p className="brand__tagline">Estaciones de Bicing en el mapa</p>
           </div>
         </div>
-        <ModeSwitch mode={replaying ? 'replay' : 'explore'} onChange={changeMode} />
+        <ModeSwitch mode={shownMode} onChange={changeMode} />
         {sources.length > 1 && (
           <label className="source-picker">
             Fuente
@@ -312,24 +371,43 @@ export function App() {
             </select>
           </label>
         )}
-        {response !== null && <SourceNotice response={response} compact={replaying} />}
+        {response !== null && (
+          <SourceNotice response={response} compact={replaying || experimenting} />
+        )}
       </header>
 
       <div className="map-area">
         <StationMap
-          stations={filtered}
+          stations={experimenting ? scenarioStations : filtered}
           frame={all}
-          frameKey={`${sourceId ?? ''}:${replaying ? 'replay' : 'explore'}`}
-          framePadding={replaying ? REPLAY_FRAME : EXPLORE_FRAME}
-          selectedId={selectedId}
-          onSelect={select}
+          frameKey={`${sourceId ?? ''}:${shownMode}`}
+          framePadding={replaying ? REPLAY_FRAME : experimenting ? EXPERIMENT_FRAME : EXPLORE_FRAME}
+          selectedId={experimenting ? null : selectedId}
+          variant={experimenting ? 'network' : 'availability'}
+          onSelect={experimenting ? tapStation : select}
           onStatusChange={setMapStatus}
+          onMapReady={setMap}
         />
         <MapStatusMessage status={mapStatus} />
         {replaying && <ReplayDeck replay={replay} />}
+        {experimenting && (
+          <ScenarioLayers
+            map={map}
+            result={scenario.shown}
+            scenario={scenario.scenario}
+            stations={all}
+            tool={tool}
+            actions={scenario}
+          />
+        )}
+        {experimenting && response !== null && <ScenarioDeck {...scenarioView} />}
         {response !== null && (
           <div className="map-legend">
-            <AvailabilityFilter counts={counts} visible={visible} onToggle={toggleCategory} />
+            {experimenting ? (
+              <CoverageLegend />
+            ) : (
+              <AvailabilityFilter counts={counts} visible={visible} onToggle={toggleCategory} />
+            )}
           </div>
         )}
       </div>

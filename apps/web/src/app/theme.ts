@@ -50,6 +50,8 @@ export const THEME = {
    * estación. Así una simulación nunca se confunde con una observación.
    */
   coverage: ['#0f3b47', '#16707f', '#26a9b8', '#7fe3ea'],
+  /** Estación real cuando solo importa dónde está (escenarios): sin estado ni número. */
+  networkMarker: { color: '#c9d3df', fill: 'full', text: NIGHT } as MarkerStyle,
   tokens: {
     '--font-ui': "'Barlow Semi Condensed', system-ui, sans-serif",
     '--bg': NIGHT,

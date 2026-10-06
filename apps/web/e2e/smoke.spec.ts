@@ -87,6 +87,31 @@ test('con el detalle abierto, la búsqueda y la leyenda siguen visibles', async 
   await expect(page.getByRole('heading', { level: 2, name: 'Liceu' })).toHaveCount(0);
 });
 
+test('experimentar con la demo: red real y escenario comparados, y el escenario en la URL', async ({
+  page,
+}) => {
+  // Una estación nueva en la Sagrada Família, que llega por la URL: sin mapa no se puede tocar.
+  await openWithoutBasemap(page, '&modo=experimentar&nuevas=2.17400,41.40360');
+
+  await expect(page.getByRole('button', { name: 'Experimentar' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  const deck = page.getByRole('region', { name: 'Escenario de cobertura' });
+  await expect(deck.getByText('Hipotético')).toBeVisible();
+  await expect(deck.getByText('46 estaciones', { exact: true })).toBeVisible();
+  await expect(deck.getByText('47 estaciones', { exact: true })).toBeVisible();
+  await expect(page.getByText('Nueva 1')).toBeVisible();
+
+  await page.getByText('Supuestos del cálculo').click();
+  await expect(page.getByText(/no es una isócrona/)).toBeVisible();
+
+  await page.getByRole('button', { name: 'Quitar: Nueva 1' }).click();
+  await expect(page.getByText(/Todavía es la red real/)).toBeVisible();
+  await expect(deck.getByText('46 estaciones', { exact: true })).toHaveCount(2);
+  expect(new URL(page.url()).searchParams.get('nuevas')).toBeNull();
+});
+
 test('reproducir la demo: momento en hora de Barcelona, pasos de 5 min y horas sin datos', async ({
   page,
 }) => {

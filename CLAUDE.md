@@ -84,7 +84,10 @@ En este equipo no hay SDK de .NET instalado: todo lo de .NET va por el contenedo
   en el servidor de desarrollo React va varias veces más lento y, sin ventana, Chromium pinta
   WebGL por software.
 - El navegador integrado de Claude no pinta WebGL si su ventana no está al frente: el mapa se
-  revisa con las capturas de Playwright (`e2e/*.capture.ts`).
+  revisa con las capturas de Playwright (`e2e/*.capture.ts`). En móvil, capturas de pantalla y no
+  `fullPage`: en páginas largas Chromium deja el mapa en negro.
+- La cobertura (ADR 0013) redondea las superficies al metro cuadrado: sin eso, una estación en
+  zona ya cubierta «ganaba» 1e-8 m². «Sin cambio» en la web es ganar y perder 0 exactos.
 - SharpCompress 1.0.0: `SevenZipArchive.Open(...)` (la documentación de `master` dice
   `OpenArchive`) y no escribe 7z. Los fixtures del histórico se generan con
   `node scripts/make-bicing-archive-fixtures.mjs` usando bsdtar.

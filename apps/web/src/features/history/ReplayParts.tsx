@@ -4,29 +4,29 @@ import { formatLocalDay, localClock } from './time';
 import { DAY_STEP_MINUTES, SPEED_LABEL, SPEEDS, type Replay, type Speed } from './useReplay';
 import './replay.css';
 
-export type Mode = 'explore' | 'replay';
+export type Mode = 'explore' | 'replay' | 'experiment';
+
+const MODES: { mode: Mode; label: string }[] = [
+  { mode: 'explore', label: 'Explorar' },
+  { mode: 'replay', label: 'Reproducir' },
+  { mode: 'experiment', label: 'Experimentar' },
+];
 
 export function ModeSwitch({ mode, onChange }: { mode: Mode; onChange: (mode: Mode) => void }) {
   return (
     <div className="mode-switch" role="group" aria-label="Modo">
-      <button
-        type="button"
-        aria-pressed={mode === 'explore'}
-        onClick={() => {
-          onChange('explore');
-        }}
-      >
-        Explorar
-      </button>
-      <button
-        type="button"
-        aria-pressed={mode === 'replay'}
-        onClick={() => {
-          onChange('replay');
-        }}
-      >
-        Reproducir
-      </button>
+      {MODES.map((m) => (
+        <button
+          key={m.mode}
+          type="button"
+          aria-pressed={mode === m.mode}
+          onClick={() => {
+            onChange(m.mode);
+          }}
+        >
+          {m.label}
+        </button>
+      ))}
     </div>
   );
 }
