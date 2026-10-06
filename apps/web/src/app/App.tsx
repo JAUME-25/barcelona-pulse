@@ -1,5 +1,14 @@
 import type { Map as MapLibreMap } from 'maplibre-gl';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import type { StationItem } from '../api/client';
 import { ReplayDeck } from '../features/history/ReplayDeck';
 import { ModeSwitch, type Mode } from '../features/history/ReplayParts';
@@ -25,7 +34,7 @@ import { BrandMark } from '../features/stations/OctagonGlyph';
 import { SourceNotice } from '../features/stations/SourceNotice';
 import { StationDetail } from '../features/stations/StationDetail';
 import { StationList } from '../features/stations/StationList';
-import { StationMap, type MapStatus } from '../features/stations/StationMap';
+import type { MapStatus } from '../features/stations/StationMap';
 import {
   instantFor,
   pickDefaultSource,
@@ -35,6 +44,12 @@ import {
 import { plural } from '../shared/format';
 import { readParam, writeParam } from '../shared/url';
 import './App.css';
+
+// MapLibre es casi todo el JavaScript: el mapa llega en su propio fragmento y el panel y la lista
+// no lo esperan (en un móvil medio, más de un segundo).
+const StationMap = lazy(() =>
+  import('../features/stations/StationMap').then((m) => ({ default: m.StationMap })),
+);
 
 const STATION_PARAM = 'estacion';
 const SOURCE_PARAM = 'fuente';
@@ -377,17 +392,21 @@ export function App() {
       </header>
 
       <div className="map-area">
-        <StationMap
-          stations={experimenting ? scenarioStations : filtered}
-          frame={all}
-          frameKey={`${sourceId ?? ''}:${shownMode}`}
-          framePadding={replaying ? REPLAY_FRAME : experimenting ? EXPERIMENT_FRAME : EXPLORE_FRAME}
-          selectedId={experimenting ? null : selectedId}
-          variant={experimenting ? 'network' : 'availability'}
-          onSelect={experimenting ? tapStation : select}
-          onStatusChange={setMapStatus}
-          onMapReady={setMap}
-        />
+        <Suspense fallback={<div className="station-map" aria-hidden="true" />}>
+          <StationMap
+            stations={experimenting ? scenarioStations : filtered}
+            frame={all}
+            frameKey={`${sourceId ?? ''}:${shownMode}`}
+            framePadding={
+              replaying ? REPLAY_FRAME : experimenting ? EXPERIMENT_FRAME : EXPLORE_FRAME
+            }
+            selectedId={experimenting ? null : selectedId}
+            variant={experimenting ? 'network' : 'availability'}
+            onSelect={experimenting ? tapStation : select}
+            onStatusChange={setMapStatus}
+            onMapReady={setMap}
+          />
+        </Suspense>
         <MapStatusMessage status={mapStatus} />
         {replaying && <ReplayDeck replay={replay} />}
         {experimenting && (

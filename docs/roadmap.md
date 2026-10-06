@@ -9,7 +9,7 @@ Actualizado el 6 de octubre de 2026.
 | **B2** Ingesta observada | Hecho | Una muestra real entra y se consulta con origen y fecha; repetirla no duplica. |
 | **B3** Reproducción histórica | Hecho | Reproduce un periodo real respetando huecos y de forma determinista. |
 | **B4** Escenarios de cobertura | Hecho | Cálculo espacial comprobado, sin solapes duplicados ni conclusiones de demanda. |
-| B5 Demo y portfolio | Pendiente | Demo estable y desplegada, rendimiento medido, caso técnico. |
+| **B5** Demo y portfolio | En curso | Demo estable y desplegada, rendimiento medido, caso técnico. |
 
 ## Decisiones tomadas
 
@@ -88,9 +88,25 @@ Actualizado el 6 de octubre de 2026.
    la usan (añadir con ratón y con el dedo, mover, quitar, recuperar, radio, área y aviso) en
    escritorio, 375 y 320 px.
 
+## B5: estado
+
+Entrega del brief: pulido visual, rendimiento medido, despliegue documentado y material para el
+caso técnico. Cierre: demo estable, límites visibles, pruebas pertinentes y una explicación
+honesta de lo hecho.
+
+1. **Hecho.** Rendimiento con la red real (544 estaciones) en escritorio y móvil, carga y
+   fluidez de los tres modos (`docs/architecture.md`). MapLibre pasa a su propio fragmento: en
+   móvil, la lista llega a los 533 ms en vez de 885.
+2. **Pendiente de decidir (Jaume).** Despliegue: dónde (el VPS de Forge o uno aparte), con qué
+   subdominio y qué semanas de datos se publican (ADR 0012; una laborable de otoño enseñaría
+   mejor los desplazamientos al trabajo que agosto).
+3. **Pendiente.** Límites visibles en la propia web: de qué fecha son los datos, que no es tiempo
+   real, qué mide y qué no la cobertura, de dónde sale cada cosa.
+4. **Pendiente.** Caso técnico para el portfolio: qué problema resuelve, decisiones, dificultades
+   reales, mediciones y límites.
+
 ## Backlog
 
-- Web: cargar MapLibre en diferido (el paquete principal pesa 1,30 MB).
 - Web: los nombres reales llegan en mayúsculas («AV. CAN MARCET, 3»); valorar un formato de
   lectura que respete partículas catalanas, sin cambiar el dato guardado.
 - Web: a escala de ciudad, 540 marcadores se solapan; valorar una vista agregada que no esconda
@@ -105,12 +121,13 @@ Actualizado el 6 de octubre de 2026.
 - API: caché HTTP con validación para `/api/stations`.
 - Reproducir: los fotogramas pesan 110 KB por hora con Brotli (2,6 MB un día). Si pesa en
   móvil, formato por columnas (~58 KB) o caché comprimida en el servidor. Medir también la
-  fluidez en móvil: pintar el mapa es lo que más cuesta.
-- Despliegue (B5): elegir las ~4 semanas que se publican (ADR 0012); una laborable de otoño
-  enseñaría mejor los desplazamientos al trabajo que agosto.
-- API: cabeceras reenviadas (`ForwardedHeaders`) para el límite por IP detrás de un proxy.
+  reproducción a la velocidad más alta en móvil (arrastrar el mapa ya está medido: 48 fps).
+- Mapa: al moverse en móvil, explorar y reproducir van a 48 fps y experimentar a 60. La
+  diferencia probable son los números dentro de los marcadores (experimentar no los lleva y sus
+  marcadores son más pequeños): comprobarlo antes de cambiar nada (p. ej., números desde z14).
+- API: cabeceras reenviadas (`ForwardedHeaders`) para el límite por IP detrás de un proxy
+  (antes de desplegar).
 - Índice no único en `station_versions(station_id)` si las consultas de detalle crecen.
-- Rendimiento: medir la carga de la web con las 540 estaciones reales y la fluidez (fps).
 - Fuentes: aclarar condiciones del GBFS del operador antes de cualquier uso.
 
 ## Fuera de alcance de la primera versión

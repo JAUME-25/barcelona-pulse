@@ -131,15 +131,29 @@ Para actualizar: cambia la versión, ejecuta las pruebas y la CI, y actualiza es
 
 ## Mediciones
 
-Entorno: Windows 11, 16 núcleos, Docker Desktop 29.6, compilación de producción servida por
-`vite preview` en local, Chromium 153. Demo de 46 estaciones. Medido el 5 de octubre de 2026.
+Entorno: Windows 11, 16 núcleos, Docker Desktop 29.6 (API y PostGIS en el mismo equipo),
+compilación de producción servida por `vite preview`, Chromium 153 con la GPU. Móvil: 375×812 y
+CPU ×4 (la GPU sigue siendo la del equipo: un teléfono real tiene menos). Red sin limitar; las
+teselas llegan de OpenFreeMap por internet. Medido el 6 de octubre de 2026, medianas de 5, con
+tiempos del propio navegador desde el inicio de la navegación (con la CPU ralentizada, el reloj
+de Playwright añade el retraso de sus comprobaciones: la lista parecía tardar 1,7 s y eran 0,5).
 
-| Medida | Escritorio | Móvil (CPU ×4) |
-| --- | --- | --- |
-| DOMContentLoaded (mediana de 5) | 111 ms | 413 ms |
-| Lista de estaciones visible | 244 ms | 897 ms |
-| Mapa listo (estilo cargado y capas añadidas) | 1 224 ms | 1 327 ms |
-| JavaScript descargado, sin comprimir | 1 752 KB | 1 752 KB |
+| Carga (ms) | Escritorio, demo | Escritorio, red real | Móvil, demo | Móvil, red real |
+| --- | --- | --- | --- | --- |
+| HTML listo (DOMContentLoaded) | 34 | 34 | 124 | 130 |
+| Primera fila de la lista | 103 | 124 | 433 | 533 |
+| Mapa listo (estilo y capas) | 756 | 854 | 1 286 | 2 061 |
+
+- La red real son 544 estaciones; la demo, 46.
+- MapLibre llega en su propio fragmento: el JavaScript inicial pesa 297 KB (90 KB comprimido)
+  y el del mapa 1,04 MB (273 KB) más su worker, 511 KB (143 KB). Con todo en un paquete, el
+  mismo método daba en móvil con la red real el HTML a 242 ms y la lista a 885 ms; el mapa,
+  igual (2,1 s).
+- Fluidez del mapa con la red real, arrastrando y acercando hasta ver los edificios en 3D (6 a
+  10 s de gesto): en escritorio, 60 fps en los tres modos y ningún fotograma de más de 50 ms;
+  en móvil, 48–49 fps al explorar y al reproducir (p95 de 50 ms, 11–13 fotogramas de más de
+  50 ms) y 60 al experimentar, cuyos marcadores no llevan número. Ninguna tarea larga durante
+  el gesto.
 
 - API con la demo, 31 peticiones a `127.0.0.1`: `GET /api/stations?source=demo` mediana
   4,0 ms (p90 4,4 ms; 18,5 KB sin comprimir); con `bbox`, 3,7 ms; `GET /api/sources`, 3,4 ms.
@@ -161,10 +175,10 @@ Entorno: Windows 11, 16 núcleos, Docker Desktop 29.6, compilación de producci�
   Sin ventana, Chromium pinta WebGL por software: con el servidor de desarrollo, cada paso
   tardaba ~260 ms en vez de 150. Por eso se mide con la GPU (`e2e/reproduccion.measure.ts`).
 - El tiempo del mapa depende de la red hasta OpenFreeMap; la red no se limitó.
-- La carga de la web se midió con la demo. Falta medirla con las 540 estaciones reales, y la
-  fluidez (fps) en escritorio y móvil: queda para B5.
-- El paquete principal pesa 1,28 MB (358 KB con gzip), casi todo MapLibre. Cargarlo en diferido
-  y quedarse con una sola fuente tipográfica son las primeras mejoras previstas.
+- Probado y descartado: `content-visibility: auto` en las filas de la lista empeoraba la carga en
+  móvil (lista de 1,7 a 2,2 s con el reloj de Playwright).
 
-Para repetirlas: `npx playwright test --config e2e/tools.config.ts --grep medicion` desde
-`apps/web` (escribe `test-results/measurements.json`).
+Para repetirlas, desde `apps/web` y sin `E2E_BASE_URL` (Playwright compila y abre
+`vite preview`): `npx playwright test --config e2e/tools.config.ts --grep medicion` (todas;
+escriben `test-results/measurements.json`), `--grep "tiempos de carga"`, `--grep fluidez` o
+`--grep perfil` (en qué se va el tiempo de la carga en móvil).

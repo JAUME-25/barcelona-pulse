@@ -5,7 +5,8 @@ de cada dato, reproducción del histórico y escenarios de cobertura con estacio
 
 **Estado (6 de octubre de 2026):** B0 a B4 terminados: la aplicación muestra y reproduce días
 reales de Bicing (el histórico público del Ajuntament) y una demo sintética, sin mezclarlos, y
-compara la cobertura de la red real con escenarios hipotéticos. No está desplegada. Detalle en
+compara la cobertura de la red real con escenarios hipotéticos. B5 (demo publicada y caso
+técnico) en curso: el rendimiento ya está medido; todavía no está desplegada. Detalle en
 [docs/roadmap.md](docs/roadmap.md).
 
 ## Qué hay
