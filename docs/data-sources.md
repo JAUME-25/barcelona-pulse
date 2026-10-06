@@ -11,7 +11,7 @@ prueba que funcione: todo lo de aquí se ha pedido de verdad.
 | Fuente | Acceso hoy | Uso previsto |
 | --- | --- | --- |
 | Bicing tiempo real, Open Data BCN (JSON) | **Requiere token personal.** Sin él: 302 a `/tokens`. | Pendiente de token. |
-| Bicing histórico mensual, Open Data BCN (.7z con CSV) | Público. 2019-03 a 2026-08, con huecos. | **En uso** (B2 y B3): `ingest bicing-archive --day` o `--from/--to`. |
+| Bicing histórico mensual, Open Data BCN (.7z con CSV) | Público. 2019-03 a 2026-08, con huecos. Al servidor de producción le contesta 403. | **En uso** (B2 y B3): `ingest bicing-archive --day` o `--from/--to`. |
 | Información de estaciones histórica (.7z) | Público. Columnas comprobadas (B2). | **En uso**: ubicación, capacidad, distrito y barrio con versiones. |
 | GBFS del operador (`barcelona.publicbikesystem.net`) | Público y sin autenticación. **Sin licencia publicada.** | Ninguno hasta aclarar condiciones. |
 | datos.gob.es | Solo metadatos; remite a Open Data BCN; desactualizado (último mes listado: 2026-04). | Ninguno. |
@@ -55,6 +55,10 @@ Pendiente de comprobar con un token válido: formato real, versión GBFS, si tra
 - Archivos `AAAA_MM_<Mes>_BicingNou_ESTACIONS.7z` (estado) e `…_INFORMACIO.7z` (información). El
   enlace de CKAN redirige (302) a `/resources/bcn/BicingBCN/<archivo>.7z`, que responde 200 sin
   autenticación.
+- El 6-10-2026 esa misma ruta contestó 403 a la descarga desde el VPS de producción (Hetzner) y
+  200 desde una conexión doméstica. Inferencia: el portal bloquea direcciones de centros de
+  datos. No se sortea: en producción se importan los archivos
+  descargados aparte y subidos al servidor (`docs/despliegue.md`).
 - Cobertura: 87 archivos de estado y 88 de información, de 2019-03 a 2026-08. Faltan 2025-11
   (documentado), 2026-07 y 2026-09; 2026-01 existe en la ruta estática pero no en CKAN. El de
   2022-03 «INFORMACIO» en CKAN apunta en realidad al de ESTACIONS.

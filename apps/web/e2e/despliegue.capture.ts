@@ -35,6 +35,17 @@ for (const mode of MODES) {
       path: `captures/despliegue-${mode.name}-${testInfo.project.name}.png`,
     });
 
+    // El móvil más estrecho que se admite, sin scroll horizontal.
+    if (testInfo.project.name === 'movil') {
+      await page.setViewportSize({ width: 320, height: 640 });
+      await page.waitForTimeout(1500);
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(overflow).toBe(0);
+      await page.screenshot({ path: `captures/despliegue-${mode.name}-320.png` });
+    }
+
     expect(problems).toEqual([]);
   });
 }

@@ -2,6 +2,7 @@
 
 Barcelona Pulse se publica en **https://pulse.jaumeperez.com**, en el VPS que ya gestiona Forge
 (Hetzner, el de Cuadra y jaumeperez.com), con las cuatro semanas del 4 al 31 de mayo de 2026.
+En marcha desde el 6 de octubre de 2026.
 
 ## Por qué ese servidor
 
@@ -81,7 +82,9 @@ Cada paso en Forge o en Cloudflare se hace mirando la pantalla real (los paneles
    `apt-get purge docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin`.
 3. **Sitio en Forge** `pulse.jaumeperez.com`: estático, repositorio `JAUME-25/barcelona-pulse`
    (público), rama `main`, directorio web `/apps/web/dist`, sin despliegue automático al
-   principio.
+   principio. En **Domains**, editar el dominio y en **Redirects** marcar **No redirect**: la
+   opción «Recommended» añade `www.pulse.jaumeperez.com`, que no tiene DNS, y el certificado
+   falla.
 4. **`.env` de producción** en la raíz del sitio, con una clave que no sale del servidor (no se
    escribe en ningún registro):
 
@@ -89,27 +92,51 @@ Cada paso en Forge o en Cloudflare se hace mirando la pantalla real (los paneles
    umask 077; printf 'POSTGRES_DB=barcelona_pulse\nPOSTGRES_USER=pulse\nPOSTGRES_PASSWORD=%s\nAPI_PORT=5080\n' "$(openssl rand -hex 24)" > .env
    ```
 
-5. **nginx del sitio**: dentro del bloque `server` de HTTPS, en lugar del `location /` que pone
-   Forge, `include /home/forge/pulse.jaumeperez.com/infra/nginx/pulse.conf;`. Lo demás (SSL,
-   registros) lo deja Forge. Comprobar con `sudo nginx -t` y recargar.
-6. **Script de despliegue** del sitio: el `git pull` de Forge y después `bash infra/deploy.sh`
+5. **Script de despliegue** del sitio: el `git pull` de Forge y después `bash infra/deploy.sh`
    (compila la web, levanta la base de datos y la API, aplica las migraciones y falla si la API
    no responde en `/health/ready`).
-7. **Primer despliegue** y los datos (descargan ~31 MB del portal de Open Data BCN; mayo tarda
-   unos minutos, en segundo plano y con registro):
+6. **Primer despliegue**: «Deploy now».
+7. **Certificado** de Let's Encrypt desde Forge.
+8. **nginx del sitio**, con el certificado ya puesto: en el bloque `server` de HTTPS, quitar el
+   `location /` y las tres `add_header` que pone Forge (las cabeceras van en `pulse.conf`) y
+   añadir `include /home/forge/pulse.jaumeperez.com/infra/nginx/pulse.conf;`. Lo demás (SSL,
+   registros) lo deja Forge, que comprueba la configuración y recarga nginx al guardar.
+9. **Los datos.** Las áreas de estudio van dentro de la API:
 
    ```bash
    docker compose -f infra/compose.prod.yml --env-file .env run --rm api ingest study-areas
-   nohup docker compose -f infra/compose.prod.yml --env-file .env run --rm api ingest bicing-archive --from 2026-05-04 --to 2026-05-31 > ingesta-mayo.log 2>&1 &
-   tail -3 ingesta-mayo.log
    ```
 
-8. **Certificado** de Let's Encrypt desde Forge.
-9. **Comprobar** desde fuera: la portada, `https://pulse.jaumeperez.com/health/ready`
-   («Healthy») y la web en los tres modos sin errores en la consola, en escritorio y móvil:
-   `E2E_BASE_URL=https://pulse.jaumeperez.com npx playwright test --config e2e/tools.config.ts --grep despliegue`
-   (desde `apps/web`).
-10. **Monitor externo** (UptimeRobot, como jaumeperez.com): la portada y `/health/ready`.
+   Los .7z de mayo, no: el portal de Open Data BCN contesta 403 a las descargas desde el
+   servidor (6-10-2026; desde una conexión doméstica, 200). No se sortea: se descargan en un PC,
+   se suben y se importan desde disco con el mismo código. Cada ingesta guarda el nombre y el
+   sha256 del archivo, como si se hubiera descargado allí.
+
+   En el PC, con una clave SSH que entre en el servidor (sha256 de los de mayo: `ed9b684b9c7d…`
+   el de estado, `360e1495f357…` el de información):
+
+   ```bash
+   curl -fLO https://opendata-ajuntament.barcelona.cat/resources/bcn/BicingBCN/2026_05_Maig_BicingNou_ESTACIONS.7z
+   curl -fLO https://opendata-ajuntament.barcelona.cat/resources/bcn/BicingBCN/2026_05_Maig_BicingNou_INFORMACIO.7z
+   ssh forge@pulse.jaumeperez.com "mkdir -p ~/bicing-mayo"
+   scp 2026_05_Maig_BicingNou_*.7z forge@pulse.jaumeperez.com:bicing-mayo/
+   ```
+
+   En el servidor, comprobar que han llegado enteros y lanzar la importación en segundo plano
+   (unos 20 s por día; el avance, en `days` de `/api/sources` o en el registro):
+
+   ```bash
+   cd ~/bicing-mayo && printf '%s  %s\n' ed9b684b9c7dedf603bf9440eff211cc5b8568a878f8f7498630f1e16bd0114f 2026_05_Maig_BicingNou_ESTACIONS.7z 360e1495f357729fb7c642f528621d212bb64e2e41bb06be7e06ceba44810e19 2026_05_Maig_BicingNou_INFORMACIO.7z | sha256sum -c -
+   cd ~/pulse.jaumeperez.com && (nohup docker compose -f infra/compose.prod.yml --env-file .env run --rm -v ~/bicing-mayo:/data:ro api ingest bicing-archive --from 2026-05-04 --to 2026-05-31 --status-file /data/2026_05_Maig_BicingNou_ESTACIONS.7z --info-file /data/2026_05_Maig_BicingNou_INFORMACIO.7z > ~/pulse-ingesta-mayo.log 2>&1 &)
+   tail -5 ~/pulse-ingesta-mayo.log
+   ```
+
+10. **Comprobar** desde fuera: la portada, `https://pulse.jaumeperez.com/health/ready`
+    («Healthy») y la web en los tres modos sin errores en la consola, en escritorio, 375 y
+    320 px:
+    `E2E_BASE_URL=https://pulse.jaumeperez.com npx playwright test --config e2e/tools.config.ts --grep despliegue`
+    (desde `apps/web`).
+11. **Monitor externo** (UptimeRobot, como jaumeperez.com): la portada y `/health/ready`.
 
 ## Cada despliegue
 
@@ -118,7 +145,8 @@ no despliega: un push con la CI en rojo no debería publicarse.
 
 ## Datos
 
-- Otro periodo: `ingest bicing-archive --from … --to …` como arriba (hasta 31 días por vez).
+- Otro periodo: `ingest bicing-archive --from … --to …` como arriba (hasta 31 días por vez y,
+  mientras el portal conteste 403 al servidor, con los archivos del mes subidos aparte).
 - Quitar días: `purge bicing-bcn --from … --to …` dice qué borraría; con `--yes`, lo borra
   (ADR 0012).
 - Copias: no hacen falta para la demo; todo sale de los archivos públicos y se puede volver a

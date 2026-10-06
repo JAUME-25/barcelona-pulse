@@ -97,16 +97,18 @@ honesta de lo hecho.
 1. **Hecho.** Rendimiento con la red real (544 estaciones) en escritorio y móvil, carga y
    fluidez de los tres modos (`docs/architecture.md`). MapLibre pasa a su propio fragmento: en
    móvil, la lista llega a los 533 ms en vez de 885.
-2. **En curso.** Despliegue en `pulse.jaumeperez.com` con las cuatro semanas del 4 al 31 de mayo
-   de 2026 (decidido por Jaume el 6-10-2026). Mayo comprobado en local: 28 días sin rechazos,
-   4 229 268 observaciones, 549 estaciones con dato en el 98,1 % de los pasos de 5 min de
-   media; 20 de 8 064 pasos por debajo del 90 % (miércoles 6, 13, 20 y 27, unos minutos) y
-   ninguno vacío; unos 0,83 GB en la base. Servidor: el VPS de Forge (un VPS aparte con memoria
-   suficiente costaba el doble; recursos comprobados: 3 GB disponibles y 28 GB de disco). La
-   web dice «Datos históricos · mayo de 2026» y la fecha completa del instante. Preparado y
-   ensayado en local: `infra/compose.prod.yml`, `infra/nginx/pulse.conf`, `infra/deploy.sh`,
-   la IP del cliente detrás del proxy para el límite por IP y la comprobación
-   `e2e/despliegue.capture.ts`. Falta hacerlo en el servidor con Jaume (`docs/despliegue.md`).
+2. **Hecho**, salvo el monitor externo. En marcha desde el 6-10-2026 en
+   https://pulse.jaumeperez.com con las cuatro semanas del 4 al 31 de mayo de 2026 (decidido
+   por Jaume ese día), en el VPS de Forge: un VPS aparte con memoria suficiente costaba el
+   doble, y en el de Forge había 3 GB de memoria disponibles y 28 GB de disco. Medido en
+   producción: 28 días sin rechazos, 4 229 269 observaciones y 548 estaciones, con dato en el
+   98,3 % de los pasos de 5 min de media; 20 de 8 064 pasos por debajo del 90 % (miércoles 6,
+   13, 20 y 27, unos minutos) y ninguno vacío. La web dice «Datos históricos · mayo de 2026» y
+   la fecha completa del instante. Comprobado desde fuera: cabeceras de seguridad, `/api` y
+   `/health/ready` a través de nginx, certificado, y los tres modos sin errores en la consola
+   en escritorio, 375 y 320 px (`e2e/despliegue.capture.ts`). El portal de Open Data BCN
+   contesta 403 al servidor: los .7z de mayo se descargaron fuera y se subieron
+   (`docs/despliegue.md`).
 3. **Pendiente.** Límites visibles en la propia web: de qué fecha son los datos, que no es tiempo
    real, qué mide y qué no la cobertura, de dónde sale cada cosa.
 4. **Pendiente.** Caso técnico para el portfolio: qué problema resuelve, decisiones, dificultades
