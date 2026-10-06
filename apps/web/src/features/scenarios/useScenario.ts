@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, toApiError, type CoverageResponse, type StudyAreaItem } from '../../api/client';
+import { replaceUrl } from '../../shared/url';
 import { useRemote } from '../stations/useStationData';
 import {
   coverageRequest,
@@ -7,9 +8,12 @@ import {
   insideServiceArea,
   MAX_ADDED,
   nextHypotheticalId,
+  resolveLinks,
   scenarioFromParams,
   scenarioToParams,
   type Scenario,
+  type ScenarioLinks,
+  type StationIds,
 } from './scenario';
 
 /** Espera tras el último cambio antes de calcular: arrastrar no lanza un cálculo por píxel. */
@@ -35,24 +39,53 @@ interface History {
 /**
  * Escenario de cobertura: los cambios sobre la red real (añadidas, movidas, quitadas), el radio y
  * el área de estudio. Va en la URL y se calcula en la API un momento después del último cambio.
- * Sin fuente no pide nada.
+ * Sin fuente no pide nada. Las estaciones reales del enlace esperan a la red (`stations`) para
+ * saber su identificador interno: hasta entonces ni se calcula ni se reescribe la URL.
  */
-export function useScenario(sourceId: string | null, at: string | undefined) {
+export function useScenario(
+  sourceId: string | null,
+  at: string | undefined,
+  stations: readonly StationIds[],
+) {
+  const [initial] = useState(() => scenarioFromParams(new URLSearchParams(window.location.search)));
   const [history, setHistory] = useState<History>(() => ({
-    present: scenarioFromParams(new URLSearchParams(window.location.search)),
+    present: initial.scenario,
     past: [],
     last: null,
   }));
   const scenario = history.present;
+  const [links, setLinks] = useState<ScenarioLinks | null>(() =>
+    initial.links.moved.length > 0 ||
+    initial.links.removed.length > 0 ||
+    initial.scenario.moved.length > 0 ||
+    initial.scenario.removed.length > 0
+      ? initial.links
+      : null,
+  );
 
+  // En cuanto llega la red, se ajusta al pintar (no hace falta otro efecto).
+  if (links !== null && stations.length > 0) {
+    setHistory((h) => ({ ...h, present: resolveLinks(h.present, links, stations) }));
+    setLinks(null);
+  }
+
+  const sourceIds = useMemo(
+    () => new Map(stations.map((s) => [s.id, s.sourceStationId])),
+    [stations],
+  );
   useEffect(() => {
+    // Sin la red (mientras llega otra vez) se perderían de la URL las estaciones reales.
+    const changesStations = scenario.moved.length > 0 || scenario.removed.length > 0;
+    if (links !== null || (changesStations && sourceIds.size === 0)) return;
     const url = new URL(window.location.href);
-    scenarioToParams(scenario, url.searchParams);
-    window.history.replaceState(null, '', url);
-  }, [scenario]);
+    scenarioToParams(scenario, url.searchParams, (id) => sourceIds.get(id));
+    replaceUrl(url);
+  }, [scenario, links, sourceIds]);
 
   const requestKey =
-    sourceId === null ? null : JSON.stringify(coverageRequest(scenario, sourceId, at));
+    sourceId === null || links !== null
+      ? null
+      : JSON.stringify(coverageRequest(scenario, sourceId, at));
   const [settledKey, setSettledKey] = useState(requestKey);
   useEffect(() => {
     const timer = window.setTimeout(() => {

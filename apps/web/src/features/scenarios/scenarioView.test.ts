@@ -188,5 +188,8 @@ describe('figuras', () => {
     expect([big.direction, big.delta]).toEqual(['up', '+0,35 puntos']);
     const loss = figuresOf(response(oneAdded, { lost: 204_000 }));
     expect([loss.direction, loss.delta]).toEqual(['down', '-0,20 puntos']);
+    // Gana lo mismo que pierde: el porcentaje no cambia, pero la cobertura sí.
+    const moved = figuresOf(response(oneAdded, { gained: 282_000, lost: 282_000 }));
+    expect([moved.direction, moved.delta]).toEqual(['same', '0,00 puntos']);
   });
 });

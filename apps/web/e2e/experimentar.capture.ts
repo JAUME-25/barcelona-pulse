@@ -8,9 +8,10 @@
 import { expect, test, type Page } from '@playwright/test';
 
 const BASE = '/?fuente=bicing-bcn&modo=experimentar';
-// Dos nuevas sin cobertura (Montjuïc y Zona Franca), una quitada y una movida en la Zona Franca.
+// Dos nuevas sin cobertura (Montjuïc y Zona Franca), una quitada (C/ 60, 25) y una movida
+// (Pg. Zona Franca, 9) en la Zona Franca, con sus identificadores de Bicing.
 const CHANGES =
-  '&nuevas=2.16600,41.36350;2.13500,41.34500&quitadas=48&movidas=409:2.15200,41.35600';
+  '&nuevas=2.16600,41.36350;2.13500,41.34500&retiradas=10&trasladadas=437:2.15200,41.35600';
 // Encuadre con los cuatro cambios a la vista en escritorio (a la derecha del panel).
 const ZONA_FRANCA = '#mapa=13.6/41.3415/2.1483/-12/45';
 const ZONA_FRANCA_MOBILE = '#mapa=13.2/41.3530/2.1500/-12/45';
@@ -129,7 +130,8 @@ test('experimentar: mover, quitar y recuperar una estación real; radio y área'
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name === 'movil', 'Con ratón; el toque se prueba al añadir.');
-  const station = 409;
+  // Su identificador en Bicing: es el que va en la URL.
+  const station = '437';
   await page.goto(`${BASE}#mapa=17/41.3513237/2.1450958/0/0`);
   await waitForScenario(page);
   const canvas = page.locator('.station-map__canvas canvas');
@@ -148,7 +150,7 @@ test('experimentar: mover, quitar y recuperar una estación real; radio y área'
   const moved = page.getByText('movida', { exact: true });
   const removed = page.getByText('quitada', { exact: true });
   await expect(moved).toBeVisible();
-  expect(page.url()).toContain(`movidas=${String(station)}%3A`);
+  expect(page.url()).toContain(`trasladadas=${station}%3A`);
   await waitForScenario(page);
 
   // Quitar: tocarla en su sitio nuevo.
@@ -156,14 +158,14 @@ test('experimentar: mover, quitar y recuperar una estación real; radio y área'
   await page.mouse.click(cx + 120, cy);
   await expect(removed).toBeVisible();
   await expect(moved).toHaveCount(0);
-  expect(page.url()).toContain(`quitadas=${String(station)}`);
+  expect(page.url()).toContain(`retiradas=${station}`);
   await waitForScenario(page);
   await page.screenshot({ path: 'captures/experimentar-escritorio-quitada.png' });
 
   // Recuperarla desde la lista.
   await page.getByRole('button', { name: /^Recuperar: / }).click();
   await expect(page.getByText('Todavía es la red real.')).toBeVisible();
-  expect(page.url()).not.toContain('quitadas=');
+  expect(page.url()).not.toContain('retiradas=');
 
   // Radio con el teclado y otra área de estudio.
   const radius = page.getByRole('slider', { name: /Radio/ });

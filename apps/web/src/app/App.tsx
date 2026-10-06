@@ -234,7 +234,7 @@ export function App() {
   const selectedId = selected?.id ?? null;
 
   // Experimentar: la red real del instante y los cambios del escenario sobre ella.
-  const scenario = useScenario(experimenting ? sourceId : null, instantFor(source, now));
+  const scenario = useScenario(experimenting ? sourceId : null, instantFor(source, now), all);
   const { state: areasState } = useStudyAreas(experimenting);
   const areas = areasState.status === 'ready' ? areasState.data : [];
   const [map, setMap] = useState<MapLibreMap | null>(null);

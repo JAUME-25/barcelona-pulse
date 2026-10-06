@@ -708,7 +708,8 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: 'Marcador Pl. de Catalunya' }));
     expect(screen.queryByRole('button', { name: 'Marcador Pl. de Catalunya' })).toBeNull();
     expect(screen.getByText('quitada')).toBeTruthy();
-    expect(new URLSearchParams(window.location.search).get('quitadas')).toBe('11');
+    // En la URL, con el identificador de la fuente (vale en cualquier copia); a la API, el interno.
+    expect(new URLSearchParams(window.location.search).get('retiradas')).toBe('demo-001');
     await waitFor(() => {
       expect(bodies.at(-1)?.removed).toEqual([11]);
     });
@@ -718,7 +719,41 @@ describe('App', () => {
     // Recuperarla la devuelve al mapa y a la red.
     await user.click(screen.getByRole('button', { name: 'Recuperar: Pl. de Catalunya' }));
     expect(screen.getByRole('button', { name: 'Marcador Pl. de Catalunya' })).toBeTruthy();
-    expect(new URLSearchParams(window.location.search).get('quitadas')).toBeNull();
+    expect(new URLSearchParams(window.location.search).get('retiradas')).toBeNull();
+  });
+
+  it.each([
+    ['con el identificador de la fuente', 'retiradas=demo-001'],
+    ['con el interno de los enlaces anteriores', 'quitadas=11'],
+  ])('un enlace a un escenario %s quita la misma estación', async (_, link) => {
+    const bodies: CoverageRequest[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) => {
+        const url = new URL(input.url);
+        if (url.pathname === '/api/sources') return json([demoSource]);
+        if (url.pathname === '/api/stations') return json(stationsResponse(stations));
+        if (url.pathname === '/api/study-areas') return json([barcelona]);
+        if (url.pathname === '/api/scenarios/coverage') {
+          const body = (await input.json()) as CoverageRequest;
+          bodies.push(body);
+          return json(coverageFor(body));
+        }
+        return json({ title: 'Petición inesperada' }, 500);
+      }),
+    );
+    window.history.replaceState(null, '', `/?modo=experimentar&${link}`);
+    renderApp();
+
+    expect(await screen.findByText('quitada')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Marcador Pl. de Catalunya' })).toBeNull();
+    await waitFor(() => {
+      expect(bodies.at(-1)?.removed).toEqual([11]);
+    });
+    // Nunca se calculó con la estación todavía en la red, y el enlace queda en el formato nuevo.
+    expect(bodies.every((b) => b.removed?.length === 1)).toBe(true);
+    const params = new URLSearchParams(window.location.search);
+    expect([params.get('retiradas'), params.get('quitadas')]).toEqual(['demo-001', null]);
   });
 
   it('sin fuentes cargadas indica cómo importar la demo', async () => {

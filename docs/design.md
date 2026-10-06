@@ -80,7 +80,10 @@ Consola, un mando bajo el mapa como el de Reproducir.
 - Si un cambio no mueve la superficie (estación en zona ya cubierta o fuera del área de estudio),
   un aviso junto a los números dice por qué: sin él parecía que no había pasado nada.
 - «Sin cambio» solo si no se gana ni se pierde nada; las superficies pequeñas van en m².
-- Todo el escenario va en la URL (`&radio=…&area=…&nuevas=…&movidas=…&quitadas=…`).
+- Todo el escenario va en la URL (`&radio=…&area=…&nuevas=…&trasladadas=…&retiradas=…`). Las
+  estaciones reales, con su identificador en Bicing, como `?estacion=`: el enlace vale en
+  cualquier copia de la base. Los enlaces anteriores al 7-10-2026 (`movidas`, `quitadas`, con el
+  identificador interno) se siguen leyendo.
 - En escritorio la leyenda sube por encima del mando; en móvil, el mando va entre el mapa y la
   leyenda, y el panel debajo.
 

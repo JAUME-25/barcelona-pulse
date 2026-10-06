@@ -9,6 +9,8 @@ const POINTS = {
   signDisplay: 'always',
 } as const;
 const KM2 = { minimumFractionDigits: 2, maximumFractionDigits: 2 } as const;
+/** «0,00» sin signo: gana lo mismo que pierde. */
+const EVEN = { minimumFractionDigits: 2, maximumFractionDigits: 2 } as const;
 const M2 = { maximumFractionDigits: 0 } as const;
 
 /** «56,0 %» */
@@ -55,13 +57,20 @@ export interface Figures {
 export function figuresOf(r: CoverageResponse): Figures {
   const { gainedSquareMeters: gained, lostSquareMeters: lost } = r.difference;
   const diff = r.scenario.coveredShare - r.base.coveredShare;
-  // «Sin cambio» solo si no gana ni pierde nada; un cambio pequeño tiene su signo.
-  const direction =
-    gained === 0 && lost === 0 ? 'same' : gained > lost ? 'up' : gained < lost ? 'down' : 'same';
+  // «Sin cambio» solo si no gana ni pierde nada; un cambio pequeño tiene su signo. Si gana lo
+  // mismo que pierde (mover una estación aislada a otra zona vacía), el porcentaje no cambia,
+  // pero la cobertura sí: «0,00 puntos», sin flecha.
+  const changed = gained !== 0 || lost !== 0;
+  const direction = gained > lost ? 'up' : gained < lost ? 'down' : 'same';
+  const delta = !changed
+    ? t().scenario.noChange
+    : direction === 'same'
+      ? t().scenario.points(numberFormat(EVEN).format(0))
+      : formatPoints(diff);
   return {
     baseShare: formatShare(r.base.coveredShare),
     scenarioShare: formatShare(r.scenario.coveredShare),
-    delta: direction === 'same' ? t().scenario.noChange : formatPoints(diff),
+    delta,
     direction,
     gained: formatArea(gained),
     lost: formatArea(lost),

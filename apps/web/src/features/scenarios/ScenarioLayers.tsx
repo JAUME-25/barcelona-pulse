@@ -337,21 +337,48 @@ export function ScenarioLayers({
       showDrag(lngLatOf(e));
     };
 
-    const onEnd = (e: MapMouseEvent | MapTouchEvent) => {
+    // Fin del arrastre, se suelte donde se suelte: sin oyentes, y lo de antes otra vez a la vista.
+    // Si el sitio no vale (fuera de la zona) o se ha cancelado, todo vuelve a como estaba; si
+    // vale, el escenario nuevo lo redibuja enseguida.
+    const stopDragging = () => {
       map.off('mousemove', onMove);
       map.off('touchmove', onMove);
+      map.off('mouseup', onEnd);
+      map.off('touchend', onEnd);
+      window.removeEventListener('mouseup', onWindowUp);
+      window.removeEventListener('touchcancel', cancel);
+      window.removeEventListener('keydown', onKey);
       map.getCanvas().style.cursor = '';
-      if (dragged === null) return;
-      const at = lngLatOf(e);
-      if (dragged.kind === 'added') actionsRef.current.moveHypothetical(dragged.id, at.lng, at.lat);
-      else actionsRef.current.moveStation(dragged.id, at.lng, at.lat);
       dragged = null;
       setData(map, S.drag, EMPTY);
-      // Si el sitio no vale (fuera de la zona), todo vuelve a como estaba; si vale, el escenario
-      // nuevo lo redibuja enseguida.
       setData(map, S.added, addedData(scenarioRef.current));
       setData(map, S.reach, reachRef.current);
     };
+
+    function onEnd(e: MapMouseEvent | MapTouchEvent) {
+      if (dragged !== null) {
+        const at = lngLatOf(e);
+        if (dragged.kind === 'added') {
+          actionsRef.current.moveHypothetical(dragged.id, at.lng, at.lat);
+        } else {
+          actionsRef.current.moveStation(dragged.id, at.lng, at.lat);
+        }
+      }
+      stopDragging();
+    }
+
+    // Soltar fuera del mapa (sobre el mando, la leyenda o el panel), un toque cancelado o Escape:
+    // la estación vuelve a su sitio en vez de quedarse pegada al cursor.
+    function cancel() {
+      if (dragged !== null) stopDragging();
+    }
+    // MapLibre avisa antes de un «mouseup» sobre el mapa: si llega aquí arrastrando, fue fuera.
+    function onWindowUp() {
+      cancel();
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') cancel();
+    }
 
     const startDrag = (e: MapLayerMouseEvent | MapLayerTouchEvent, what: Dragged) => {
       if ('points' in e && e.points.length !== 1) return;
@@ -377,10 +404,13 @@ export function ScenarioLayers({
       if (e.type === 'touchstart') {
         map.on('touchmove', onMove);
         map.once('touchend', onEnd);
+        window.addEventListener('touchcancel', cancel);
       } else {
         map.on('mousemove', onMove);
         map.once('mouseup', onEnd);
+        window.addEventListener('mouseup', onWindowUp);
       }
+      window.addEventListener('keydown', onKey);
     };
 
     const onAddedDown = (e: MapLayerMouseEvent | MapLayerTouchEvent) => {
@@ -436,6 +466,9 @@ export function ScenarioLayers({
       map.off('touchmove', onMove);
       map.off('mouseup', onEnd);
       map.off('touchend', onEnd);
+      window.removeEventListener('mouseup', onWindowUp);
+      window.removeEventListener('touchcancel', cancel);
+      window.removeEventListener('keydown', onKey);
       uninstall(map);
     };
   }, [map]);
