@@ -52,7 +52,9 @@ tipado; `app` con la composición y el tema visual (`theme.ts`).
    llega una hora se sigue viendo el último paso ya cargado.
 7. «Qué muestra y qué no» pide la línea temporal de cada semana importada cada 15 minutos (con
    mayo, 4 peticiones) para la rejilla de huecos, y la guarda mientras la página siga abierta:
-   cada petición cuenta para el límite de la API.
+   cada petición cuenta para el límite de la API. La API ya las tiene calculadas:
+   `TimelineWarmUp` las calcula al arrancar y comprueba cada 5 minutos que sigan en la caché
+   (después de importar o quitar días, la clave cambia y las vuelve a calcular).
 
 ## Ingesta
 
@@ -159,11 +161,16 @@ de Playwright añade el retraso de sus comprobaciones: la lista parecía tardar 
 - «Qué muestra y qué no» en producción (VPS de Forge, 6-10-2026): la rejilla de huecos salía a
   los 12,5 s la primera vez después de arrancar la API, que calcula a la vez las cuatro semanas
   de mayo cada 15 min, y a los 0,5 s cuando ya las tiene en memoria (cada semana, 56–190 ms).
-  Desde entonces `infra/deploy.sh` las deja calculadas (`infra/warm-up.mjs`) y la caché de
-  líneas temporales no caduca por tiempo: cambia de clave con cada ingesta o purga y la acota
-  el límite de 200 entradas. En local, recién arrancada la API: precalentar 6 semanas, 11 s;
-  la rejilla después, 0,6 s. En producción (despliegue de `6664c93`): de 3,5 a 4,2 s por
-  semana, unos 15 s las cuatro; la rejilla después, 0,58 s.
+  Primero las dejó calculadas `infra/deploy.sh` y la caché de líneas temporales dejó de caducar
+  por tiempo (cambia de clave con cada ingesta o purga y la acota el límite de 200 entradas). En
+  producción (despliegue de `6664c93`): de 3,5 a 4,2 s por semana, unos 15 s las cuatro; la
+  rejilla después, 0,58 s. Pero un reinicio sin despliegue, una importación o una purga volvían
+  a dejar la espera a la primera visita. Desde el 6-10-2026 lo hace la API (`TimelineWarmUp`):
+  al arrancar y cada 5 minutos, si falta alguna semana en la caché. En local (6 semanas,
+  16 núcleos): con la API recién arrancada y la caché vacía, la rejilla tardaba 3,2 s; con
+  `TimelineWarmUp`, unos 10 s después de arrancar ya las tiene todas (1,6–1,9 s por semana) y
+  la rejilla sale en 42 ms. Si alguien abre la ficha en esos primeros segundos, aún la calcula
+  su petición.
 - Fluidez del mapa con la red real, arrastrando y acercando hasta ver los edificios en 3D (6 a
   10 s de gesto): en escritorio, 60 fps en los tres modos y ningún fotograma de más de 50 ms;
   en móvil, 48–49 fps al explorar y al reproducir (p95 de 50 ms, 11–13 fotogramas de más de

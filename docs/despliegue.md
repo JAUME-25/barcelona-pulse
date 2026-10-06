@@ -93,9 +93,10 @@ Cada paso en Forge o en Cloudflare se hace mirando la pantalla real (los paneles
    ```
 
 5. **Script de despliegue** del sitio: el `git pull` de Forge y después `bash infra/deploy.sh`
-   (compila la web, levanta la base de datos y la API, aplica las migraciones, falla si la API
-   no responde en `/health/ready` y deja calculada la rejilla de huecos de «Qué muestra y qué
-   no» con `infra/warm-up.mjs`, para que la primera visita no espere unos 12 s).
+   (compila la web, levanta la base de datos y la API, aplica las migraciones y falla si la API
+   no responde en `/health/ready`). La rejilla de huecos de «Qué muestra y qué no» la deja
+   calculada la propia API al arrancar, en unos 15 s con mayo, para que la primera visita no
+   espere unos 12 s.
 6. **Primer despliegue**: «Deploy now».
 7. **Certificado** de Let's Encrypt desde Forge.
 8. **nginx del sitio**, con el certificado ya puesto: en el bloque `server` de HTTPS, quitar el
@@ -137,7 +138,10 @@ Cada paso en Forge o en Cloudflare se hace mirando la pantalla real (los paneles
     320 px:
     `E2E_BASE_URL=https://pulse.jaumeperez.com npx playwright test --config e2e/tools.config.ts --grep despliegue`
     (desde `apps/web`).
-11. **Monitor externo** (UptimeRobot, como jaumeperez.com): la portada y `/health/ready`.
+11. **Monitor externo** (UptimeRobot, como jaumeperez.com): la portada y `/health/ready`. Hecho
+    el 6-10-2026: dos monitores «HTTP / website monitoring», cada 5 min, con aviso por correo.
+    `/health/ready` da 503 si la API no llega a PostGIS y nginx da 502 si la API no responde;
+    los dos cuentan como caída.
 
 ## Cada despliegue
 
@@ -148,12 +152,8 @@ no despliega: un push con la CI en rojo no debería publicarse.
 
 - Otro periodo: `ingest bicing-archive --from … --to …` como arriba (hasta 31 días por vez y,
   mientras el portal conteste 403 al servidor, con los archivos del mes subidos aparte).
-- Después de importar o quitar días, la rejilla de huecos se vuelve a calcular. Para dejarla
-  hecha sin esperar al próximo despliegue:
-
-  ```bash
-  docker run --rm --network barcelona-pulse_default -v "$PWD/infra:/infra:ro" node:24-slim node /infra/warm-up.mjs http://api:8080
-  ```
+- Después de importar o quitar días, la API vuelve a calcular la rejilla de huecos sola en
+  menos de 5 minutos (`TimelineWarmUp`); no hace falta nada más.
 - Quitar días: `purge bicing-bcn --from … --to …` dice qué borraría; con `--yes`, lo borra
   (ADR 0012).
 - Copias: no hacen falta para la demo; todo sale de los archivos públicos y se puede volver a

@@ -97,7 +97,7 @@ honesta de lo hecho.
 1. **Hecho.** Rendimiento con la red real (544 estaciones) en escritorio y móvil, carga y
    fluidez de los tres modos (`docs/architecture.md`). MapLibre pasa a su propio fragmento: en
    móvil, la lista llega a los 533 ms en vez de 885.
-2. **Hecho**, salvo el monitor externo. En marcha desde el 6-10-2026 en
+2. **Hecho.** En marcha desde el 6-10-2026 en
    https://pulse.jaumeperez.com con las cuatro semanas del 4 al 31 de mayo de 2026 (decidido
    por Jaume ese día), en el VPS de Forge: un VPS aparte con memoria suficiente costaba el
    doble, y en el de Forge había 3 GB de memoria disponibles y 28 GB de disco. Medido en
@@ -108,7 +108,10 @@ honesta de lo hecho.
    `/health/ready` a través de nginx, certificado, y los tres modos sin errores en la consola
    en escritorio, 375 y 320 px (`e2e/despliegue.capture.ts`). El portal de Open Data BCN
    contesta 403 al servidor: los .7z de mayo se descargaron fuera y se subieron
-   (`docs/despliegue.md`).
+   (`docs/despliegue.md`). Monitor externo en UptimeRobot desde el 6-10-2026, como el de
+   jaumeperez.com: la portada y `/health/ready`, HTTP cada 5 min y aviso por correo (los dos
+   «Up» al crearlos, en la captura de Jaume). `/health/ready` responde 503 si la API no llega a
+   la base de datos: comprobado en local parando PostGIS.
 3. **Hecho** y en producción desde el 6-10-2026 (`8903d65`, CI verde). Límites visibles,
    elegidos ese día mezclando tres propuestas (`docs/design.md`):
    - «Qué muestra y qué no»: de cuándo son los datos, una rejilla de huecos por día y hora que
@@ -131,20 +134,31 @@ honesta de lo hecho.
      en el despliegue de `6664c93` (6-10-2026, 59 s en total): la API se recreó, el
      precalentamiento tardó de 3,5 a 4,2 s por semana y, después, la rejilla salió en 0,58 s a
      la primera.
+   - Un reinicio sin despliegue, una importación o una purga volvían a dejar la espera a la
+     primera visita. Desde el 6-10-2026 la deja calculada la propia API (`TimelineWarmUp`): al
+     arrancar y cada 5 minutos, si falta alguna semana en la caché. `infra/warm-up.mjs` sobra y se
+     quita. En local: 6 semanas en unos 10 s al arrancar y la rejilla después en 42 ms (antes,
+     3,2 s en frío). Pendiente de desplegar y medir en producción.
 4. **En curso.** Caso técnico para el portfolio: qué problema resuelve, decisiones, dificultades
    reales, mediciones y límites. El texto está en `docs/caso-tecnico.md` (6-10-2026), con las
    cifras de las ADR, de `docs/architecture.md` y de producción, y las pruebas de la CI de
    `5d438d7` (151 de backend y 71 de la web). Dice que está hecho con un asistente de IA, sin
-   decir que lo haya hecho todo la IA (decidido por Jaume el 6-10-2026). Falta la página en
-   jaumeperez.com, decidida ese día: la misma plantilla que la de Cuadra, en tres idiomas y con
-   capturas reales.
+   decir que lo haya hecho todo la IA (decidido por Jaume el 6-10-2026).
+   - Página en jaumeperez.com (`/barcelona-pulse`, decidida ese día): la plantilla de Cuadra, en
+     tres idiomas, con tres capturas reales de producción a 2880 × 1800
+     (`e2e/portfolio.capture.ts`). Hecha y revisada en local en la rama `caso/barcelona-pulse`
+     de jaumeperez-web: tipos, compilación, pruebas, marcadores, su recorrido de revisión (sin
+     desbordes de 320 a 1280 px y 0 infracciones de axe en claro y oscuro) y usada en el
+     navegador. Sin publicar.
+   - Se llega desde «Programas a medida»: en «Lo que ya he hecho», después del CRM y de Cuadra,
+     y en su cierre (decidido por Jaume el 6-10-2026, que también dio por buenas las
+     traducciones). Falta publicarla cuando Jaume lo diga.
 
 ## Backlog
 
-- Límites: la rejilla de huecos se mide cada 15 min en el navegador, con una petición por semana
-  importada. `deploy.sh` la deja calculada, pero si la API se reinicia sin desplegar (un
-  reinicio del servidor), la primera visita vuelve a esperar unos 12 s. Si molesta, un resumen
-  por día y hora en la API, calculado en cada ingesta (daría también el detalle de 5 min).
+- Límites: en los ~15 s que tarda la API en calcular la rejilla al arrancar, una visita que abra
+  la ficha aún la calcula ella. Si llegara a importar, compartir el cálculo en curso entre
+  peticiones o guardar un resumen por día y hora en cada ingesta.
 - Mapa: los marcadores sin dato son discretos a propósito; si se filtran solo esos, cuesta
   verlos a escala de ciudad.
 - Web: los nombres reales llegan en mayúsculas («AV. CAN MARCET, 3»); valorar un formato de

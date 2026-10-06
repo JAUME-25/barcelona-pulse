@@ -134,19 +134,27 @@ public static class TimelineQuery
         ORDER BY st.at
         """;
 
-    public static async Task<IReadOnlyList<TimelinePoint>> GetAsync(
-        PulseDbContext db, IMemoryCache cache, DataSource source, DateTimeOffset from, DateTimeOffset to,
-        TimeSpan step, CancellationToken ct)
+    /// <summary>
+    /// Clave de la caché. Se invalida sola: incluye la última ingesta terminada de la fuente y la
+    /// última purga (ADR 0012), que borra datos sin crear una ingesta.
+    /// </summary>
+    public static async Task<string> KeyAsync(
+        PulseDbContext db, DataSource source, DateTimeOffset from, DateTimeOffset to, TimeSpan step, CancellationToken ct)
     {
-        // La caché se invalida sola: la clave incluye la última ingesta terminada de la fuente y la
-        // última purga (ADR 0012), que borra datos sin crear una ingesta.
         var lastRun = await db.IngestionRuns
             .Where(r => r.SourceId == source.Id && r.FinishedAt != null)
             .MaxAsync(r => (long?)r.Id, ct) ?? 0;
         var lastPurge = await db.IngestionRuns
             .Where(r => r.SourceId == source.Id)
             .MaxAsync(r => r.PurgedAt, ct);
-        var key = $"timeline:{source.Id}:{from:O}:{to:O}:{step.TotalMinutes}:{lastRun}:{lastPurge?.UtcTicks}";
+        return $"timeline:{source.Id}:{from:O}:{to:O}:{step.TotalMinutes}:{lastRun}:{lastPurge?.UtcTicks}";
+    }
+
+    public static async Task<IReadOnlyList<TimelinePoint>> GetAsync(
+        PulseDbContext db, IMemoryCache cache, DataSource source, DateTimeOffset from, DateTimeOffset to,
+        TimeSpan step, CancellationToken ct)
+    {
+        var key = await KeyAsync(db, source, from, to, step, ct);
         if (cache.TryGetValue(key, out IReadOnlyList<TimelinePoint>? cached) && cached is not null)
         {
             return cached;
@@ -181,7 +189,7 @@ public static class TimelineQuery
 
             // Sin caducidad por tiempo: la clave cambia con cada ingesta o purga y el límite de la
             // caché (200 entradas, Program.cs) acota la memoria. Así sigue ahí lo que deja calculado
-            // infra/warm-up.mjs al desplegar, aunque nadie lo pida en horas.
+            // TimelineWarmUp, aunque nadie lo pida en horas.
             cache.Set(key, (IReadOnlyList<TimelinePoint>)points, new MemoryCacheEntryOptions { Size = 1 });
             return points;
         }

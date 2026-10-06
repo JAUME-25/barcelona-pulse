@@ -75,13 +75,7 @@ public static class SourcesEndpoints
                     r.ObservationsAccepted, r.ObservationsDuplicate, r.ObservationsConflicting, r.ObservationsRejected))
                 .FirstOrDefaultAsync(ct);
 
-            // Solo las ingestas terminadas y no quitadas: una fallida o purgada no deja nada que reproducir.
-            var covered = await db.IngestionRuns.AsNoTracking()
-                .Where(r => r.SourceId == s.Id && r.CoveredFrom != null && r.CoveredTo != null && r.PurgedAt == null
-                    && (r.Status == IngestionStatus.Succeeded || r.Status == IngestionStatus.SucceededWithIssues))
-                .Select(r => new { From = r.CoveredFrom!.Value, To = r.CoveredTo!.Value })
-                .ToListAsync(ct);
-            var days = covered.SelectMany(c => LocalDay.DatesIn(c.From, c.To)).Distinct().Order().ToList();
+            var days = await SourceDays.GetAsync(db, s.Id, ct);
 
             result.Add(new SourceSummary(s.Id, s.Kind, s.Name, s.Attribution, s.License, s.Url,
                 (int)s.StalenessTolerance.TotalMinutes, stationCount, period, days, last));

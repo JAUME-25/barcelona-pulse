@@ -39,4 +39,20 @@ public sealed class TimelineGridTests
 
         Assert.Equal(23 + 1, points);
     }
+
+    [Fact]
+    public void The_gaps_grid_asks_for_whole_weeks_from_monday_also_across_a_time_change()
+    {
+        // Como apps/web/src/features/limits/quality.ts: de las 00:00 del lunes al último paso antes
+        // de las 00:00 del lunes siguiente, en hora de Barcelona. El 29-3-2026 cambia la hora.
+        var weeks = TimelineWarmUp.Weeks([new DateOnly(2026, 3, 30), new DateOnly(2026, 3, 25), new DateOnly(2026, 3, 26)])
+            .ToList();
+
+        Assert.Equal(
+            [
+                (new DateOnly(2026, 3, 23), DateTimeOffset.Parse("2026-03-22T23:00:00Z"), DateTimeOffset.Parse("2026-03-29T21:45:00Z")),
+                (new DateOnly(2026, 3, 30), DateTimeOffset.Parse("2026-03-29T22:00:00Z"), DateTimeOffset.Parse("2026-04-05T21:45:00Z")),
+            ],
+            weeks);
+    }
 }
