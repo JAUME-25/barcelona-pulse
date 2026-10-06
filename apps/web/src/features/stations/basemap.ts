@@ -114,6 +114,9 @@ function withChanges(layer: LayerSpecification): LayerSpecification {
   if (layer.type === 'symbol' && 'text-field' in layout && /place|name/.test(layer.id)) {
     layout['text-field'] = LOCAL_NAME;
   }
+  // El sprite de OpenFreeMap no tiene «wood-pattern»: con el patrón, los bosques no se pintaban
+  // (Collserola y Montjuïc sin su verde) y la consola lo avisaba.
+  if (layer.id === 'landcover_wood') delete paint['fill-pattern'];
 
   const changed = { ...layer, paint, layout } as LayerSpecification;
   if (layer.id === 'place_other')
@@ -121,8 +124,21 @@ function withChanges(layer: LayerSpecification): LayerSpecification {
   return changed;
 }
 
+/**
+ * Las etiquetas, después de todo lo demás. El estilo intercala alguna entre el suelo
+ * (`water_name` va antes que los edificios y las calles), y los edificios en 3D van justo antes
+ * de la primera: MapLibre pinta sin profundidad lo que queda encima de una capa 3D, así que las
+ * calles y las plantas se veían a través de los volúmenes.
+ */
+function labelsLast(layers: readonly LayerSpecification[]): LayerSpecification[] {
+  return [
+    ...layers.filter((l) => l.type !== 'symbol'),
+    ...layers.filter((l) => l.type === 'symbol'),
+  ];
+}
+
 export function nightStyle(style: StyleSpecification): StyleSpecification {
-  return { ...style, layers: style.layers.map(withChanges) };
+  return { ...style, layers: labelsLast(style.layers.map(withChanges)) };
 }
 
 export async function loadNightStyle(signal: AbortSignal): Promise<StyleSpecification> {

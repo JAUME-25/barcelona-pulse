@@ -52,6 +52,8 @@ interface StationMapProps {
    * para cuando lo que importa es dónde están (escenarios de cobertura).
    */
   variant?: MarkerVariant;
+  /** Edificios en 3D. Al experimentar no: taparían la cobertura. */
+  buildings?: boolean;
   onSelect: (id: number) => void;
   onStatusChange: (status: MapStatus) => void;
   /** El mapa ya cargado, para quien dibuje sus propias capas encima; null al desmontarse. */
@@ -213,6 +215,7 @@ function addLayers(
   stations: readonly StationItem[],
   selectedId: number | null,
   variant: MarkerVariant,
+  buildings: boolean,
 ) {
   for (const category of AVAILABILITY_ORDER) {
     map.addImage(`bp-${category}`, createMarkerImage(THEME.markers[category]), {
@@ -222,7 +225,9 @@ function addLayers(
   map.addImage(NETWORK_IMAGE, createMarkerImage(THEME.networkMarker), { pixelRatio: PIXEL_RATIO });
   map.addImage('bp-halo', createHaloImage(), { pixelRatio: PIXEL_RATIO });
 
-  // Edificios en 3D desde z14, más claros cuanto más altos para que se lean de noche.
+  // Edificios en 3D desde z14, opacos y más claros cuanto más altos para que se lean de noche.
+  // Justo antes de la primera etiqueta, que nightStyle deja detrás de calles y plantas: lo que va
+  // encima de una capa 3D se pinta sin profundidad y se vería a través de los volúmenes.
   if (map.getSource('openmaptiles') !== undefined) {
     const firstSymbol = map.getStyle().layers.find((l) => l.type === 'symbol')?.id;
     map.addLayer(
@@ -233,6 +238,7 @@ function addLayers(
         'source-layer': 'building',
         minzoom: 14,
         filter: ['!=', ['get', 'hide_3d'], true],
+        layout: { visibility: buildings ? 'visible' : 'none' },
         paint: {
           'fill-extrusion-color': [
             'interpolate',
@@ -300,6 +306,7 @@ export function StationMap({
   framePadding,
   selectedId,
   variant = 'availability',
+  buildings = true,
   onSelect,
   onStatusChange,
   onMapReady,
@@ -314,6 +321,7 @@ export function StationMap({
   const stationsRef = useRef(stations);
   const selectedRef = useRef(selectedId);
   const variantRef = useRef(variant);
+  const buildingsRef = useRef(buildings);
   const onSelectRef = useRef(onSelect);
   const onStatusRef = useRef(onStatusChange);
   const onMapReadyRef = useRef(onMapReady);
@@ -375,7 +383,13 @@ export function StationMap({
 
       instance.on('load', () => {
         loadedRef.current = true;
-        addLayers(instance, stationsRef.current, selectedRef.current, variantRef.current);
+        addLayers(
+          instance,
+          stationsRef.current,
+          selectedRef.current,
+          variantRef.current,
+          buildingsRef.current,
+        );
         setMapReady(true);
         onStatusRef.current({ kind: 'ready' });
         onMapReadyRef.current?.(instance);
@@ -434,6 +448,14 @@ export function StationMap({
     map.setLayoutProperty(MARKERS_LAYER, 'icon-size', MARKER_SIZE[variant]);
     map.setLayoutProperty(MARKERS_LAYER, 'text-field', MARKER_TEXT[variant]);
   }, [variant, mapReady]);
+
+  // Edificios en 3D: se ocultan sin quitar la capa (la cobertura se dibuja debajo de ella).
+  useEffect(() => {
+    buildingsRef.current = buildings;
+    const map = mapRef.current;
+    if (!mapReady || map === null || map.getLayer(BUILDINGS_LAYER) === undefined) return;
+    map.setLayoutProperty(BUILDINGS_LAYER, 'visibility', buildings ? 'visible' : 'none');
+  }, [buildings, mapReady]);
 
   // Encuadre inicial: una vez por fuente, abarcando todas sus estaciones.
   useEffect(() => {

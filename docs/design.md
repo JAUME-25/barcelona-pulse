@@ -72,7 +72,8 @@ Consola, un mando bajo el mapa como el de Reproducir.
   la lista de cambios (cada uno se deshace por separado) y los supuestos del modelo, plegados.
 - En el mapa, las estaciones reales son octógonos grises pequeños, sin estado ni número: aquí
   importa dónde están. La cobertura de la red real es un charco de luz cian tenue; lo que gana el
-  escenario, cian intenso; lo que pierde, rayado. El área de estudio, en discontinuo gris.
+  escenario, cian intenso; lo que pierde, rayado. El área de estudio, en discontinuo gris. Sin
+  edificios en 3D, para que se vea entera.
 - Una estación nueva es un rombo; una quitada deja su octógono en discontinuo con aspa; una
   movida, sin aspa y con una línea hasta su sitio nuevo. La nueva y la movida llevan siempre su
   círculo de alcance en discontinuo, aunque no ganen nada.
@@ -171,9 +172,15 @@ El estilo `dark` de OpenFreeMap se transforma al cargarlo (`features/stations/ba
 - nombres de calle y de barrio claros, con halo oscuro y algo más grandes;
 - nombres locales (`name`, como en las placas) en vez de la traducción inglesa;
 - barrios de clase `quarter` visibles (en OSM, la mayoría de barris de Barcelona);
-- parques en verde muy oscuro y agua en azul oscuro, para reconocer Montjuïc, Collserola o el mar.
+- parques y bosques en verde muy oscuro y agua en azul oscuro, para reconocer Montjuïc,
+  Collserola o el mar (los bosques sin el patrón del estilo, que no está en su sprite);
+- las etiquetas, después de todo lo demás.
 
-Edificios en 3D desde z14, más claros cuanto más altos (`#22334c` → `#435d86`).
+Edificios en 3D desde z14, opacos y más claros cuanto más altos (`#22334c` → `#435d86`),
+elegido por Jaume el 7-10-2026 entre tres (maqueta, noche y solo los altos). Van encima de calles
+y plantas y debajo de las etiquetas: MapLibre pinta sin profundidad lo que queda encima de una
+capa 3D, y con los edificios debajo de las calles se veían transparentes. Al experimentar no se
+dibujan: tapaban la cobertura.
 
 ## Tipografía y medidas
 

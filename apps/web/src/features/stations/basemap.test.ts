@@ -39,6 +39,13 @@ const original: StyleSpecification = {
       'source-layer': 'boundary',
       paint: { 'line-color': '#123456' },
     },
+    {
+      id: 'landcover_wood',
+      type: 'fill',
+      source: 'openmaptiles',
+      'source-layer': 'landcover',
+      paint: { 'fill-color': 'rgb(32,32,32)', 'fill-pattern': 'wood-pattern' },
+    },
   ],
 };
 
@@ -77,6 +84,24 @@ describe('nightStyle', () => {
   it('no toca las capas que no conoce ni modifica el estilo original', () => {
     expect(layer(night, 'capa_que_no_conocemos').paint?.['line-color']).toBe('#123456');
     expect(layer(original, 'highway_minor').paint?.['line-color']).toBe('#181818');
+  });
+
+  it('deja las etiquetas después del suelo, donde van los edificios en 3D', () => {
+    // Lo que va encima de una capa 3D se pinta sin profundidad: calles y plantas, debajo.
+    expect(night.layers.map((l) => l.id)).toEqual([
+      'background',
+      'highway_minor',
+      'capa_que_no_conocemos',
+      'landcover_wood',
+      'place_suburb',
+      'place_other',
+    ]);
+  });
+
+  it('pinta los bosques sin el patrón que no está en el sprite', () => {
+    expect(layer(night, 'landcover_wood').paint?.['fill-pattern']).toBeUndefined();
+    expect(layer(night, 'landcover_wood').paint?.['fill-color']).toBe('#0f2219');
+    expect(layer(original, 'landcover_wood').paint?.['fill-pattern']).toBe('wood-pattern');
   });
 });
 

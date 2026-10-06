@@ -32,7 +32,7 @@ export const THEME = {
   night: NIGHT,
   halo: '#ffffff',
   textFont: ['Noto Sans Bold'],
-  buildings: { low: '#22334c', high: '#435d86', opacity: 0.9 },
+  buildings: { low: '#22334c', high: '#435d86', opacity: 1 },
   /**
    * Estados de estación. Escala cálida para «se acaban las bicis» (ámbar, naranja, rojo),
    * violeta para «no se puede devolver» y neutros para lo que no opera o no se sabe.

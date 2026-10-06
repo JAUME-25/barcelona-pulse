@@ -472,6 +472,7 @@ export function App() {
             }
             selectedId={experimenting ? null : selectedId}
             variant={experimenting ? 'network' : 'availability'}
+            buildings={!experimenting}
             onSelect={experimenting ? tapStation : select}
             onStatusChange={setMapStatus}
             onMapReady={setMap}
