@@ -109,8 +109,8 @@ honesta de lo hecho.
    en escritorio, 375 y 320 px (`e2e/despliegue.capture.ts`). El portal de Open Data BCN
    contesta 403 al servidor: los .7z de mayo se descargaron fuera y se subieron
    (`docs/despliegue.md`).
-3. **Hecho** en local, sin desplegar. Límites visibles, elegidos el 6-10-2026 mezclando tres
-   propuestas (`docs/design.md`):
+3. **Hecho** y en producción desde el 6-10-2026 (`8903d65`, CI verde). Límites visibles,
+   elegidos ese día mezclando tres propuestas (`docs/design.md`):
    - «Qué muestra y qué no»: de cuándo son los datos, una rejilla de huecos por día y hora que
      lleva a reproducir el día, las estaciones sin dato con el motivo, qué no dice la aplicación
      y de dónde sale cada cosa.
@@ -121,14 +121,21 @@ honesta de lo hecho.
      datos desde junio de 2025, y el detalle, «es de las 12 de junio…».
    - Pruebas: unitarias de textos y huecos, una de la app con la ficha, y capturas en
      escritorio, 375 y 320 px (`e2e/limites.capture.ts`).
+   - Comprobado en producción desde fuera: los tres modos y la ficha en escritorio y móvil, sin
+     errores en la consola (`e2e/despliegue.capture.ts`). Mayo, medido cada 15 min: dato en el
+     98,3 % de las estaciones de media y 12 de 2 688 pasos por debajo del 95 %, todos de
+     madrugada (02:15 a 04:45) los miércoles 6, 13, 20 y 27.
+   - La rejilla tarda 12,5 s la primera vez que se abre después de arrancar la API (calcula las
+     cuatro semanas) y 0,5 s después; el resto de la ficha sale enseguida.
 4. **Pendiente.** Caso técnico para el portfolio: qué problema resuelve, decisiones, dificultades
    reales, mediciones y límites.
 
 ## Backlog
 
 - Límites: la rejilla de huecos se mide cada 15 min en el navegador, con una petición por semana
-  importada. Si hace falta el detalle de 5 min o muchas más semanas, un resumen por día y hora en
-  la API.
+  importada, y la primera vez tras arrancar la API tarda 12,5 s. Opciones: pedir esas semanas
+  al final de `infra/deploy.sh` para dejarlas calculadas, o un resumen por día y hora en la API
+  calculado en cada ingesta (también daría el detalle de 5 min).
 - Mapa: los marcadores sin dato son discretos a propósito; si se filtran solo esos, cuesta
   verlos a escala de ciudad.
 - Web: los nombres reales llegan en mayúsculas («AV. CAN MARCET, 3»); valorar un formato de
