@@ -83,6 +83,35 @@ Consola, un mando bajo el mapa como el de Reproducir.
 - En escritorio la leyenda sube por encima del mando; en móvil, el mando va entre el mapa y la
   leyenda, y el panel debajo.
 
+## Límites visibles
+
+Elegido el 6 de octubre de 2026 mezclando tres propuestas (Ficha, Sello y Lupa): la explicación
+completa en un solo sitio y, junto a cada dato, lo justo para no malinterpretarlo.
+
+- «Qué muestra y qué no», en el aviso de procedencia de los tres modos, abre una ficha en el
+  panel (el mapa sigue a la vista; va en la URL, `?vista=limites`). Lleva:
+  - los datos: periodo, último dato, ritmo y cuándo caduca un dato;
+  - los huecos;
+  - las estaciones sin dato en el momento mostrado, con el motivo;
+  - lo que la aplicación no dice;
+  - de dónde sale cada cosa, con su licencia, y el enlace al código.
+- Huecos: un día por fila y una hora por casilla, rayada si falta parte de las estaciones y en
+  discontinuo si no hay ninguna, como la franja de Reproducir. Pulsar un día lo reproduce.
+- Estaciones sin dato, agrupadas: ningún dato hasta ese momento, días, horas o minutos sin
+  informar. Cada una abre su detalle y se marca en el mapa (al experimentar no, porque allí
+  tocar una estación la quita).
+- Junto al dato:
+  - bajo la pista de Reproducir, a qué horas faltan datos;
+  - «N de M con dato» y, en Experimentar, «En línea recta · Superficie, no población · No mide
+    viajes» llevan una nota (subrayado de puntos) que se abre debajo del bloque, sin partir la
+    frase.
+- En móvil, un sello sobre el mapa con «Histórico, no es tiempo real» y el momento; en
+  Experimentar, de cuándo es la red y si lleva cambios hipotéticos. Al bajar, el aviso de
+  procedencia se queda arriba. En escritorio no hace falta: el panel está al lado.
+- Descartado: una lupa que apagaba en el mapa las estaciones con dato y rotulaba las que no.
+  Competía con la leyenda, que ya filtra, y en móvil los rótulos se cortaban en los bordes. Su
+  idea, el motivo de cada estación, está en la ficha.
+
 ## Encuadre
 
 Al abrir, las estaciones ocupan la parte del mapa que no tapan el panel, la leyenda y, al

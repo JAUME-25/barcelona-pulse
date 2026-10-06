@@ -1,8 +1,30 @@
 // Comprobación de un despliegue (no es una prueba de la CI): la web servida por nginx con sus
 // cabeceras funciona en los tres modos, con el mapa, sin errores en la consola (la política de
-// seguridad bloquearía en silencio lo que no esté permitido) y con la procedencia a la vista.
+// seguridad bloquearía en silencio lo que no esté permitido), con la procedencia a la vista y con
+// «Qué muestra y qué no» midiendo los huecos de todo lo importado.
 //   E2E_BASE_URL=https://pulse.jaumeperez.com npx playwright test --config e2e/tools.config.ts --grep despliegue
 import { expect, test } from '@playwright/test';
+
+test('despliegue: «Qué muestra y qué no» con los huecos medidos', async ({ page }, testInfo) => {
+  const problems: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error') problems.push(message.text());
+  });
+  page.on('pageerror', (error) => problems.push(error.message));
+
+  await page.goto('/?fuente=bicing-bcn');
+  await page.locator('[data-map-status="ready"]').waitFor({ timeout: 60_000 });
+  const started = Date.now();
+  await page.getByRole('button', { name: 'Qué muestra y qué no' }).click();
+  await expect(page.locator('.hole-grid')).toBeVisible({ timeout: 60_000 });
+  testInfo.annotations.push({
+    type: 'huecos',
+    description: `rejilla en ${String(Date.now() - started)} ms`,
+  });
+  await page.waitForTimeout(800);
+  await page.screenshot({ path: `captures/despliegue-ficha-${testInfo.project.name}.png` });
+  expect(problems).toEqual([]);
+});
 
 const MODES = [
   { name: 'explorar', query: '' },

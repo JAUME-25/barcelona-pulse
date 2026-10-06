@@ -1,4 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, type PointerEvent } from 'react';
+import { GapCaption } from '../limits/Notes';
 import { onTimeKey, sliderProps } from './controls';
 import { Clock, Counts, PlayButton, SpeedSelect, StepButton } from './ReplayParts';
 import { areaPath, coverageRuns, dataSegments, hourMarks, niceMax } from './series';
@@ -7,8 +8,8 @@ import { WeekDials } from './WeekDials';
 
 /**
  * Reproductor de un día, bajo el mapa. La pista es la forma del día: estaciones sin bicis hacia
- * arriba, llenas hacia abajo, y los huecos sin dato a la vista (eje discontinuo). Los relojes de
- * la semana sirven para ver el patrón de cada día y elegirlo.
+ * arriba, llenas hacia abajo, y los huecos sin dato a la vista (eje discontinuo y, debajo, a qué
+ * horas). Los relojes de la semana sirven para ver el patrón de cada día y elegirlo.
  */
 export function ReplayDeck({ replay }: { replay: Replay }) {
   const { points, index } = replay;
@@ -71,7 +72,12 @@ export function ReplayDeck({ replay }: { replay: Replay }) {
         <SpeedSelect replay={replay} />
       </div>
       <Clock replay={replay} />
-      <Counts point={replay.point} />
+      <Counts
+        point={replay.point}
+        toleranceMinutes={
+          replay.dayState.status === 'ready' ? replay.dayState.data.toleranceMinutes : null
+        }
+      />
       <WeekDials replay={replay} />
 
       <div
@@ -142,6 +148,7 @@ export function ReplayDeck({ replay }: { replay: Replay }) {
           <span className="replay-deck__head" style={{ left: pct(index) }} aria-hidden="true" />
         )}
       </div>
+      <GapCaption points={points} />
     </section>
   );
 }

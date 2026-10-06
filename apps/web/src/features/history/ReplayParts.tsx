@@ -1,4 +1,5 @@
 import type { TimelinePoint } from '../../api/client';
+import { Term, TermGroup } from '../limits/Notes';
 import { OctagonGlyph } from '../stations/OctagonGlyph';
 import { formatLocalDay, localClock } from './time';
 import { DAY_STEP_MINUTES, SPEED_LABEL, SPEEDS, type Replay, type Speed } from './useReplay';
@@ -106,7 +107,17 @@ export function Clock({ replay }: { replay: Replay }) {
   );
 }
 
-export function Counts({ point }: { point: TimelinePoint | undefined }) {
+/**
+ * Recuentos del momento. «Con dato» lleva su nota: quién cuenta y quién no (las que no
+ * informaron no son vacías ni llenas).
+ */
+export function Counts({
+  point,
+  toleranceMinutes = null,
+}: {
+  point: TimelinePoint | undefined;
+  toleranceMinutes?: number | null;
+}) {
   if (point === undefined) {
     return <p className="replay-counts replay-counts--note">Cargando el día…</p>;
   }
@@ -117,7 +128,7 @@ export function Counts({ point }: { point: TimelinePoint | undefined }) {
       </p>
     );
   }
-  return (
+  const list = (
     <ul className="replay-counts">
       <li>
         <OctagonGlyph category="empty" size={16} />
@@ -128,8 +139,17 @@ export function Counts({ point }: { point: TimelinePoint | undefined }) {
         <strong>{point.stationsFull}</strong> llenas
       </li>
       <li className="replay-counts__coverage">
-        {point.stationsWithData} de {point.stationsKnown} con dato
+        <Term
+          note={`Las que informaron en los ${String(toleranceMinutes ?? '')} minutos anteriores. Las demás no cuentan como vacías ni como llenas.`}
+        >
+          {point.stationsWithData} de {point.stationsKnown} con dato
+        </Term>
       </li>
     </ul>
+  );
+  return toleranceMinutes === null ? (
+    list
+  ) : (
+    <TermGroup className="replay-counts-group">{list}</TermGroup>
   );
 }

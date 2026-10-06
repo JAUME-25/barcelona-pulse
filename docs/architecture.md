@@ -50,6 +50,9 @@ tipado; `app` con la composición y el tema visual (`theme.ts`).
    El estado de las estaciones llega en fotogramas de una hora (`GET /api/sources/{id}/frames`,
    ADR 0010): una petición por hora del día, con la siguiente pedida por adelantado. Mientras
    llega una hora se sigue viendo el último paso ya cargado.
+7. «Qué muestra y qué no» pide la línea temporal de cada semana importada cada 15 minutos (con
+   mayo, 4 peticiones) para la rejilla de huecos, y la guarda mientras la página siga abierta:
+   cada petición cuenta para el límite de la API.
 
 ## Ingesta
 
@@ -151,7 +154,8 @@ de Playwright añade el retraso de sus comprobaciones: la lista parecía tardar 
 - MapLibre llega en su propio fragmento: el JavaScript inicial pesa 297 KB (90 KB comprimido)
   y el del mapa 1,04 MB (273 KB) más su worker, 511 KB (143 KB). Con todo en un paquete, el
   mismo método daba en móvil con la red real el HTML a 242 ms y la lista a 885 ms; el mapa,
-  igual (2,1 s).
+  igual (2,1 s). Con los límites visibles, el inicial pasa a 313 KB (97 KB comprimido; tiempos
+  sin volver a medir).
 - Fluidez del mapa con la red real, arrastrando y acercando hasta ver los edificios en 3D (6 a
   10 s de gesto): en escritorio, 60 fps en los tres modos y ningún fotograma de más de 50 ms;
   en móvil, 48–49 fps al explorar y al reproducir (p95 de 50 ms, 11–13 fotogramas de más de

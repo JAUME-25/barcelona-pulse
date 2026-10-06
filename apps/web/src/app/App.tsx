@@ -14,6 +14,9 @@ import { ReplayDeck } from '../features/history/ReplayDeck';
 import { ModeSwitch, type Mode } from '../features/history/ReplayParts';
 import { useFrames } from '../features/history/useFrames';
 import { useReplay } from '../features/history/useReplay';
+import { LimitsSheet } from '../features/limits/LimitsSheet';
+import { MapStamp } from '../features/limits/MapStamp';
+import { hasChanges } from '../features/scenarios/scenario';
 import {
   ScenarioDeck,
   ScenarioPanel,
@@ -54,6 +57,8 @@ const StationMap = lazy(() =>
 const STATION_PARAM = 'estacion';
 const SOURCE_PARAM = 'fuente';
 const MODE_PARAM = 'modo';
+const VIEW_PARAM = 'vista';
+const VIEW_LIMITS = 'limites';
 const MODE_IN_URL: Record<Mode, string | null> = {
   explore: null,
   replay: 'reproducir',
@@ -121,6 +126,12 @@ export function App() {
 
   const [mode, setMode] = useState<Mode>(modeFromUrl);
   const [initialMoment] = useState(() => ({ day: readParam('dia'), time: readParam('hora') }));
+  // «Qué muestra y qué no»: ocupa el panel y va en la URL (?vista=limites). Al llegar con el
+  // enlace no se mueve el foco, como con una estación.
+  const [sheet, setSheet] = useState(() =>
+    readParam(VIEW_PARAM) === VIEW_LIMITS ? { byUser: false } : null,
+  );
+  const restoreLimitsFocusRef = useRef(false);
   // Solo se reproduce una fuente con datos; sin ellos, la vista es la de explorar.
   const replaying = mode === 'replay' && (source?.period ?? null) !== null;
   const experimenting = mode === 'experiment' && sourceId !== null;
@@ -261,6 +272,34 @@ export function App() {
     writeParam(MODE_PARAM, MODE_IN_URL[next]);
   };
 
+  const openSheet = () => {
+    setSheet({ byUser: true });
+    writeParam(VIEW_PARAM, VIEW_LIMITS);
+  };
+  const closeSheet = (restoreFocus: boolean) => {
+    restoreLimitsFocusRef.current = restoreFocus;
+    setSheet(null);
+    writeParam(VIEW_PARAM, null);
+  };
+
+  // Al volver de la ficha con su botón, el foco regresa al enlace que la abrió.
+  useEffect(() => {
+    if (sheet !== null || !restoreLimitsFocusRef.current) return;
+    restoreLimitsFocusRef.current = false;
+    document.querySelector<HTMLButtonElement>('.source-notice__limits button')?.focus();
+  }, [sheet]);
+
+  // Desde la ficha: reproducir un día o abrir una estación sin dato (se marca en el mapa).
+  const pickDay = (day: string) => {
+    closeSheet(false);
+    replay.selectDay(day);
+    changeMode('replay');
+  };
+  const selectFromSheet = (id: number) => {
+    closeSheet(false);
+    select(id);
+  };
+
   const mapUnavailable = mapStatus.kind === 'failed' || mapStatus.kind === 'unsupported';
 
   let body: ReactNode;
@@ -296,6 +335,20 @@ export function App() {
       <p className="panel-status" role="status">
         Cargando estaciones…
       </p>
+    );
+  } else if (sheet !== null && source?.kind === 'observed') {
+    // Al experimentar no se abre una estación: allí tocarla es quitarla del escenario.
+    body = (
+      <LimitsSheet
+        source={source}
+        response={response}
+        focusOnOpen={sheet.byUser}
+        onClose={() => {
+          closeSheet(true);
+        }}
+        onPickDay={pickDay}
+        onSelectStation={experimenting ? undefined : selectFromSheet}
+      />
     );
   } else if (experimenting) {
     body = <ScenarioPanel {...scenarioView} />;
@@ -343,7 +396,12 @@ export function App() {
         ) : (
           <>
             <h2 className="list-title">Estaciones</h2>
-            <StationList stations={filtered} selectedId={selectedId} onSelect={select} />
+            <StationList
+              stations={filtered}
+              at={response.at}
+              selectedId={selectedId}
+              onSelect={select}
+            />
           </>
         )}
       </>
@@ -391,6 +449,7 @@ export function App() {
             response={response}
             compact={replaying || experimenting}
             months={source === undefined ? null : formatMonths(source.days)}
+            onLimits={response.source.kind === 'observed' ? openSheet : undefined}
           />
         )}
       </header>
@@ -412,6 +471,15 @@ export function App() {
           />
         </Suspense>
         <MapStatusMessage status={mapStatus} />
+        {/* Sello de qué es y de cuándo: solo en móvil (CSS), donde el aviso queda arriba. */}
+        {response !== null && !mapUnavailable && (
+          <MapStamp
+            kind={response.source.kind}
+            at={replaying ? replay.point?.at : response.at}
+            experiment={experimenting}
+            hypothetical={hasChanges(scenario.scenario)}
+          />
+        )}
         {replaying && <ReplayDeck replay={replay} />}
         {experimenting && (
           <ScenarioLayers

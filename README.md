@@ -18,7 +18,9 @@ técnico) en curso: el rendimiento ya está medido; todavía no está desplegada
 - **Web** React + MapLibre: mapa, leyenda que también filtra, lista accesible y detalle; modo
   «Reproducir» para recorrer un día del histórico paso a paso, con los huecos a la vista, y modo
   «Experimentar» para añadir, mover o quitar estaciones y ver cuánta superficie gana o pierde la
-  cobertura.
+  cobertura. «Qué muestra y qué no» explica los límites: de cuándo son los datos, los huecos de
+  cada día y hora, qué estaciones no informan y por qué, qué no dice la cobertura y de dónde sale
+  cada cosa.
 - **Diseño «Fanals»**: Barcelona de noche, con estados que se distinguen por forma, color y
   número. Ver [docs/design.md](docs/design.md).
 

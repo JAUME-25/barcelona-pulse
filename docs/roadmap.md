@@ -109,13 +109,28 @@ honesta de lo hecho.
    en escritorio, 375 y 320 px (`e2e/despliegue.capture.ts`). El portal de Open Data BCN
    contesta 403 al servidor: los .7z de mayo se descargaron fuera y se subieron
    (`docs/despliegue.md`).
-3. **Pendiente.** Límites visibles en la propia web: de qué fecha son los datos, que no es tiempo
-   real, qué mide y qué no la cobertura, de dónde sale cada cosa.
+3. **Hecho** en local, sin desplegar. Límites visibles, elegidos el 6-10-2026 mezclando tres
+   propuestas (`docs/design.md`):
+   - «Qué muestra y qué no»: de cuándo son los datos, una rejilla de huecos por día y hora que
+     lleva a reproducir el día, las estaciones sin dato con el motivo, qué no dice la aplicación
+     y de dónde sale cada cosa.
+   - Junto al dato: a qué horas faltan datos bajo la pista de Reproducir y notas en «con dato» y
+     en el resultado de la cobertura.
+   - Un sello en el mapa en móvil.
+   - Corregido de paso: la lista decía «Sin dato reciente desde las 10:54» de una estación sin
+     datos desde junio de 2025, y el detalle, «es de las 12 de junio…».
+   - Pruebas: unitarias de textos y huecos, una de la app con la ficha, y capturas en
+     escritorio, 375 y 320 px (`e2e/limites.capture.ts`).
 4. **Pendiente.** Caso técnico para el portfolio: qué problema resuelve, decisiones, dificultades
    reales, mediciones y límites.
 
 ## Backlog
 
+- Límites: la rejilla de huecos se mide cada 15 min en el navegador, con una petición por semana
+  importada. Si hace falta el detalle de 5 min o muchas más semanas, un resumen por día y hora en
+  la API.
+- Mapa: los marcadores sin dato son discretos a propósito; si se filtran solo esos, cuesta
+  verlos a escala de ciudad.
 - Web: los nombres reales llegan en mayúsculas («AV. CAN MARCET, 3»); valorar un formato de
   lectura que respete partículas catalanas, sin cambiar el dato guardado.
 - Web: a escala de ciudad, 540 marcadores se solapan; valorar una vista agregada que no esconda

@@ -84,6 +84,12 @@ Jaume ejecuta los comandos en Forge y pega la salida.
 - «Reproducir» pide fotogramas de una hora (`/api/sources/{id}/frames`, ADR 0010), no
   `/api/stations` por paso: la API admite 120 peticiones por minuto e IP. Las capturas seguidas
   también pueden agotarlo (sale «Too Many Requests»): espera un minuto.
+- «Qué muestra y qué no» pide una línea temporal por semana importada y la guarda en la página
+  (`features/limits/quality.ts`): sin eso, abrirla y cerrarla agotaba el límite. Cada recarga
+  vuelve a pedirlas.
+- Una estación sin ninguna observación hasta el momento mostrado no «nunca ha informado»: al
+  principio del periodo importado puede no haber empezado aún. Se dice «Ningún dato hasta este
+  momento».
 - La fluidez se mide con la compilación de producción y la GPU (`e2e/reproduccion.measure.ts`):
   en el servidor de desarrollo React va varias veces más lento y, sin ventana, Chromium pinta
   WebGL por software.

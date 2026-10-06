@@ -1,5 +1,6 @@
 import type { StationsResponse } from '../../api/client';
 import { formatDay, formatTime } from '../../shared/format';
+import '../limits/limits.css';
 
 function Moment({ label, iso }: { label: string; iso: string }) {
   return (
@@ -21,12 +22,15 @@ export function SourceNotice({
   response,
   compact = false,
   months = null,
+  onLimits,
 }: {
   response: StationsResponse;
   /** Sin el momento: al reproducir, lo enseña el control de tiempo. */
   compact?: boolean;
   /** Meses de los datos importados («mayo de 2026»), para el histórico. */
   months?: string | null;
+  /** Abre «Qué muestra y qué no», que lleva también el enlace al conjunto de datos. */
+  onLimits?: () => void;
 }) {
   const { source } = response;
 
@@ -70,12 +74,19 @@ export function SourceNotice({
       <p className="source-notice__credit">
         {source.attribution}
         {source.license !== null && <> Licencia {source.license}.</>}{' '}
-        {source.url !== null && (
+        {onLimits === undefined && source.url !== null && (
           <a href={source.url} target="_blank" rel="noreferrer">
             Ver el conjunto de datos
           </a>
         )}
       </p>
+      {onLimits !== undefined && (
+        <p className="source-notice__limits">
+          <button type="button" className="limits-link" onClick={onLimits}>
+            Qué muestra y qué no
+          </button>
+        </p>
+      )}
     </div>
   );
 }

@@ -39,10 +39,28 @@ export function formatTime(iso: string): string {
   return timeFormat.format(new Date(iso));
 }
 
-/** «10:00» si es el mismo día de referencia; si no, fecha y hora completas. */
-export function formatTimeRelativeToDay(iso: string, referenceIso: string): string {
-  const sameDay = dayFormat.format(new Date(iso)) === dayFormat.format(new Date(referenceIso));
-  return sameDay ? formatTime(iso) : formatDateTime(iso);
+const dayMonthFormat = new Intl.DateTimeFormat('es-ES', {
+  timeZone: DISPLAY_TIME_ZONE,
+  day: 'numeric',
+  month: 'long',
+});
+const yearFormat = new Intl.DateTimeFormat('es-ES', {
+  timeZone: DISPLAY_TIME_ZONE,
+  year: 'numeric',
+});
+
+/**
+ * Desde cuándo, respecto a un momento de referencia: «las 23:39» si es del mismo día, «el 28 de
+ * mayo» si es del mismo año y, si no, «el 12 de junio de 2025».
+ */
+export function formatSince(iso: string, referenceIso: string): string {
+  const date = new Date(iso);
+  const reference = new Date(referenceIso);
+  if (dayFormat.format(date) === dayFormat.format(reference)) return `las ${formatTime(iso)}`;
+  if (yearFormat.format(date) === yearFormat.format(reference)) {
+    return `el ${dayMonthFormat.format(date)}`;
+  }
+  return `el ${dayFormat.format(date)}`;
 }
 
 /** «2 h 15 min», «40 min», «menos de 1 min» */

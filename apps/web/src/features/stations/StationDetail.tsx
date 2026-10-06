@@ -1,13 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { StationItem, StationsResponse } from '../../api/client';
-import {
-  formatDateTime,
-  formatDay,
-  formatDuration,
-  formatTime,
-  formatTimeRelativeToDay,
-  plural,
-} from '../../shared/format';
+import { formatDateTime, formatDay, formatDuration, formatTime, plural } from '../../shared/format';
 import {
   AVAILABILITY_LABEL,
   availabilityOf,
@@ -39,10 +32,12 @@ function UnknownExplanation({
       </p>
     );
   }
+  // «de las 07:45» el mismo día; si no, con la fecha: «del 12 de junio de 2025, 10:54».
+  const sameDay = formatDay(last) === formatDay(response.at);
   return (
     <p className="station-detail__explain">
-      La última observación es de las{' '}
-      <time dateTime={last}>{formatTimeRelativeToDay(last, response.at)}</time>,{' '}
+      La última observación es {sameDay ? 'de las' : 'del'}{' '}
+      <time dateTime={last}>{sameDay ? formatTime(last) : formatDateTime(last)}</time>,{' '}
       {formatDuration(last, response.at)} antes del momento mostrado. Pasados{' '}
       {response.toleranceMinutes} min sin datos, el estado se da por desconocido: no se supone que
       esté vacía.

@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef } from 'react';
 import type { StationItem, StudyAreaItem } from '../../api/client';
 import { formatDateTime } from '../../shared/format';
+import { ScopeNotes } from '../limits/Notes';
 import { figuresOf } from './figures';
 import { hasChanges } from './scenario';
 import {
@@ -29,7 +30,7 @@ export interface ScenarioViewProps {
 
 /**
  * Mando de «Experimentar», bajo el mapa como el de Reproducir: herramientas, radio y área a un
- * lado; al otro, la comparación red real → escenario, grande.
+ * lado; al otro, la comparación red real → escenario, grande, con qué mide y qué no.
  */
 export function ScenarioDeck({ state, areas, tool, onTool }: ScenarioViewProps) {
   const f = state.shown === undefined ? undefined : figuresOf(state.shown);
@@ -104,6 +105,7 @@ export function ScenarioDeck({ state, areas, tool, onTool }: ScenarioViewProps) 
             <p className="scenario-deck__of">
               Del área de {f.areaName} ({f.areaSize}) a menos de {f.radius} m en línea recta.
             </p>
+            <ScopeNotes />
           </>
         )}
         <div className="scenario-deck__actions">

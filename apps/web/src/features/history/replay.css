@@ -145,6 +145,7 @@
     'clock'
     'counts'
     'track'
+    'gaps'
     'days';
   gap: 12px;
   padding: 14px 16px 12px;
@@ -170,7 +171,8 @@
   grid-area: clock;
 }
 
-.replay-deck .replay-counts {
+.replay-deck .replay-counts,
+.replay-deck .replay-counts-group {
   grid-area: counts;
 }
 
@@ -442,6 +444,7 @@
       'transport clock'
       'transport counts'
       'track track'
+      'gaps gaps'
       'days days';
     gap: 10px 24px;
     padding: 14px 22px 10px;
@@ -485,7 +488,8 @@
     grid-template-areas:
       'transport clock days'
       'transport counts days'
-      'track track track';
+      'track track track'
+      'gaps gaps gaps';
   }
 
   .replay-deck .week-dials {

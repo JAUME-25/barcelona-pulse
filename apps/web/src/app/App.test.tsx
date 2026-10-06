@@ -339,6 +339,115 @@ describe('App', () => {
     expect(screen.getByText(/no permite coger bicis/)).toBeTruthy();
   });
 
+  it('«Qué muestra y qué no» explica los límites y lleva a las estaciones sin dato', async () => {
+    const real = [
+      stationFixture({
+        id: 21,
+        sourceStationId: '1',
+        name: 'GRAN VIA CORTS CATALANES, 760',
+        state: { lastObservedAt: '2026-08-20T21:54:08+00:00' },
+      }),
+      stationFixture({
+        id: 22,
+        sourceStationId: '264',
+        name: 'C/ FERRAN JUNOY, 10',
+        state: {
+          freshness: 'stale',
+          status: 'unknown',
+          lastObservedAt: '2026-08-17T10:00:00+00:00',
+          bikesAvailable: null,
+          docksAvailable: null,
+        },
+      }),
+      stationFixture({
+        id: 23,
+        sourceStationId: '542',
+        name: 'Copa América Barcelona - 542',
+        state: {
+          freshness: 'none',
+          status: 'unknown',
+          lastObservedAt: null,
+          bikesAvailable: null,
+          docksAvailable: null,
+        },
+      }),
+    ];
+    mockApi((path, url) => {
+      if (path === '/api/sources') return json([observedSource]);
+      if (path === '/api/stations') return json(observedResponse(real));
+      if (path === '/api/sources/bicing-bcn/timeline') return json(timelineFor(url));
+      return json({ title: 'Petición inesperada' }, 500);
+    });
+    const user = userEvent.setup();
+    renderApp();
+
+    await user.click(await screen.findByRole('button', { name: 'Qué muestra y qué no' }));
+    const sheet = screen.getByRole('article');
+    expect(document.activeElement).toBe(
+      within(sheet).getByRole('heading', { name: 'Qué muestra y qué no' }),
+    );
+    expect(new URLSearchParams(window.location.search).get('vista')).toBe('limites');
+    expect(
+      within(sheet).getByText(/Cómo estaban las 3 estaciones de Bicing el 20 de agosto de 2026/),
+    ).toBeTruthy();
+    // Los huecos se miden con una petición por semana importada, cada 15 minutos.
+    expect(await within(sheet).findByText(/pasos por debajo del 95/)).toBeTruthy();
+    const weeks = requests.filter((u) => u.pathname.endsWith('/timeline'));
+    expect(weeks.map((u) => u.searchParams.get('step'))).toEqual(['15']);
+    expect(
+      within(sheet).getByRole('button', { name: /^jueves, 20 de agosto de 2026/ }),
+    ).toBeTruthy();
+
+    // Las que no tienen dato, con el motivo, de la que más tiempo lleva callada a la que menos.
+    expect(within(sheet).getByText(/2 de 3 estaciones sin dato/)).toBeTruthy();
+    expect(
+      within(sheet).getByRole('heading', { level: 4, name: /^Ningún dato hasta este momento/ }),
+    ).toBeTruthy();
+    const silent = Array.from(sheet.querySelectorAll('button.silent-group__item'));
+    expect(silent.map((b) => b.textContent)).toEqual([
+      'Copa América Barcelona - 542',
+      'C/ FERRAN JUNOY, 10Sin datos desde el 17 de agosto',
+    ]);
+
+    // Volver deja el foco en el enlace que la abrió.
+    await user.click(within(sheet).getByRole('button', { name: 'Volver' }));
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Qué muestra y qué no' }),
+    );
+    expect(new URLSearchParams(window.location.search).get('vista')).toBeNull();
+
+    // Una estación de la ficha abre su detalle, con la explicación de por qué no hay dato.
+    await user.click(screen.getByRole('button', { name: 'Qué muestra y qué no' }));
+    await user.click(screen.getByRole('button', { name: /^C\/ FERRAN JUNOY, 10/ }));
+    const detail = screen.getByRole('article');
+    expect(within(detail).getByRole('heading', { name: 'C/ FERRAN JUNOY, 10' })).toBeTruthy();
+    // Con la fecha, porque no es del mismo día: «del 17 de agosto», no «de las 12:00».
+    expect(detail.textContent).toMatch(
+      /La última observación es del 17 de agosto de 2026.*12:00, 3 días antes del momento mostrado/,
+    );
+    expect(detail.textContent).toMatch(/el estado se da por desconocido/);
+    expect(new URLSearchParams(window.location.search).get('estacion')).toBe('264');
+    expect(
+      screen
+        .getByRole('button', { name: 'Marcador C/ FERRAN JUNOY, 10' })
+        .getAttribute('data-selected'),
+    ).toBe('true');
+
+    // En la lista, desde cuándo, con la fecha si no es del mismo día; y las que nunca informaron.
+    await user.click(screen.getByRole('button', { name: 'Volver a la lista' }));
+    expect(screen.getByRole('button', { name: /^C\/ FERRAN JUNOY, 10/ }).textContent).toContain(
+      'Sin dato reciente desde el 17 de agosto',
+    );
+    expect(
+      screen.getByRole('button', { name: /^Copa América Barcelona - 542/ }).textContent,
+    ).toContain('Ningún dato hasta este momento');
+
+    // Abierta dos veces, los huecos se han pedido una sola: cuentan para el límite de la API.
+    await user.click(screen.getByRole('button', { name: 'Qué muestra y qué no' }));
+    expect(await screen.findByText(/pasos por debajo del 95/)).toBeTruthy();
+    expect(requests.filter((u) => u.pathname.endsWith('/timeline'))).toHaveLength(1);
+  });
+
   it('la fuente se puede fijar por la URL', async () => {
     mockApi((path) =>
       json(path === '/api/sources' ? [demoSource, observedSource] : stationsResponse(stations)),
@@ -346,7 +455,7 @@ describe('App', () => {
     window.history.replaceState(null, '', '/?fuente=demo');
     renderApp();
 
-    expect(await screen.findByText(/Datos inventados/)).toBeTruthy();
+    expect(await screen.findByText(/Datos inventados para probar/)).toBeTruthy();
     const stationsRequest = requests.find((u) => u.pathname === '/api/stations');
     expect(stationsRequest?.searchParams.get('source')).toBe('demo');
     expect(stationsRequest?.searchParams.has('at')).toBe(false);
@@ -378,6 +487,17 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: '5 minutos después' }));
     expect(slider.getAttribute('aria-valuetext')).toMatch(/^08:35,/);
     expect(within(catalunya()).getByText('35')).toBeTruthy();
+
+    // Bajo la pista, a qué horas faltan datos; «con dato» explica quién cuenta.
+    expect(
+      screen.getByText(
+        /^Menos del 95\s% de las estaciones con dato de 00:00 a 06:55 y de 10:35 a 23:55\.$/,
+      ),
+    ).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: '3 de 3 con dato' }));
+    expect(screen.getByRole('note').textContent).toBe(
+      'Las que informaron en los 30 minutos anteriores. Las demás no cuentan como vacías ni como llenas.',
+    );
 
     // Una petición por hora (la actual y la siguiente, por adelantado), ninguna por paso.
     const framesFrom = requests
@@ -472,6 +592,12 @@ describe('App', () => {
       'true',
     );
     expect(bodies[0]).toMatchObject({ source: 'demo', studyArea: 'barcelona', radiusMeters: 300 });
+
+    // Junto al resultado, qué mide y qué no: cada nota se abre debajo.
+    await user.click(within(deck).getByRole('button', { name: 'En línea recta' }));
+    expect(within(deck).getByRole('note').textContent).toMatch(/no es una isócrona/);
+    await user.click(within(deck).getByRole('button', { name: 'No mide viajes' }));
+    expect(within(deck).getByRole('note').textContent).toMatch(/viajes, esperas o demanda/);
 
     // Con «Quitar», tocar una estación la saca del mapa y del cálculo.
     await user.click(within(deck).getByRole('button', { name: 'Quitar' }));

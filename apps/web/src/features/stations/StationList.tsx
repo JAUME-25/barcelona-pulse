@@ -1,22 +1,26 @@
 import { memo, useCallback, useEffect, useRef } from 'react';
 import type { StationItem } from '../../api/client';
-import { formatTime } from '../../shared/format';
+import { formatSince } from '../../shared/format';
 import { AVAILABILITY_LABEL, availabilityOf, type Availability } from './availability';
 import { OctagonGlyph } from './OctagonGlyph';
 
 interface StationListProps {
   stations: readonly StationItem[];
+  /** Momento mostrado: para decir desde cuándo no hay dato. */
+  at: string;
   selectedId: number | null;
   onSelect: (id: number) => void;
 }
 
-function summary(station: StationItem): string {
+function summary(station: StationItem, at: string): string {
   const category = availabilityOf(station.state);
   const label = AVAILABILITY_LABEL[category];
   const last = station.state.lastObservedAt;
+  // Con la fecha si no es del mismo día: «desde las 10:54» no puede querer decir junio de 2025.
   if (station.state.freshness === 'stale' && last !== null) {
-    return `${label} desde las ${formatTime(last)}`;
+    return `${label} desde ${formatSince(last, at)}`;
   }
+  if (station.state.freshness === 'none') return 'Ningún dato hasta este momento';
   if (category !== 'outOfService' && station.state.isRenting === false) {
     return `${label}, sin préstamo`;
   }
@@ -95,7 +99,7 @@ const StationRow = memo(function StationRow({
 });
 
 /** Alternativa accesible al mapa: cada estación es un botón con su estado en texto. */
-export function StationList({ stations, selectedId, onSelect }: StationListProps) {
+export function StationList({ stations, at, selectedId, onSelect }: StationListProps) {
   // La función que llega cambia con los datos; las filas reciben siempre la misma.
   const onSelectRef = useRef(onSelect);
   useEffect(() => {
@@ -117,7 +121,7 @@ export function StationList({ stations, selectedId, onSelect }: StationListProps
             id={station.id}
             name={station.name}
             category={category}
-            summaryText={summary(station)}
+            summaryText={summary(station, at)}
             bikes={known ? station.state.bikesAvailable : null}
             docks={known ? station.state.docksAvailable : null}
             current={station.id === selectedId}

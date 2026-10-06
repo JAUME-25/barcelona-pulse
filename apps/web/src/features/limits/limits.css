@@ -1,0 +1,381 @@
+/* Límites visibles (B5): la ficha «Qué muestra y qué no», las notas junto a los datos y el
+   sello del mapa en móvil. */
+
+.source-notice__limits {
+  margin-top: 8px !important;
+}
+
+.limits-link {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* Ficha */
+.limits-sheet {
+  padding-top: 18px;
+}
+
+.limits-sheet a {
+  color: var(--accent);
+}
+
+.limits-sheet__title {
+  margin: 18px 0 10px;
+  font-size: 2.125rem;
+  line-height: 1.05;
+}
+
+.limits-sheet__title:focus {
+  outline: none;
+}
+
+/* A 320 px, en una línea. */
+@media (max-width: 420px) {
+  .limits-sheet__title {
+    font-size: 1.75rem;
+  }
+}
+
+.limits-sheet__lead {
+  margin: 0;
+  font-size: 1.125rem;
+  line-height: 1.45;
+}
+
+.limits-sheet__heading {
+  margin: 26px 0 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 1.25rem;
+}
+
+.limits-sheet__text {
+  margin: 0 0 12px;
+  line-height: 1.45;
+}
+
+.limits-sheet__note {
+  margin: 10px 0 0;
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+}
+
+.limits-sheet__note p {
+  margin: 0 0 10px;
+}
+
+.limits-sheet__list {
+  margin: 0;
+  padding-left: 20px;
+  line-height: 1.45;
+}
+
+.limits-sheet__list li + li {
+  margin-top: 6px;
+}
+
+.limits-facts {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 18px;
+  margin: 0;
+}
+
+.limits-facts dt {
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+}
+
+.limits-facts dd {
+  margin: 0;
+}
+
+.limits-origins {
+  margin: 0 0 14px;
+}
+
+.limits-origins > div {
+  display: grid;
+  grid-template-columns: minmax(0, 8.5rem) minmax(0, 1fr);
+  gap: 2px 14px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+}
+
+.limits-origins > div:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.limits-origins dt {
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+}
+
+.limits-origins dd {
+  margin: 0;
+}
+
+.limits-origins__terms {
+  display: block;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+}
+
+@media (max-width: 420px) {
+  .limits-origins > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Rejilla de huecos: un día por fila, una hora por casilla. Rayado y discontinuo, como en la
+   franja de «Reproducir»: faltan datos. */
+.hole-grid {
+  display: grid;
+  gap: 2px;
+  margin: 4px 0 0;
+}
+
+.hole-grid__hours,
+.hole-grid__row {
+  display: grid;
+  grid-template-columns: 3.6rem repeat(24, minmax(0, 1fr));
+  gap: 2px;
+  align-items: center;
+}
+
+.hole-grid__hours {
+  color: var(--ink-2);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.hole-grid__month {
+  margin: 10px 0 4px;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.hole-grid__row {
+  width: 100%;
+  padding: 1px 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.hole-grid__row[data-week-start] {
+  margin-top: 5px;
+}
+
+.hole-grid__row:hover,
+.hole-grid__row:focus-visible {
+  background: var(--panel-2);
+}
+
+.hole-grid__day {
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+
+.hole-grid__row:hover .hole-grid__day,
+.hole-grid__row:focus-visible .hole-grid__day {
+  color: var(--ink);
+}
+
+.hole-grid__cell {
+  display: block;
+  height: 11px;
+  border-radius: 2px;
+}
+
+.hole-grid__cell--complete {
+  background: color-mix(in srgb, var(--ink-2) 42%, transparent);
+}
+
+.hole-grid__cell--partial {
+  background: repeating-linear-gradient(135deg, var(--ink) 0 1.5px, transparent 1.5px 3.5px);
+  box-shadow: inset 0 0 0 1px var(--ink);
+}
+
+.hole-grid__cell--none {
+  border: 1px dashed var(--cat-unknown);
+}
+
+.hole-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 12px 0 0;
+  padding: 0;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+  list-style: none;
+}
+
+.hole-legend li {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.hole-legend .hole-grid__cell {
+  width: 16px;
+}
+
+/* Estaciones sin dato, por motivo */
+.silent-group {
+  margin-top: 14px;
+}
+
+.silent-group__title {
+  margin: 0 0 4px;
+  font-size: 1.0625rem;
+}
+
+.silent-group__count {
+  color: var(--ink-2);
+  font-weight: 400;
+}
+
+.silent-group__list {
+  margin: 0 -10px;
+  padding: 0;
+  list-style: none;
+}
+
+.silent-group__item {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+}
+
+button.silent-group__item {
+  cursor: pointer;
+}
+
+button.silent-group__item:hover {
+  background: var(--panel-2);
+}
+
+.silent-group__name {
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.silent-group__why {
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+}
+
+/* Palabras con nota: subrayado de puntos; la nota sale debajo del bloque. */
+.term {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  text-decoration: underline dotted;
+  text-decoration-color: color-mix(in srgb, var(--ink) 60%, transparent);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
+.term[aria-expanded='true'] {
+  color: var(--ink);
+  text-decoration-style: solid;
+}
+
+.term-note {
+  margin: 8px 0 4px;
+  padding: 8px 12px;
+  border-left: 2px solid var(--ink-2);
+  border-radius: 0 6px 6px 0;
+  background: var(--panel-2);
+  color: var(--ink);
+  font-size: 0.9375rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.scope-notes__terms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 2px 0 0;
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+}
+
+/* Bajo la pista de «Reproducir» (área `gaps` del reproductor). */
+.gap-caption {
+  grid-area: gaps;
+  margin: -4px 0 0;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+}
+
+/* Sello del mapa: solo en móvil, donde el aviso de procedencia se queda arriba al bajar. */
+.map-stamp {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  display: grid;
+  gap: 1px;
+  max-width: calc(100% - 80px);
+  margin: 0;
+  padding: 5px 10px 6px;
+  border: 1px solid color-mix(in srgb, var(--ink) 38%, transparent);
+  border-radius: 6px;
+  background: var(--panel);
+  box-shadow: var(--panel-shadow);
+  pointer-events: none;
+}
+
+.map-stamp__label {
+  color: var(--ink-2);
+  font-size: 0.75rem;
+}
+
+.map-stamp__value {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.map-stamp__extra {
+  color: var(--coverage-4);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.map-stamp--demo {
+  border-color: color-mix(in srgb, var(--demo) 60%, transparent);
+}
+
+@media (min-width: 768px) {
+  .map-stamp {
+    display: none;
+  }
+}
