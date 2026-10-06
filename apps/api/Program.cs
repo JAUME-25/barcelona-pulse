@@ -19,6 +19,7 @@ if (!builder.Environment.IsDevelopment())
 builder.Services.AddPulseDatabase();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<StationIngestor>();
+builder.Services.AddScoped<ObservationPurger>();
 // Líneas temporales ya calculadas, hasta la siguiente ingesta de cada fuente.
 builder.Services.AddMemoryCache(o => o.SizeLimit = 200);
 builder.Services.AddHttpClient<BicingArchiveDownloader>(http =>

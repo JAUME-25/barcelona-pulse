@@ -22,6 +22,12 @@ public sealed class DataSource
     /// Fuera de ella, el estado de la estación es desconocido.
     /// </summary>
     public required TimeSpan StalenessTolerance { get; set; }
+
+    /// <summary>
+    /// Observaciones guardadas. La ingesta suma las nuevas y la purga resta las borradas, en la
+    /// misma transacción: así /api/sources no las cuenta en cada petición (ADR 0012).
+    /// </summary>
+    public long ObservationCount { get; set; }
 }
 
 public enum SourceKind

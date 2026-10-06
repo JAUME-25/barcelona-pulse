@@ -3,10 +3,10 @@
 Mapa de las estaciones de Bicing de Barcelona con la disponibilidad de cada una y la procedencia
 de cada dato. Más adelante: reproducción del histórico y escenarios de cobertura.
 
-**Estado (5 de octubre de 2026):** B0, B1 y B2 terminados; B3 (reproducción histórica) en
-curso, con la importación de periodos y la línea temporal en la API. La aplicación muestra datos
-reales de Bicing (el histórico público del Ajuntament) y una demo sintética, sin mezclarlos. No
-está desplegada. Detalle en [docs/roadmap.md](docs/roadmap.md).
+**Estado (6 de octubre de 2026):** B0 a B3 terminados: la aplicación muestra y reproduce días
+reales de Bicing (el histórico público del Ajuntament) y una demo sintética, sin mezclarlos.
+Siguiente, B4 (escenarios de cobertura). No está desplegada. Detalle en
+[docs/roadmap.md](docs/roadmap.md).
 
 ## Qué hay
 
@@ -87,6 +87,8 @@ reproducir un día: `&modo=reproducir&dia=2026-08-20&hora=08:30` (hora de Barcel
 - **Demo:** `node scripts/generate-demo-fixture.mjs` lo regenera de forma determinista. Si cambia
   su contenido, reinicia la base local: la importación conserva las observaciones que ya tenían
   la misma clave.
+- **Quitar días importados:** `docker compose run --rm api purge bicing-bcn --from 2026-08-24 --to 2026-08-30`
+  dice qué borraría; con `--yes` lo borra. Volver a importarlos los recupera (ADR 0012).
 - **Reiniciar la base local:** `docker compose down` y `docker volume rm barcelona-pulse_db-data`.
 
 ## Problemas frecuentes

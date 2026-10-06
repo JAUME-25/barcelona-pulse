@@ -44,6 +44,13 @@ public static class StationQueries
             .Select(s => db.StationObservations.Where(o => o.StationId == s.Id).Max(o => (DateTimeOffset?)o.ObservedAt))
             .MaxAsync(ct);
 
+    /// <summary>Instante de la primera observación de la fuente, también por estación.</summary>
+    public static Task<DateTimeOffset?> EarliestObservationAsync(PulseDbContext db, string sourceId, CancellationToken ct) =>
+        db.Stations
+            .Where(s => s.SourceId == sourceId)
+            .Select(s => db.StationObservations.Where(o => o.StationId == s.Id).Min(o => (DateTimeOffset?)o.ObservedAt))
+            .MinAsync(ct);
+
     /// <summary>
     /// SQL explícito a propósito (ADR 0005): por cada versión vigente en @at, la última
     /// observación ≤ @at con LATERAL … LIMIT 1, que baja por el índice único

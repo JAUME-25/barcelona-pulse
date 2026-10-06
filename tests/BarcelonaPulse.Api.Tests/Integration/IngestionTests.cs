@@ -52,6 +52,8 @@ public sealed class IngestionTests(PostgisDatabase database) : IClassFixture<Pos
         Assert.Equal(572, second.ObservationsDuplicate);
 
         await using var db = database.CreateContext();
+        // El recuento de la fuente lo lleva la ingesta: solo suma las nuevas.
+        Assert.Equal(572, (await db.DataSources.SingleAsync(s => s.Id == "demo-repeat")).ObservationCount);
         Assert.Equal(46, await db.Stations.CountAsync(s => s.SourceId == "demo-repeat"));
         Assert.Equal(46, await db.StationVersions.CountAsync(v => v.Station.SourceId == "demo-repeat"));
         Assert.Equal(572, await db.StationObservations.CountAsync(o =>

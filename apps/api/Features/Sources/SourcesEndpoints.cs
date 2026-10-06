@@ -1,4 +1,5 @@
 using BarcelonaPulse.Api.Features.Ingestion;
+using BarcelonaPulse.Api.Features.Stations;
 using BarcelonaPulse.Api.Infrastructure;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
@@ -61,13 +62,11 @@ public static class SourcesEndpoints
         {
             var stationCount = await db.Stations.CountAsync(x => x.SourceId == s.Id, ct);
 
-            var period = await (
-                    from o in db.StationObservations
-                    join st in db.Stations on o.StationId equals st.Id
-                    where st.SourceId == s.Id
-                    group o by st.SourceId into g
-                    select new ObservationPeriod(g.Min(o => o.ObservedAt), g.Max(o => o.ObservedAt), g.LongCount()))
-                .FirstOrDefaultAsync(ct);
+            // Primera y última por estación (índice) y el recuento que llevan ingesta y purga: antes
+            // se recorrían todas las observaciones en cada petición, y crecía con el histórico.
+            var first = await StationQueries.EarliestObservationAsync(db, s.Id, ct);
+            var latest = await StationQueries.LatestObservationAsync(db, s.Id, ct);
+            var period = first is { } f && latest is { } l ? new ObservationPeriod(f, l, s.ObservationCount) : null;
 
             var last = await db.IngestionRuns.AsNoTracking()
                 .Where(r => r.SourceId == s.Id)
@@ -76,9 +75,9 @@ public static class SourcesEndpoints
                     r.ObservationsAccepted, r.ObservationsDuplicate, r.ObservationsConflicting, r.ObservationsRejected))
                 .FirstOrDefaultAsync(ct);
 
-            // Solo las ingestas terminadas: una fallida no deja nada que reproducir.
+            // Solo las ingestas terminadas y no quitadas: una fallida o purgada no deja nada que reproducir.
             var covered = await db.IngestionRuns.AsNoTracking()
-                .Where(r => r.SourceId == s.Id && r.CoveredFrom != null && r.CoveredTo != null
+                .Where(r => r.SourceId == s.Id && r.CoveredFrom != null && r.CoveredTo != null && r.PurgedAt == null
                     && (r.Status == IngestionStatus.Succeeded || r.Status == IngestionStatus.SucceededWithIssues))
                 .Select(r => new { From = r.CoveredFrom!.Value, To = r.CoveredTo!.Value })
                 .ToListAsync(ct);

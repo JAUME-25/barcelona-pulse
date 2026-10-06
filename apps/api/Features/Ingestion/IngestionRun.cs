@@ -33,6 +33,12 @@ public sealed class IngestionRun
     public DateTimeOffset? CoveredFrom { get; init; }
     public DateTimeOffset? CoveredTo { get; init; }
 
+    /// <summary>
+    /// Cuándo se quitaron sus días con <c>purge</c> (ADR 0012): ya no se pueden reproducir. La
+    /// ejecución se conserva como registro de lo que entró.
+    /// </summary>
+    public DateTimeOffset? PurgedAt { get; set; }
+
     public int StationsReceived { get; set; }
     public int StationsRejected { get; set; }
     public int StationVersionsCreated { get; set; }

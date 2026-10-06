@@ -63,6 +63,8 @@ Puntos de entrada, por línea de comandos (no hay endpoint HTTP de importación)
   locales.
 - `… ingest bicing-archive --from 2026-08-17 --to 2026-08-23`: un periodo de hasta 31 días.
   Cada día es una ejecución propia; los archivos de cada mes se descargan una sola vez.
+- `… purge bicing-bcn --from 2026-08-24 --to 2026-08-30`: dice qué borraría; con `--yes`,
+  quita esos días (ADR 0012).
 
 - Cada ejecución queda en `ingestion_runs` con fuente, adaptador y versión, entrada y su
   sha256, periodo, recuentos y resultado; los rechazos, en `ingestion_rejections` con su motivo.
@@ -150,6 +152,9 @@ Entorno: Windows 11, 16 núcleos, Docker Desktop 29.6, compilación de producci�
 - Línea temporal con esa semana (1 080 173 observaciones): un día a 5 min, 0,48 s la primera
   vez; la semana a 15 min, 1,7 s; repetidas, 5–9 ms desde la caché (ADR 0009).
 - Fotogramas de una hora real: 47–110 ms; 2 MB sin comprimir y 110 KB con Brotli (ADR 0010).
+- Con dos semanas (2,16 millones de observaciones, 406 MB la tabla con índices) los tiempos de
+  estado, fotogramas y línea temporal no cambian. `GET /api/sources`, que contaba todas las
+  observaciones, pasó de 117–177 ms a 12 ms con el recuento guardado (ADR 0012).
 - Reproducir un día entero a la velocidad más alta (compilación de producción, GPU): 43,7 s,
   23 peticiones y ningún 429; tareas largas del navegador, un 13 % del tiempo, la mayor de 90 ms.
   Sin ventana, Chromium pinta WebGL por software: con el servidor de desarrollo, cada paso

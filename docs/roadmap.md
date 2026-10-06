@@ -1,14 +1,14 @@
 # Hoja de ruta
 
-Actualizado el 5 de octubre de 2026.
+Actualizado el 6 de octubre de 2026.
 
 | Bloque | Estado | Criterio de cierre |
 | --- | --- | --- |
 | **B0** Validación y decisiones | Hecho | Fuentes comprobadas, versiones fijadas, arquitectura y ADR. |
 | **B1** Primera funcionalidad completa | Hecho | PostGIS, demo idempotente, API de estaciones, mapa, lista y detalle, pruebas. |
 | **B2** Ingesta observada | Hecho | Una muestra real entra y se consulta con origen y fecha; repetirla no duplica. |
-| **B3** Reproducción histórica | En curso | Reproduce un periodo real respetando huecos y de forma determinista. |
-| B4 Escenarios de cobertura | Pendiente | Cálculo espacial comprobado, sin solapes duplicados ni conclusiones de demanda. |
+| **B3** Reproducción histórica | Hecho | Reproduce un periodo real respetando huecos y de forma determinista. |
+| B4 Escenarios de cobertura | Siguiente | Cálculo espacial comprobado, sin solapes duplicados ni conclusiones de demanda. |
 | B5 Demo y portfolio | Pendiente | Demo estable y desplegada, rendimiento medido, caso técnico. |
 
 ## Decisiones tomadas
@@ -19,6 +19,10 @@ Actualizado el 5 de octubre de 2026.
   (pasos en `docs/data-sources.md`).
 - **Repositorio público** en GitHub (`JAUME-25/barcelona-pulse`), código con licencia MIT. Los
   datos y recursos de terceros conservan sus licencias (ver README).
+- **Reproducir:** el reproductor bajo el mapa, con los relojes de la semana y los pasos de 5
+  minutos de otra de las propuestas (`docs/design.md`).
+- **Retención:** periodos elegidos, sin borrado automático; unas 4 semanas para el despliegue y
+  `purge` para quitar días (ADR 0012).
 
 ## B2: cómo se cerró
 
@@ -33,7 +37,7 @@ Actualizado el 5 de octubre de 2026.
 - Por el camino: la consulta del estado pasó a SQL explícito (de 119 a 14 ms, ADR 0008) y las
   respuestas se comprimen (285 KB → 29 KB).
 
-## B3: estado
+## B3: cómo se cerró
 
 1. **Hecho.** Importar un periodo: `--from` y `--to` (hasta 31 días), con la descarga de cada
    mes una sola vez. La semana del 17 al 23 de agosto de 2026 entró en 72 s (925 784
@@ -48,8 +52,10 @@ Actualizado el 5 de octubre de 2026.
 4. **Hecho.** Pruebas: rejilla en días de 23 y 25 h, huecos que dejan estaciones sin dato, cada
    paso igual al mapa en ese instante, horas de Barcelona en el navegador, interfaz (unitarias,
    de componentes y de humo en escritorio y móvil).
-5. **Por decidir.** Retención: un año entero serían ~57 millones de filas y ~11 GB. Decidir qué
-   periodos se guardan antes de importar más de unas semanas.
+5. **Hecho.** Retención (ADR 0012): periodos importados a propósito, sin borrado automático;
+   `purge` quita días enteros (sin `--yes`, solo dice qué borraría). Medido: con el doble de
+   datos, estado, fotogramas y línea temporal tardan lo mismo; `/api/sources`, que contaba todo,
+   pasa de 117–177 ms a 12 ms con un recuento que llevan ingesta y purga.
 6. **Hecho.** Días que se pueden reproducir: salen del periodo que cubre cada ingesta terminada
    (`days` en `/api/sources`, ADR 0011), no del mínimo y el máximo de las observaciones, que
    una estación con un `last_reported` de 2025 estiraba. La web enseña la semana del día
@@ -61,7 +67,7 @@ Actualizado el 5 de octubre de 2026.
 
 ## Backlog
 
-- Web: cargar MapLibre en diferido (el paquete principal pesa 1,28 MB).
+- Web: cargar MapLibre en diferido (el paquete principal pesa 1,30 MB).
 - Web: los nombres reales llegan en mayúsculas («AV. CAN MARCET, 3»); valorar un formato de
   lectura que respete partículas catalanas, sin cambiar el dato guardado.
 - Web: a escala de ciudad, 540 marcadores se solapan; valorar una vista agregada que no esconda
@@ -74,9 +80,8 @@ Actualizado el 5 de octubre de 2026.
 - Reproducir: los fotogramas pesan 110 KB por hora con Brotli (2,6 MB un día). Si pesa en
   móvil, formato por columnas (~58 KB) o caché comprimida en el servidor. Medir también la
   fluidez en móvil: pintar el mapa es lo que más cuesta.
-- API: `GET /api/sources` calcula el periodo y el recuento recorriendo todas las observaciones
-  de la fuente (80 ms con una semana real; crecerá con el histórico). Sacarlo de
-  `ingestion_runs` o precalcularlo en cada ingesta.
+- Despliegue (B5): elegir las ~4 semanas que se publican (ADR 0012); una laborable de otoño
+  enseñaría mejor los desplazamientos al trabajo que agosto.
 - API: cabeceras reenviadas (`ForwardedHeaders`) para el límite por IP detrás de un proxy.
 - Índice no único en `station_versions(station_id)` si las consultas de detalle crecen.
 - Rendimiento: medir la carga de la web con las 540 estaciones reales y la fluidez (fps).

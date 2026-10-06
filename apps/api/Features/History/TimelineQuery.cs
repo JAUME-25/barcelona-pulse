@@ -138,11 +138,15 @@ public static class TimelineQuery
         PulseDbContext db, IMemoryCache cache, DataSource source, DateTimeOffset from, DateTimeOffset to,
         TimeSpan step, CancellationToken ct)
     {
-        // La caché se invalida sola: la clave incluye la última ingesta terminada de la fuente.
+        // La caché se invalida sola: la clave incluye la última ingesta terminada de la fuente y la
+        // última purga (ADR 0012), que borra datos sin crear una ingesta.
         var lastRun = await db.IngestionRuns
             .Where(r => r.SourceId == source.Id && r.FinishedAt != null)
             .MaxAsync(r => (long?)r.Id, ct) ?? 0;
-        var key = $"timeline:{source.Id}:{from:O}:{to:O}:{step.TotalMinutes}:{lastRun}";
+        var lastPurge = await db.IngestionRuns
+            .Where(r => r.SourceId == source.Id)
+            .MaxAsync(r => r.PurgedAt, ct);
+        var key = $"timeline:{source.Id}:{from:O}:{to:O}:{step.TotalMinutes}:{lastRun}:{lastPurge?.UtcTicks}";
         if (cache.TryGetValue(key, out IReadOnlyList<TimelinePoint>? cached) && cached is not null)
         {
             return cached;

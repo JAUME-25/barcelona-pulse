@@ -36,6 +36,7 @@ procedencia visible de los datos. Estado y siguiente paso: `docs/roadmap.md`.
 docker compose up -d --build api                                   # PostGIS + migraciones + API
 docker compose run --rm api ingest demo                            # importar el demo (idempotente)
 docker compose run --rm api ingest bicing-archive --day 2026-08-20  # un día real del histórico
+docker compose run --rm api purge bicing-bcn --day 2026-08-20      # qué borraría (con --yes, lo borra)
 docker compose run --rm -e BP_REQUIRE_DB=true sdk dotnet test      # pruebas de backend
 docker compose run --rm --no-deps sdk dotnet format BarcelonaPulse.slnx --verify-no-changes
 npm --prefix apps/web run dev                                      # web en http://localhost:5173
@@ -62,6 +63,9 @@ En este equipo no hay SDK de .NET instalado: todo lo de .NET va por el contenedo
 - La consulta del estado en un instante es SQL explícito (ADR 0008): EF la traducía con
   `ROW_NUMBER()` sobre todo el histórico. Si cambian columnas de `station_observations`, revísala.
 - `returning` es palabra reservada de PostgreSQL: no la uses como alias.
+- El recuento de observaciones de cada fuente (`data_sources.observation_count`) lo llevan la
+  ingesta y `purge` en su transacción (ADR 0012): si se borran observaciones por otra vía,
+  descuadra.
 - La línea temporal (`Features/History/TimelineQuery.cs`, ADR 0009) repite en SQL la regla del
   estado en un instante y la precedencia de la leyenda (`availability.ts`) para vacías y
   llenas. Si cambia una, cambian las otras; la prueba `Every_step_matches_the_map_at_that_instant`

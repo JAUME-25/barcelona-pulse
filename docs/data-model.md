@@ -7,11 +7,11 @@ Esquema en `apps/api/Infrastructure/Migrations`.
 
 | Tabla | Qué guarda | Clave natural |
 | --- | --- | --- |
-| `data_sources` | Fuente: `kind` (`observed` o `synthetic`), nombre, atribución, licencia y tolerancia de frescura. | `id` (texto: `demo`, …) |
+| `data_sources` | Fuente: `kind` (`observed` o `synthetic`), nombre, atribución, licencia, tolerancia de frescura y recuento de observaciones (lo llevan ingesta y purga). | `id` (texto: `demo`, …) |
 | `stations` | Identidad estable de una estación dentro de su fuente. | `(source_id, source_station_id)` |
 | `station_versions` | Nombre, dirección, distrito, barrio, ubicación (`geometry(Point,4326)`) y capacidad durante un intervalo. | una vigente por estación |
 | `station_observations` | Estado publicado en un instante: estado, bicis (total, mecánicas, eléctricas), anclajes libres, deshabilitados, si presta y si admite devoluciones, y marcas de calidad. | `(station_id, observed_at)` |
-| `ingestion_runs` | Cada ingesta: fuente, adaptador y versión, entrada y sha256, periodo observado y periodo que dice cubrir (`covered_from`, `covered_to`), recuentos (nuevas, duplicadas, en conflicto, rechazadas) y resultado. | |
+| `ingestion_runs` | Cada ingesta: fuente, adaptador y versión, entrada y sha256, periodo observado y periodo que dice cubrir (`covered_from`, `covered_to`), recuentos (nuevas, duplicadas, en conflicto, rechazadas), resultado y, si sus días se quitaron, cuándo (`purged_at`). | |
 | `ingestion_rejections` | Registros rechazados con su motivo (hasta 1 000 por ingesta; el total va en `ingestion_runs`). | |
 
 Los escenarios hipotéticos (B4) tendrán sus propias tablas; nunca filas en estas con otra
@@ -93,10 +93,11 @@ zona del navegador (la prueba de humo corre con el navegador en Nueva York).
 - `ix_station_versions_one_current_per_station` (único parcial, `valid_to IS NULL`).
 - `ix_stations_source_id_source_station_id` (único).
 
-Sin particiones ni retención todavía. Medido con la semana del 17 al 23 de agosto de 2026:
-~155 000 observaciones por día y unos 206 MB por semana con índices, así que un año entero
-serían ~57 millones de filas y ~11 GB. Propuesta: guardar solo los periodos que se importen a
-propósito, no todo el archivo; decidirlo antes de importar más de unas semanas.
+**Retención** (ADR 0012). Se guardan los periodos que se importan a propósito, sin borrado
+automático: ~155 000 observaciones y unos 30 MB por día, 206 MB por semana, ~11 GB al año. Para
+el despliegue, unas 4 semanas elegidas. `purge` quita días enteros (sus observaciones) y marca
+sus ingestas; reimportarlos los recupera. Las consultas no dependen del tamaño de la tabla (van
+por el índice); sin particiones mientras no haya una ventana móvil.
 
 ## Fixture de demostración
 

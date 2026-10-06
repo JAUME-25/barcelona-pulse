@@ -14,10 +14,11 @@ namespace BarcelonaPulse.Api.Infrastructure;
 ///   ingest demo                     importa el fixture sintético (idempotente)
 ///   ingest bicing-archive --day D   importa un día del histórico de Bicing (idempotente)
 ///   ingest bicing-archive --from A --to B   importa un periodo, un día por ingesta
+///   purge FUENTE --day D [--yes]    quita días de una fuente (sin --yes, solo cuenta)
 /// </summary>
 public static class CommandLine
 {
-    private static readonly string[] Commands = ["migrate", "ingest"];
+    private static readonly string[] Commands = ["migrate", "ingest", "purge"];
 
     /// <summary>Primer mes publicado del histórico de Bicing nuevo.</summary>
     private static readonly DateOnly FirstArchiveDay = new(2019, 3, 1);
@@ -35,6 +36,10 @@ public static class CommandLine
               Importa días naturales (hora de Barcelona) del histórico mensual de Bicing del
               Ajuntament, hasta 31 por comando. Sin rutas, descarga los dos .7z de cada mes.
               Repetirlo no duplica nada.
+          purge FUENTE (--day AAAA-MM-DD | --from AAAA-MM-DD --to AAAA-MM-DD) [--yes]
+              Quita días enteros (hora de Barcelona) de una fuente, hasta 31 por comando: sus
+              observaciones y la posibilidad de reproducirlos. Sin --yes solo dice qué borraría.
+              Volver a importar esos días los recupera.
         """;
 
     public static bool IsCommand(string[] args) => args.Length > 0 && Commands.Contains(args[0]);
@@ -103,6 +108,21 @@ public static class CommandLine
                             $"{runs.Sum(r => r.ObservationsRejected)} rechazadas.");
                     }
 
+                    return 0;
+                }
+
+            case ["purge", var sourceId, .. var options] when !sourceId.StartsWith("--", StringComparison.Ordinal):
+                {
+                    var apply = options.Contains("--yes");
+                    var (from, to) = ParsePeriod(ParseOptions([.. options.Where(o => o != "--yes")]));
+                    var purger = sp.GetRequiredService<ObservationPurger>();
+                    var result = await purger.PurgeAsync(sourceId, from, to, apply, ct);
+                    Console.WriteLine(result.Applied
+                        ? $"Quitados de '{sourceId}' los días {from:yyyy-MM-dd} a {to:yyyy-MM-dd} (hora de Barcelona): " +
+                          $"{result.Observations} observaciones borradas y {result.Ingestions} ingestas marcadas."
+                        : $"Sin --yes no se borra nada. Se borrarían {result.Observations} observaciones de '{sourceId}' " +
+                          $"entre el {from:yyyy-MM-dd} y el {to:yyyy-MM-dd} (hora de Barcelona), y {result.Ingestions} " +
+                          "ingestas dejarían de poderse reproducir. Repite con --yes para hacerlo.");
                     return 0;
                 }
 

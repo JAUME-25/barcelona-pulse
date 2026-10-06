@@ -51,6 +51,9 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
             var rejections = new List<RejectedRecord>(batch.Rejected);
             var stations = await UpsertStationsAsync(batch, run, rejections, ct);
             await InsertObservationsAsync(batch, run, stations, rejections, tx, ct);
+            // El recuento de la fuente se lleva aquí, en la misma transacción (ADR 0012).
+            await db.DataSources.Where(s => s.Id == batch.Source.Id).ExecuteUpdateAsync(s => s
+                .SetProperty(x => x.ObservationCount, x => x.ObservationCount + run.ObservationsAccepted), ct);
 
             run.StationsRejected = rejections.Count(r => r.RecordKind == RecordKinds.Station);
             run.ObservationsRejected = rejections.Count(r => r.RecordKind == RecordKinds.Observation);
