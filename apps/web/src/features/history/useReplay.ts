@@ -20,12 +20,11 @@ export const SPEED_LABEL: Record<Speed, string> = {
   rapida: 'Rápida',
 };
 /**
- * Cada fotograma pide el estado de todas las estaciones, y la API admite 120 peticiones por
- * minuto: el ritmo es fijo (unas 86 por minuto) y la velocidad decide cuánto avanza el reloj en
- * cada fotograma. Un día entero tarda 3 min 22 s, 1 min 7 s o 34 s.
+ * Milisegundos por paso de 5 minutos: un día entero en 3 min 22 s, 1 min 41 s o 43 s. Los
+ * estados llegan en fotogramas de una hora (`useFrames`): a la velocidad más alta son unas 33
+ * peticiones por minuto, lejos del límite de 120 de la API.
  */
-const FRAME_MS = 700;
-const SPEED_MINUTES: Record<Speed, number> = { lenta: 5, normal: 15, rapida: 30 };
+const SPEED_MS: Record<Speed, number> = { lenta: 700, normal: 350, rapida: 150 };
 
 const NO_POINTS: readonly TimelinePoint[] = [];
 
@@ -106,15 +105,14 @@ export function useReplay(
 
   useEffect(() => {
     if (!playing || count === 0) return;
-    const jump = SPEED_MINUTES[speed] / DAY_STEP_MINUTES;
     const timer = window.setInterval(() => {
       const current = indexRef.current;
       if (stalled?.current === true || current >= count - 1) {
         setPlaying(false);
         return;
       }
-      setChosenIndex(Math.min(current + jump, count - 1));
-    }, FRAME_MS);
+      setChosenIndex(current + 1);
+    }, SPEED_MS[speed]);
     return () => {
       window.clearInterval(timer);
     };

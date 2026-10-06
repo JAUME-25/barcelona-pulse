@@ -72,6 +72,7 @@ var api = app.MapGroup("/api").RequireRateLimiting(ServiceRegistration.ApiRateLi
 api.MapSourcesEndpoints();
 api.MapStationsEndpoints();
 api.MapTimelineEndpoints();
+api.MapFramesEndpoints();
 
 await app.RunAsync();
 return 0;

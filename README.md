@@ -11,7 +11,8 @@ está desplegada. Detalle en [docs/roadmap.md](docs/roadmap.md).
 ## Qué hay
 
 - **API** ASP.NET Core sobre .NET 10 con PostgreSQL 18 y PostGIS 3.6: fuentes de datos,
-  estaciones y su estado en un instante, y la línea temporal de un periodo, con OpenAPI.
+  estaciones y su estado en un instante, y la línea temporal y los fotogramas para reproducir
+  un periodo, con OpenAPI.
 - **Ingesta** por línea de comandos, idempotente y con registro de cada ejecución.
 - **Web** React + MapLibre: mapa, leyenda que también filtra, lista accesible y detalle; modo
   «Reproducir» para recorrer un día del histórico paso a paso, con los huecos a la vista.

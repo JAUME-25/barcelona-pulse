@@ -1,6 +1,31 @@
-import type { SourceSummary, StationItem, StationsResponse, StationState } from '../api/client';
+import type {
+  FramesResponse,
+  SourceSummary,
+  StationItem,
+  StationsResponse,
+  StationState,
+} from '../api/client';
 
 type StationOverrides = Partial<Omit<StationItem, 'state'>> & { state?: Partial<StationState> };
+
+/** Los atributos de una estación tal como llegan en los fotogramas. */
+export function frameStation(
+  s: StationItem,
+  assumedUntil: string | null = null,
+): FramesResponse['stations'][number] {
+  return {
+    id: s.id,
+    sourceStationId: s.sourceStationId,
+    name: s.name,
+    address: s.address,
+    district: s.district,
+    neighbourhood: s.neighbourhood,
+    longitude: s.longitude,
+    latitude: s.latitude,
+    capacity: s.capacity,
+    assumedUntil,
+  };
+}
 
 export function stationFixture(overrides: StationOverrides = {}): StationItem {
   const { state, ...rest } = overrides;

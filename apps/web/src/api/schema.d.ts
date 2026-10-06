@@ -41,6 +41,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/sources/{id}/frames': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Fotogramas: el estado de todas las estaciones en 12 pasos seguidos
+     * @description Cada paso aplica la misma regla que GET /api/stations?at=…. Con el paso de 5 min, una hora por petición: sirve para reproducir sin una petición por paso.
+     */
+    get: operations['GetFrames'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/stations': {
     parameters: {
       query?: never;
@@ -82,6 +102,87 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** @description Un paso: las estaciones con versión vigente en ese instante y su estado. */
+    Frame: {
+      /** Format: date-time */
+      at: string;
+      states: components['schemas']['FrameState'][];
+    };
+    /** @description Fotogramas seguidos de una fuente. */
+    FramesResponse: {
+      /** @description Fuente consultada, con su tipo. */
+      source: components['schemas']['SourceRef'];
+      /**
+       * Format: date-time
+       * @description Primer paso, alineado a la rejilla (UTC).
+       */
+      from: string;
+      /**
+       * Format: int32
+       * @description Minutos entre pasos.
+       */
+      stepMinutes: number;
+      /**
+       * Format: int32
+       * @description Antigüedad máxima de una observación para contar como dato.
+       */
+      toleranceMinutes: number;
+      /** @description Si había más estaciones que el máximo por respuesta. */
+      truncated: boolean;
+      /** @description Atributos de las estaciones, una vez para todos los pasos. */
+      stations: components['schemas']['FrameStation'][];
+      /** @description Los pasos, en orden. */
+      frames: components['schemas']['Frame'][];
+    };
+    /** @description Estado de una estación en un paso. */
+    FrameState: {
+      /**
+       * Format: int32
+       * @description Posición de la estación en `stations`.
+       */
+      station: number;
+      /** @description Estado en ese instante, con la misma regla que GET /api/stations. */
+      state: components['schemas']['StationState'];
+    };
+    /** @description Atributos de una estación durante la ventana: una entrada por versión vigente en algún paso. */
+    FrameStation: {
+      /**
+       * Format: int64
+       * @description Identificador interno de la estación (el mismo en todas sus versiones).
+       */
+      id: number;
+      /** @description Identificador tal como lo publica la fuente. */
+      sourceStationId: string;
+      /** @description Nombre publicado por la fuente. */
+      name: string;
+      /** @description Dirección, si la fuente la publica. */
+      address: null | string;
+      /** @description Distrito, si la fuente lo publica. */
+      district: null | string;
+      /** @description Barrio, si la fuente lo publica. */
+      neighbourhood: null | string;
+      /**
+       * Format: double
+       * @description Longitud WGS84.
+       */
+      longitude: number;
+      /**
+       * Format: double
+       * @description Latitud WGS84.
+       */
+      latitude: number;
+      /**
+       * Format: int32
+       * @description Capacidad publicada; nula si la fuente no la da.
+       */
+      capacity: null | number;
+      /**
+       * Format: date-time
+       * @description Si es la primera versión conocida, cuándo se publicó: en los pasos anteriores sus atributos se
+       *     asumen (lo mismo que `metadataAssumed` en GET /api/stations). Nulo en las demás.
+       */
+      assumedUntil: null | string;
+    };
     /**
      * @description Frescura del dato en el instante consultado.
      * @enum {unknown}
@@ -397,6 +498,52 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['TimelineResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['HttpValidationProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetFrames: {
+    parameters: {
+      query?: {
+        /** @description Primer paso, ISO 8601 con zona. Se alinea hacia atrás a la rejilla del paso. */
+        from?: string;
+        /** @description Paso en minutos: 5, 10, 15, 30 o 60. Por defecto, 5. */
+        step?: number;
+      };
+      header?: never;
+      path: {
+        /** @description Identificador de la fuente. */
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['FramesResponse'];
         };
       };
       /** @description Bad Request */

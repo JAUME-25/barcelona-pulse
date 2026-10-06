@@ -108,6 +108,76 @@
         }
       }
     },
+    "/api/sources/{id}/frames": {
+      "get": {
+        "tags": [
+          "History"
+        ],
+        "summary": "Fotogramas: el estado de todas las estaciones en 12 pasos seguidos",
+        "description": "Cada paso aplica la misma regla que GET /api/stations?at=…. Con el paso de 5 min, una hora por petición: sirve para reproducir sin una petición por paso.",
+        "operationId": "GetFrames",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la fuente.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "Primer paso, ISO 8601 con zona. Se alinea hacia atrás a la rejilla del paso.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "step",
+            "in": "query",
+            "description": "Paso en minutos: 5, 10, 15, 30 o 60. Por defecto, 5.",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FramesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/stations": {
       "get": {
         "tags": [
@@ -240,6 +310,175 @@
   },
   "components": {
     "schemas": {
+      "Frame": {
+        "required": [
+          "at",
+          "states"
+        ],
+        "type": "object",
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "states": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FrameState"
+            }
+          }
+        },
+        "description": "Un paso: las estaciones con versión vigente en ese instante y su estado."
+      },
+      "FramesResponse": {
+        "required": [
+          "source",
+          "from",
+          "stepMinutes",
+          "toleranceMinutes",
+          "truncated",
+          "stations",
+          "frames"
+        ],
+        "type": "object",
+        "properties": {
+          "source": {
+            "description": "Fuente consultada, con su tipo.",
+            "$ref": "#/components/schemas/SourceRef"
+          },
+          "from": {
+            "type": "string",
+            "description": "Primer paso, alineado a la rejilla (UTC).",
+            "format": "date-time"
+          },
+          "stepMinutes": {
+            "type": "integer",
+            "description": "Minutos entre pasos.",
+            "format": "int32"
+          },
+          "toleranceMinutes": {
+            "type": "integer",
+            "description": "Antigüedad máxima de una observación para contar como dato.",
+            "format": "int32"
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "Si había más estaciones que el máximo por respuesta."
+          },
+          "stations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FrameStation"
+            },
+            "description": "Atributos de las estaciones, una vez para todos los pasos."
+          },
+          "frames": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Frame"
+            },
+            "description": "Los pasos, en orden."
+          }
+        },
+        "description": "Fotogramas seguidos de una fuente."
+      },
+      "FrameState": {
+        "required": [
+          "station",
+          "state"
+        ],
+        "type": "object",
+        "properties": {
+          "station": {
+            "type": "integer",
+            "description": "Posición de la estación en `stations`.",
+            "format": "int32"
+          },
+          "state": {
+            "description": "Estado en ese instante, con la misma regla que GET /api/stations.",
+            "$ref": "#/components/schemas/StationState"
+          }
+        },
+        "description": "Estado de una estación en un paso."
+      },
+      "FrameStation": {
+        "required": [
+          "id",
+          "sourceStationId",
+          "name",
+          "address",
+          "district",
+          "neighbourhood",
+          "longitude",
+          "latitude",
+          "capacity",
+          "assumedUntil"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Identificador interno de la estación (el mismo en todas sus versiones).",
+            "format": "int64"
+          },
+          "sourceStationId": {
+            "type": "string",
+            "description": "Identificador tal como lo publica la fuente."
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre publicado por la fuente."
+          },
+          "address": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Dirección, si la fuente la publica."
+          },
+          "district": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Distrito, si la fuente lo publica."
+          },
+          "neighbourhood": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Barrio, si la fuente lo publica."
+          },
+          "longitude": {
+            "type": "number",
+            "description": "Longitud WGS84.",
+            "format": "double"
+          },
+          "latitude": {
+            "type": "number",
+            "description": "Latitud WGS84.",
+            "format": "double"
+          },
+          "capacity": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "description": "Capacidad publicada; nula si la fuente no la da.",
+            "format": "int32"
+          },
+          "assumedUntil": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Si es la primera versión conocida, cuándo se publicó: en los pasos anteriores sus atributos se\nasumen (lo mismo que `metadataAssumed` en GET /api/stations). Nulo en las demás.",
+            "format": "date-time"
+          }
+        },
+        "description": "Atributos de una estación durante la ventana: una entrada por versión vigente en algún paso."
+      },
       "Freshness": {
         "enum": [
           "current",

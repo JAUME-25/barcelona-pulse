@@ -23,7 +23,7 @@ que solo reenvían llamadas.
 | `Features/Sources` | Fuentes de datos (observada o sintética) y `GET /api/sources` con el periodo cubierto. |
 | `Features/Stations` | Estaciones, versiones de atributos y observaciones; regla del estado en un instante; `GET /api/stations` y `GET /api/stations/{id}`. |
 | `Features/Ingestion` | Contrato normalizado, validación común, `StationIngestor` (idempotente) y adaptadores: `Demo/DemoFixtureAdapter` y `BicingArchive/BicingArchiveAdapter`. |
-| `Features/History` | Línea temporal de una fuente para reproducir un periodo: `GET /api/sources/{id}/timeline` (ADR 0009). |
+| `Features/History` | Reproducir un periodo: línea temporal `GET /api/sources/{id}/timeline` (ADR 0009) y fotogramas `GET /api/sources/{id}/frames` (ADR 0010). |
 | `Infrastructure` | `PulseDbContext`, migraciones, registro de servicios, CLI, utilidades de instantes y geometría. |
 
 Previsto: `Features/Scenarios` (B4), en su propia carpeta.
@@ -47,9 +47,10 @@ tipado; `app` con la composición y el tema visual (`theme.ts`).
 5. Para reproducir un periodo, `GET /api/sources/{id}/timeline` aplica la misma regla en una
    rejilla de pasos y devuelve, en cada uno, cuántas estaciones tienen dato y cuántas bicis
    suman. Los huecos se ven como pasos con menos estaciones con dato (ADR 0009).
-6. Al reproducir, la web pide el día cada 5 min y la semana por horas, y en cada fotograma
-   `GET /api/stations?at=…` con el instante del paso. Mientras llega, sigue viendo el anterior
-   de la misma fuente. El ritmo es fijo (0,7 s) para no pasar del límite de peticiones.
+6. Al reproducir, la web pide la línea temporal del día cada 5 min y la de la semana por horas.
+   El estado de las estaciones llega en fotogramas de una hora (`GET /api/sources/{id}/frames`,
+   ADR 0010): una petición por hora del día, con la siguiente pedida por adelantado. Mientras
+   llega una hora se sigue viendo el último paso ya cargado.
 
 ## Ingesta
 
@@ -148,6 +149,11 @@ Entorno: Windows 11, 16 núcleos, Docker Desktop 29.6, compilación de producci�
   2026, 925 784 observaciones nuevas): 72 s.
 - Línea temporal con esa semana (1 080 173 observaciones): un día a 5 min, 0,48 s la primera
   vez; la semana a 15 min, 1,7 s; repetidas, 5–9 ms desde la caché (ADR 0009).
+- Fotogramas de una hora real: 47–110 ms; 2 MB sin comprimir y 110 KB con Brotli (ADR 0010).
+- Reproducir un día entero a la velocidad más alta (compilación de producción, GPU): 43,7 s,
+  23 peticiones y ningún 429; tareas largas del navegador, un 13 % del tiempo, la mayor de 90 ms.
+  Sin ventana, Chromium pinta WebGL por software: con el servidor de desarrollo, cada paso
+  tardaba ~260 ms en vez de 150. Por eso se mide con la GPU (`e2e/reproduccion.measure.ts`).
 - El tiempo del mapa depende de la red hasta OpenFreeMap; la red no se limitó.
 - La carga de la web se midió con la demo. Falta medirla con las 540 estaciones reales, y la
   fluidez (fps) en escritorio y móvil: queda para B5.

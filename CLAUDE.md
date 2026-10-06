@@ -68,9 +68,12 @@ En este equipo no hay SDK de .NET instalado: todo lo de .NET va por el contenedo
   lo vigila.
 - Un `MAX(observed_at)` sobre el join de observaciones y estaciones recorre todo el histórico
   (~100 ms con una semana): usa `StationQueries.LatestObservationAsync`, que va por estación.
-- Cada fotograma de «Reproducir» es una petición a `/api/stations`, y la API admite 120 por
-  minuto e IP: no subas el ritmo de `useReplay` sin un endpoint de fotogramas. Las capturas
-  seguidas también lo agotan (sale «Too Many Requests»): espera un minuto.
+- «Reproducir» pide fotogramas de una hora (`/api/sources/{id}/frames`, ADR 0010), no
+  `/api/stations` por paso: la API admite 120 peticiones por minuto e IP. Las capturas seguidas
+  también pueden agotarlo (sale «Too Many Requests»): espera un minuto.
+- La fluidez se mide con la compilación de producción y la GPU (`e2e/reproduccion.measure.ts`):
+  en el servidor de desarrollo React va varias veces más lento y, sin ventana, Chromium pinta
+  WebGL por software.
 - El navegador integrado de Claude no pinta WebGL si su ventana no está al frente: el mapa se
   revisa con las capturas de Playwright (`e2e/*.capture.ts`).
 - SharpCompress 1.0.0: `SevenZipArchive.Open(...)` (la documentación de `master` dice

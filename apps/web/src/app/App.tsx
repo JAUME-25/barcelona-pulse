@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import type { StationItem } from '../api/client';
 import { ReplayDeck } from '../features/history/ReplayDeck';
 import { ModeSwitch, type Mode } from '../features/history/ReplayParts';
+import { useFrames } from '../features/history/useFrames';
 import { useReplay } from '../features/history/useReplay';
 import { AvailabilityFilter } from '../features/stations/AvailabilityFilter';
 import {
@@ -96,11 +97,14 @@ export function App() {
     stationsFailedRef,
   );
 
+  // Al explorar, un instante con /api/stations; al reproducir, fotogramas de una hora.
+  const explored = useStations(replaying ? null : sourceId, instantFor(source, now));
+  const framed = useFrames(replaying ? sourceId : null, replay.point?.at);
   const {
     state: stationsState,
     previous: previousStations,
     retry: retryStations,
-  } = useStations(sourceId, (replaying ? replay.point?.at : undefined) ?? instantFor(source, now));
+  } = replaying ? framed : explored;
   useEffect(() => {
     stationsFailedRef.current = stationsState.status === 'error';
   });

@@ -43,10 +43,8 @@ Actualizado el 5 de octubre de 2026.
    por paso, misma regla que el mapa, máximo 7 días y caché por ingesta (ADR 0009).
 3. **Hecho.** Interfaz de «Reproducir» (`?modo=reproducir&dia=…&hora=…`), elegida entre tres
    propuestas (`docs/design.md`). Pista y relojes con teclado, ratón y pasos de 5 min; la
-   reproducción para si no llega el estado de las estaciones. Medido: cada fotograma es una
-   petición a `/api/stations` y a velocidad alta se pasaba del límite de 120 por minuto (429).
-   Ahora el ritmo es fijo (un fotograma cada 0,7 s, 88 peticiones en un minuto, ningún 429) y la
-   velocidad decide cuánto avanza el reloj (5, 15 o 30 min).
+   reproducción para si no llega el estado de las estaciones. Una petición por paso superaba el
+   límite de 120 por minuto (429): ahora el estado llega en fotogramas de una hora (punto 7).
 4. **Hecho.** Pruebas: rejilla en días de 23 y 25 h, huecos que dejan estaciones sin dato, cada
    paso igual al mapa en ese instante, horas de Barcelona en el navegador, interfaz (unitarias,
    de componentes y de humo en escritorio y móvil).
@@ -57,8 +55,9 @@ Actualizado el 5 de octubre de 2026.
    lo estira hasta entonces (el dato es correcto: por eso sale «sin dato reciente»). Los días
    reproducibles deben salir de lo importado (la ventana de cada ingesta), no del mínimo y el
    máximo. Mientras, la web ofrece los últimos 7 días del periodo.
-7. **Propuesta.** Endpoint de «fotogramas» (una hora de pasos en una petición, cacheable porque
-   el pasado no cambia): reproducción a pasos de 5 min más rápida sin acercarse al límite.
+7. **Hecho.** Fotogramas: `GET /api/sources/{id}/frames`, 12 pasos por petición con la misma
+   regla que el mapa (ADR 0010). Un día entero a la velocidad más alta, con todos los pasos de
+   5 min: 43,7 s, 23 peticiones y ningún 429.
 
 ## Backlog
 
@@ -72,6 +71,9 @@ Actualizado el 5 de octubre de 2026.
 - Tiempo real con el token de Open Data BCN (`Authorization: <token>`; un 302 a `/tokens` es un
   fallo de autenticación): tarea programada y «Última observación» con frescura medida.
 - API: caché HTTP con validación para `/api/stations`.
+- Reproducir: los fotogramas pesan 110 KB por hora con Brotli (2,6 MB un día). Si pesa en
+  móvil, formato por columnas (~58 KB) o caché comprimida en el servidor. Medir también la
+  fluidez en móvil: pintar el mapa es lo que más cuesta.
 - API: `GET /api/sources` calcula el periodo y el recuento recorriendo todas las observaciones
   de la fuente (80 ms con una semana real; crecerá con el histórico). Sacarlo de
   `ingestion_runs` o precalcularlo en cada ingesta.

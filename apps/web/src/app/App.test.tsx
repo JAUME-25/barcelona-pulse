@@ -2,9 +2,10 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event';
 import { useEffect } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { StationItem, TimelinePoint, TimelineResponse } from '../api/client';
+import type { FramesResponse, StationItem, TimelinePoint, TimelineResponse } from '../api/client';
 import {
   demoSource,
+  frameStation,
   observedResponse,
   observedSource,
   stationFixture,
@@ -112,6 +113,31 @@ function timelineFor(url: URL): TimelineResponse {
     stepMinutes: step / 60_000,
     toleranceMinutes: 30,
     points,
+  };
+}
+
+const iso = (t: number) => new Date(t).toISOString().replace('.000Z', '+00:00');
+
+/** Fotogramas de una hora: Pl. de Catalunya tiene tantas bicis como el minuto del paso. */
+function framesFor(url: URL): FramesResponse {
+  const from = Date.parse(url.searchParams.get('from') ?? '');
+  return {
+    source: stationsResponse([]).source,
+    from: iso(from),
+    stepMinutes: 5,
+    toleranceMinutes: 30,
+    truncated: false,
+    stations: stations.map((s) => frameStation(s)),
+    frames: Array.from({ length: 12 }, (_, k) => {
+      const at = from + k * 300_000;
+      return {
+        at: iso(at),
+        states: stations.map((s, i) => ({
+          station: i,
+          state: i === 0 ? { ...s.state, bikesAvailable: new Date(at).getUTCMinutes() } : s.state,
+        })),
+      };
+    }),
   };
 }
 
@@ -269,7 +295,8 @@ describe('App', () => {
     mockApi((path, url) => {
       if (path === '/api/sources') return json([demoSource]);
       if (path === '/api/sources/demo/timeline') return json(timelineFor(url));
-      return json(stationsResponse(stations));
+      if (path === '/api/sources/demo/frames') return json(framesFor(url));
+      return json({ title: 'Petición inesperada' }, 500);
     });
     const user = userEvent.setup();
     window.history.replaceState(null, '', '/?fuente=demo&modo=reproducir&hora=08:30');
@@ -281,17 +308,22 @@ describe('App', () => {
         '08:30, martes, 10 de marzo de 2026. 1 sin bicis, 0 llenas, 3 de 3 con dato.',
       );
     });
-    const stationsAt = () =>
-      requests.filter((u) => u.pathname === '/api/stations').map((u) => u.searchParams.get('at'));
+    // Las 08:30 en Barcelona son las 07:30 UTC: el paso de minuto 30 de esa hora.
+    const catalunya = () => screen.getByRole('button', { name: /^Pl\. de Catalunya/ });
     await waitFor(() => {
-      expect(stationsAt()).toContain('2026-03-10T07:30:00+00:00');
+      expect(within(catalunya()).getByText('30')).toBeTruthy();
     });
 
     await user.click(screen.getByRole('button', { name: '5 minutos después' }));
     expect(slider.getAttribute('aria-valuetext')).toMatch(/^08:35,/);
-    await waitFor(() => {
-      expect(stationsAt()).toContain('2026-03-10T07:35:00+00:00');
-    });
+    expect(within(catalunya()).getByText('35')).toBeTruthy();
+
+    // Una petición por hora (la actual y la siguiente, por adelantado), ninguna por paso.
+    const framesFrom = requests
+      .filter((u) => u.pathname === '/api/sources/demo/frames')
+      .map((u) => u.searchParams.get('from'));
+    expect(framesFrom).toEqual(['2026-03-10T07:00:00.000Z', '2026-03-10T08:00:00.000Z']);
+    expect(requests.some((u) => u.pathname === '/api/stations')).toBe(false);
 
     // Antes de los datos no hay ceros: el momento dice que no hay datos.
     slider.focus();

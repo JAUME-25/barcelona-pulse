@@ -16,7 +16,7 @@ interface Keyed<T> {
   value: Remote<T>;
 }
 
-function asApiError(error: unknown): ApiError {
+export function asApiError(error: unknown): ApiError {
   if (error instanceof ApiError) return error;
   return new ApiError(
     'No se ha podido contactar con la API. Comprueba la conexión y vuelve a intentarlo.',

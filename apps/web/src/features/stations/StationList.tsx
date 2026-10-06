@@ -1,6 +1,7 @@
+import { memo, useCallback, useEffect, useRef } from 'react';
 import type { StationItem } from '../../api/client';
 import { formatTime } from '../../shared/format';
-import { AVAILABILITY_LABEL, availabilityOf } from './availability';
+import { AVAILABILITY_LABEL, availabilityOf, type Availability } from './availability';
 import { OctagonGlyph } from './OctagonGlyph';
 
 interface StationListProps {
@@ -34,47 +35,94 @@ function Figure({ value, unit }: { value: number | null; unit: string }) {
   );
 }
 
+interface StationRowProps {
+  id: number;
+  name: string;
+  category: Availability;
+  summaryText: string;
+  bikes: number | null;
+  docks: number | null;
+  current: boolean;
+  onSelect: (id: number) => void;
+}
+
+/**
+ * Solo valores simples: al reproducir, cada paso trae objetos nuevos para las 540 estaciones y
+ * así solo se vuelven a pintar las filas que cambian de verdad.
+ */
+const StationRow = memo(function StationRow({
+  id,
+  name,
+  category,
+  summaryText,
+  bikes,
+  docks,
+  current,
+  onSelect,
+}: StationRowProps) {
+  return (
+    <li>
+      <button
+        type="button"
+        className="station-list__item"
+        data-station-id={id}
+        aria-current={current ? 'true' : undefined}
+        onClick={() => {
+          onSelect(id);
+        }}
+      >
+        <OctagonGlyph category={category} size={22} />
+        <span className="station-list__text">
+          <span className="station-list__name">{name}</span>
+          <span className="station-list__summary">
+            {summaryText}
+            {bikes !== null && (
+              <span className="visually-hidden">
+                , {bikes === 1 ? '1 bici' : `${bikes} bicis`}
+                {docks !== null &&
+                  `, ${docks === 1 ? '1 anclaje libre' : `${docks} anclajes libres`}`}
+              </span>
+            )}
+          </span>
+        </span>
+        <span className="station-list__figures" aria-hidden="true">
+          <Figure value={bikes} unit={bikes === 1 ? 'bici' : 'bicis'} />
+          <Figure value={docks} unit="libres" />
+        </span>
+      </button>
+    </li>
+  );
+});
+
 /** Alternativa accesible al mapa: cada estación es un botón con su estado en texto. */
 export function StationList({ stations, selectedId, onSelect }: StationListProps) {
+  // La función que llega cambia con los datos; las filas reciben siempre la misma.
+  const onSelectRef = useRef(onSelect);
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+  });
+  const select = useCallback((id: number) => {
+    onSelectRef.current(id);
+  }, []);
+
   return (
     <ul className="station-list">
       {stations.map((station) => {
         const category = availabilityOf(station.state);
         // Sin dato o fuera de servicio no se enseñan cifras: se leerían como disponibles.
         const known = category !== 'unknown' && category !== 'outOfService';
-        const bikes = known ? station.state.bikesAvailable : null;
-        const docks = known ? station.state.docksAvailable : null;
         return (
-          <li key={station.id}>
-            <button
-              type="button"
-              className="station-list__item"
-              data-station-id={station.id}
-              aria-current={station.id === selectedId ? 'true' : undefined}
-              onClick={() => {
-                onSelect(station.id);
-              }}
-            >
-              <OctagonGlyph category={category} size={22} />
-              <span className="station-list__text">
-                <span className="station-list__name">{station.name}</span>
-                <span className="station-list__summary">
-                  {summary(station)}
-                  {known && bikes !== null && (
-                    <span className="visually-hidden">
-                      , {bikes === 1 ? '1 bici' : `${bikes} bicis`}
-                      {docks !== null &&
-                        `, ${docks === 1 ? '1 anclaje libre' : `${docks} anclajes libres`}`}
-                    </span>
-                  )}
-                </span>
-              </span>
-              <span className="station-list__figures" aria-hidden="true">
-                <Figure value={bikes} unit={bikes === 1 ? 'bici' : 'bicis'} />
-                <Figure value={docks} unit="libres" />
-              </span>
-            </button>
-          </li>
+          <StationRow
+            key={station.id}
+            id={station.id}
+            name={station.name}
+            category={category}
+            summaryText={summary(station)}
+            bikes={known ? station.state.bikesAvailable : null}
+            docks={known ? station.state.docksAvailable : null}
+            current={station.id === selectedId}
+            onSelect={select}
+          />
         );
       })}
     </ul>
