@@ -55,4 +55,15 @@ public sealed class TimelineGridTests
             ],
             weeks);
     }
+
+    [Fact]
+    public void The_week_of_the_october_time_change_fits_in_one_request()
+    {
+        // El 26-10-2025 tiene 25 h: la semana dura 168 h 45 min y la API la admite entera.
+        var (_, from, to) = Assert.Single(TimelineWarmUp.Weeks([new DateOnly(2025, 10, 22)]));
+
+        Assert.Equal(DateTimeOffset.Parse("2025-10-19T22:00:00Z"), from);
+        Assert.Equal(DateTimeOffset.Parse("2025-10-26T22:45:00Z"), to);
+        Assert.True(to - from <= TimelineGrid.MaxRange);
+    }
 }

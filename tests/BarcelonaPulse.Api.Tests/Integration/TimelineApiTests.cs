@@ -151,6 +151,20 @@ public sealed class TimelineApiTests(DemoApiFixture fixture) : IClassFixture<Dem
     }
 
     [Fact]
+    public async Task The_week_of_the_october_time_change_is_accepted_whole()
+    {
+        // La que piden la web y el precalentamiento: del lunes 20-10-2025 a las 00:00 al domingo 26 a
+        // las 23:45, hora de Barcelona. El domingo tiene 25 h: son 168 h 45 min.
+        var response = await Client().GetAsync(
+            "/api/sources/demo/timeline?from=2025-10-19T22:00:00.000Z&to=2025-10-26T22:45:00.000Z&step=15",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var timeline = await response.Content.ReadFromJsonAsync<TimelineResponse>(Json, TestContext.Current.CancellationToken);
+        Assert.Equal(6 * 96 + 100, timeline!.Points.Count); // seis días de 96 pasos y uno de 100
+    }
+
+    [Fact]
     public async Task An_unknown_source_is_a_404()
     {
         var response = await Client().GetAsync("/api/sources/no-existe/timeline", TestContext.Current.CancellationToken);

@@ -50,7 +50,12 @@ public sealed record TimelineResponse(
 public static class TimelineGrid
 {
     public static readonly int[] AllowedStepMinutes = [5, 10, 15, 30, 60];
-    public static readonly TimeSpan MaxRange = TimeSpan.FromDays(7);
+
+    /// <summary>
+    /// Siete días de Barcelona: la semana del cambio de hora de octubre tiene un día de 25 h y
+    /// dura 169 h (la web y el precalentamiento la piden entera).
+    /// </summary>
+    public static readonly TimeSpan MaxRange = TimeSpan.FromDays(7) + TimeSpan.FromHours(1);
 
     public static (DateTimeOffset From, DateTimeOffset To, int Points) Align(
         DateTimeOffset from, DateTimeOffset to, TimeSpan step)
@@ -150,9 +155,16 @@ public static class TimelineQuery
         return $"timeline:{source.Id}:{from:O}:{to:O}:{step.TotalMinutes}:{lastRun}:{lastPurge?.UtcTicks}";
     }
 
+    /// <summary>
+    /// Cálculos sin caché a la vez. Uno tarda segundos con una semana y la base de producción
+    /// tiene 1,5 CPU: sin tope, una ráfaga de rangos distintos (cada uno, otra clave) la dejaba sin
+    /// sitio para nada más. Lo que ya está en la caché no espera.
+    /// </summary>
+    private static readonly SemaphoreSlim Computations = new(2);
+
     public static async Task<IReadOnlyList<TimelinePoint>> GetAsync(
         PulseDbContext db, IMemoryCache cache, DataSource source, DateTimeOffset from, DateTimeOffset to,
-        TimeSpan step, CancellationToken ct)
+        TimeSpan step, CancellationToken ct, CacheItemPriority priority = CacheItemPriority.Normal)
     {
         var key = await KeyAsync(db, source, from, to, step, ct);
         if (cache.TryGetValue(key, out IReadOnlyList<TimelinePoint>? cached) && cached is not null)
@@ -160,12 +172,47 @@ public static class TimelineQuery
             return cached;
         }
 
+        await Computations.WaitAsync(ct);
+        try
+        {
+            // Mientras esperaba, otra petición puede haber calculado lo mismo.
+            if (cache.TryGetValue(key, out cached) && cached is not null)
+            {
+                return cached;
+            }
+
+            var points = await ComputeAsync(db, source, from, to, step, ct);
+            // Sin caducidad por tiempo: la clave cambia con cada ingesta o purga y el límite de la
+            // caché (200 entradas, Program.cs) acota la memoria. Así sigue ahí lo que deja calculado
+            // TimelineWarmUp, aunque nadie lo pida en horas; con prioridad alta, lo último que se
+            // desaloja si la caché se llena.
+            cache.Set(key, points, new MemoryCacheEntryOptions { Size = 1, Priority = priority });
+            return points;
+        }
+        finally
+        {
+            Computations.Release();
+        }
+    }
+
+    private static async Task<IReadOnlyList<TimelinePoint>> ComputeAsync(
+        PulseDbContext db, DataSource source, DateTimeOffset from, DateTimeOffset to, TimeSpan step, CancellationToken ct)
+    {
         var connection = (NpgsqlConnection)db.Database.GetDbConnection();
         var opened = connection.State != System.Data.ConnectionState.Open;
         if (opened) await connection.OpenAsync(ct);
         try
         {
-            await using var command = new NpgsqlCommand(Sql, connection);
+            await using var tx = await connection.BeginTransactionAsync(ct);
+            // Como mucho 20 s (nginx corta a los 30), y sin JIT: con la estimación del
+            // generate_series compilaba siempre y la compilación costaba más que la consulta.
+            await using (var settings = new NpgsqlCommand(
+                "SET LOCAL statement_timeout = 20000; SET LOCAL jit = off", connection, tx))
+            {
+                await settings.ExecuteNonQueryAsync(ct);
+            }
+
+            await using var command = new NpgsqlCommand(Sql, connection, tx);
             command.Parameters.Add(new NpgsqlParameter("from", NpgsqlDbType.TimestampTz) { Value = from.ToUniversalTime() });
             command.Parameters.Add(new NpgsqlParameter("to", NpgsqlDbType.TimestampTz) { Value = to.ToUniversalTime() });
             command.Parameters.Add(new NpgsqlParameter("step", NpgsqlDbType.Interval) { Value = step });
@@ -187,10 +234,6 @@ public static class TimelineQuery
                     reader.IsDBNull(7) ? null : (int)reader.GetInt64(7)));
             }
 
-            // Sin caducidad por tiempo: la clave cambia con cada ingesta o purga y el límite de la
-            // caché (200 entradas, Program.cs) acota la memoria. Así sigue ahí lo que deja calculado
-            // TimelineWarmUp, aunque nadie lo pida en horas.
-            cache.Set(key, (IReadOnlyList<TimelinePoint>)points, new MemoryCacheEntryOptions { Size = 1 });
             return points;
         }
         finally

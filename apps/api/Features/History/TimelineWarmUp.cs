@@ -68,7 +68,7 @@ public sealed class TimelineWarmUp(
                 }
 
                 var started = Stopwatch.GetTimestamp();
-                await TimelineQuery.GetAsync(db, cache, source, from, to, Step, ct);
+                await TimelineQuery.GetAsync(db, cache, source, from, to, Step, ct, CacheItemPriority.High);
                 computed++;
                 logger.LogInformation(
                     "Rejilla de huecos de {Source}, semana del {Monday:yyyy-MM-dd}: {Milliseconds} ms",

@@ -102,6 +102,11 @@ Puntos de entrada, por línea de comandos (no hay endpoint HTTP de importación)
   Vite reenvía `/api`.
 - Límite de 120 peticiones por minuto e IP en `/api` (configurable). Consultas acotadas: caja
   máxima de 1° y un máximo de 1 000 estaciones por respuesta (`truncated` lo indica).
+- La línea temporal calcula como mucho dos rangos a la vez; los demás esperan y, si mientras
+  tanto otro ha calculado el mismo, lo toman de la caché. Lo que ya está en la caché no espera.
+  Cada cálculo tiene 20 s de tope y va sin JIT, que con la estimación del `generate_series` se
+  activaba siempre y añadía un 50 %. Medido en local el 7-10-2026: 12 semanas distintas a la vez,
+  nunca más de 2 consultas en PostgreSQL y todas servidas en 5,6 s.
 - Detrás de un proxy, la IP del cliente sale de `X-Forwarded-For` solo si la conexión llega de
   las redes de `ForwardedHeaders:KnownNetworks` (o de localhost); si no, se ignora y nadie puede
   hacerse pasar por otra IP. En producción, la red de Docker del proyecto (`docs/despliegue.md`).
