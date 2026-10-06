@@ -6,8 +6,9 @@ de cada dato, reproducción del histórico y escenarios de cobertura con estacio
 **Estado (6 de octubre de 2026):** B0 a B4 terminados: la aplicación muestra y reproduce días
 reales de Bicing (el histórico público del Ajuntament) y una demo sintética, sin mezclarlos, y
 compara la cobertura de la red real con escenarios hipotéticos. B5 (demo publicada y caso
-técnico) en curso: el rendimiento ya está medido; todavía no está desplegada. Detalle en
-[docs/roadmap.md](docs/roadmap.md).
+técnico) en curso: en marcha en https://pulse.jaumeperez.com con las cuatro semanas del 4 al 31
+de mayo de 2026, rendimiento medido y límites visibles; el caso técnico está en
+[docs/caso-tecnico.md](docs/caso-tecnico.md). Detalle en [docs/roadmap.md](docs/roadmap.md).
 
 ## Qué hay
 
@@ -165,6 +166,7 @@ La licencia MIT no cubre los datos ni los recursos de terceros, que mantienen su
 
 ## Documentación
 
+- [Caso técnico](docs/caso-tecnico.md): problema, decisiones, dificultades, mediciones y límites
 - [Arquitectura y versiones](docs/architecture.md)
 - [Fuentes de datos](docs/data-sources.md)
 - [Modelo de datos](docs/data-model.md)

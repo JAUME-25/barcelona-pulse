@@ -131,8 +131,13 @@ honesta de lo hecho.
      en el despliegue de `6664c93` (6-10-2026, 59 s en total): la API se recreó, el
      precalentamiento tardó de 3,5 a 4,2 s por semana y, después, la rejilla salió en 0,58 s a
      la primera.
-4. **Pendiente.** Caso técnico para el portfolio: qué problema resuelve, decisiones, dificultades
-   reales, mediciones y límites.
+4. **En curso.** Caso técnico para el portfolio: qué problema resuelve, decisiones, dificultades
+   reales, mediciones y límites. El texto está en `docs/caso-tecnico.md` (6-10-2026), con las
+   cifras de las ADR, de `docs/architecture.md` y de producción, y las pruebas de la CI de
+   `5d438d7` (151 de backend y 71 de la web). Dice que está hecho con un asistente de IA, sin
+   decir que lo haya hecho todo la IA (decidido por Jaume el 6-10-2026). Falta la página en
+   jaumeperez.com, decidida ese día: la misma plantilla que la de Cuadra, en tres idiomas y con
+   capturas reales.
 
 ## Backlog
 
