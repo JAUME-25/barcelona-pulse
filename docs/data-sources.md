@@ -1,7 +1,8 @@
 # Fuentes de datos
 
 Comprobado el 5 de octubre de 2026 desde este entorno. Las muestras y su procedencia (URL, hora,
-estado HTTP, sha256) están en [`docs/samples/`](samples/); las del GBFS del operador no se
+estado HTTP, sha256) están en [`docs/samples/`](samples/), salvo el archivo de distritos, que
+ahora va dentro de la API (ver «Límites administrativos»); las del GBFS del operador no se
 redistribuyen porque no publica licencia. Que un catálogo liste un recurso no
 prueba que funcione: todo lo de aquí se ha pedido de verdad.
 
@@ -10,13 +11,13 @@ prueba que funcione: todo lo de aquí se ha pedido de verdad.
 | Fuente | Acceso hoy | Uso previsto |
 | --- | --- | --- |
 | Bicing tiempo real, Open Data BCN (JSON) | **Requiere token personal.** Sin él: 302 a `/tokens`. | Pendiente de token. |
-| Bicing histórico mensual, Open Data BCN (.7z con CSV) | Público. 2019-03 a 2026-08, con huecos. | **En uso** (B2): `ingest bicing-archive --day`. B3 para periodos. |
+| Bicing histórico mensual, Open Data BCN (.7z con CSV) | Público. 2019-03 a 2026-08, con huecos. | **En uso** (B2 y B3): `ingest bicing-archive --day` o `--from/--to`. |
 | Información de estaciones histórica (.7z) | Público. Columnas comprobadas (B2). | **En uso**: ubicación, capacidad, distrito y barrio con versiones. |
 | GBFS del operador (`barcelona.publicbikesystem.net`) | Público y sin autenticación. **Sin licencia publicada.** | Ninguno hasta aclarar condiciones. |
 | datos.gob.es | Solo metadatos; remite a Open Data BCN; desactualizado (último mes listado: 2026-04). | Ninguno. |
 | API antigua `api.bsmsa.eu` | 503 «API blocked». | Ninguno. |
 | Mapa base OpenFreeMap | Público, sin clave ni límites publicados. | Ya en uso. |
-| Límites administrativos, Open Data BCN | Público, CC BY 4.0. | B4 (área de estudio). |
+| Límites administrativos, Open Data BCN | Público, CC BY 4.0. | **En uso** (B4): áreas de estudio de la cobertura (`ingest study-areas`). |
 
 ## Bicing en Open Data BCN
 
@@ -128,7 +129,9 @@ Pendiente de comprobar con un token válido: formato real, versión GBFS, si tra
   lat). 10 distritos y 73 barrios.
 - El término municipal como polígono está en un ZIP de CartoBCN (EPSG:25831, 22,8 MB).
 - El servidor da 503 a ratos; hay que reintentar con espera.
-- Muestra: `docs/samples/boundaries/BarcelonaCiutat_Districtes.json` (sin modificar).
+- **En uso** (B4): los 10 distritos son las áreas de estudio de la cobertura y Barcelona, su
+  unión (ADR 0013). El archivo va dentro de la API, sin modificar:
+  `apps/api/Features/Scenarios/Data/BarcelonaCiutat_Districtes.json`, con su `PROVENANCE.md`.
 
 ## Sistema de referencia para medir
 

@@ -8,7 +8,7 @@ Actualizado el 6 de octubre de 2026.
 | **B1** Primera funcionalidad completa | Hecho | PostGIS, demo idempotente, API de estaciones, mapa, lista y detalle, pruebas. |
 | **B2** Ingesta observada | Hecho | Una muestra real entra y se consulta con origen y fecha; repetirla no duplica. |
 | **B3** Reproducción histórica | Hecho | Reproduce un periodo real respetando huecos y de forma determinista. |
-| B4 Escenarios de cobertura | Siguiente | Cálculo espacial comprobado, sin solapes duplicados ni conclusiones de demanda. |
+| **B4** Escenarios de cobertura | En curso | Cálculo espacial comprobado, sin solapes duplicados ni conclusiones de demanda. |
 | B5 Demo y portfolio | Pendiente | Demo estable y desplegada, rendimiento medido, caso técnico. |
 
 ## Decisiones tomadas
@@ -64,6 +64,20 @@ Actualizado el 6 de octubre de 2026.
 7. **Hecho.** Fotogramas: `GET /api/sources/{id}/frames`, 12 pasos por petición con la misma
    regla que el mapa (ADR 0010). Un día entero a la velocidad más alta, con todos los pasos de
    5 min: 43,7 s, 23 peticiones y ningún 429.
+
+## B4: estado
+
+1. **Hecho.** Áreas de estudio: los 10 distritos oficiales del Ajuntament y Barcelona como su
+   unión (101,702 km²), con `ingest study-areas` (ADR 0013).
+2. **Hecho.** Cálculo: `POST /api/scenarios/coverage`, modelo `cobertura-geometrica` v1, sin
+   guardar escenarios. Comprobado con PostGIS (un círculo exacto, estaciones coincidentes,
+   solapes, recorte al área, capacidad que no cambia nada, mismo resultado al repetir) y medido
+   con la red real: 0,33–0,37 s; el 56 % de Barcelona a menos de 300 m.
+3. **Siguiente.** Pantalla «Experimentar»: dos o tres direcciones para elegir antes de
+   construirla. Colocar, mover y quitar estaciones; radio y área; base y escenario comparados
+   con los números y los supuestos a la vista; cian solo para la cobertura y forma propia para
+   las hipotéticas; el escenario en la URL.
+4. **Pendiente.** Pruebas de la interfaz y de humo.
 
 ## Backlog
 

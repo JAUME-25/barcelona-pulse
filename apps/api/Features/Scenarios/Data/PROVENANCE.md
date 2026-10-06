@@ -1,6 +1,7 @@
 # Procedencia: BarcelonaCiutat_Districtes.json
 
-Copia sin modificar del recurso publicado por el Ajuntament de Barcelona.
+Copia sin modificar del recurso publicado por el Ajuntament de Barcelona. Va embebida en la API:
+`ingest study-areas` la carga como áreas de estudio de la cobertura (ADR 0013).
 
 | Campo | Valor |
 |---|---|

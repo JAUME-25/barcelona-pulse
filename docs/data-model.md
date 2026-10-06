@@ -13,9 +13,10 @@ Esquema en `apps/api/Infrastructure/Migrations`.
 | `station_observations` | Estado publicado en un instante: estado, bicis (total, mecánicas, eléctricas), anclajes libres, deshabilitados, si presta y si admite devoluciones, y marcas de calidad. | `(station_id, observed_at)` |
 | `ingestion_runs` | Cada ingesta: fuente, adaptador y versión, entrada y sha256, periodo observado y periodo que dice cubrir (`covered_from`, `covered_to`), recuentos (nuevas, duplicadas, en conflicto, rechazadas), resultado y, si sus días se quitaron, cuándo (`purged_at`). | |
 | `ingestion_rejections` | Registros rechazados con su motivo (hasta 1 000 por ingesta; el total va en `ingestion_runs`). | |
+| `study_areas` | Áreas de estudio de la cobertura en EPSG:25831: los 10 distritos oficiales y Barcelona como su unión, con su superficie, procedencia y sha256 del archivo. | `id` (`barcelona`, `districte-01`…) |
 
-Los escenarios hipotéticos (B4) tendrán sus propias tablas; nunca filas en estas con otra
-marca.
+Los escenarios hipotéticos (B4) no se guardan: se calculan al pedirlos y el escenario viaja en
+la petición (ADR 0013). Ninguna tabla tiene estaciones inventadas.
 
 ## Contrato normalizado
 

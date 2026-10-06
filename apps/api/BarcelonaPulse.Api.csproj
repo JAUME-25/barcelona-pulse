@@ -26,6 +26,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Features/Ingestion/Demo/demo-fixture.v1.json" LogicalName="BarcelonaPulse.Api.demo-fixture.v1.json" />
+    <EmbeddedResource Include="Features/Scenarios/Data/BarcelonaCiutat_Districtes.json" LogicalName="BarcelonaPulse.Api.BarcelonaCiutat_Districtes.json" />
   </ItemGroup>
 
   <ItemGroup>

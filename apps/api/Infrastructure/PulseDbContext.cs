@@ -1,4 +1,5 @@
 using BarcelonaPulse.Api.Features.Ingestion;
+using BarcelonaPulse.Api.Features.Scenarios;
 using BarcelonaPulse.Api.Features.Sources;
 using BarcelonaPulse.Api.Features.Stations;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +14,7 @@ public sealed class PulseDbContext(DbContextOptions<PulseDbContext> options) : D
     public DbSet<StationObservation> StationObservations => Set<StationObservation>();
     public DbSet<IngestionRun> IngestionRuns => Set<IngestionRun>();
     public DbSet<IngestionRejection> IngestionRejections => Set<IngestionRejection>();
+    public DbSet<StudyArea> StudyAreas => Set<StudyArea>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,5 +27,6 @@ public sealed class PulseDbContext(DbContextOptions<PulseDbContext> options) : D
         configurationBuilder.Properties<SourceKind>().HaveConversion<SnakeCaseEnumConverter<SourceKind>>().HaveMaxLength(32);
         configurationBuilder.Properties<ObservationStatus>().HaveConversion<SnakeCaseEnumConverter<ObservationStatus>>().HaveMaxLength(32);
         configurationBuilder.Properties<IngestionStatus>().HaveConversion<SnakeCaseEnumConverter<IngestionStatus>>().HaveMaxLength(32);
+        configurationBuilder.Properties<StudyAreaKind>().HaveConversion<SnakeCaseEnumConverter<StudyAreaKind>>().HaveMaxLength(32);
     }
 }

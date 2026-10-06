@@ -2,6 +2,7 @@ using System.IO.Compression;
 using BarcelonaPulse.Api.Features.History;
 using BarcelonaPulse.Api.Features.Ingestion;
 using BarcelonaPulse.Api.Features.Ingestion.BicingArchive;
+using BarcelonaPulse.Api.Features.Scenarios;
 using BarcelonaPulse.Api.Features.Sources;
 using BarcelonaPulse.Api.Features.Stations;
 using BarcelonaPulse.Api.Infrastructure;
@@ -20,6 +21,7 @@ builder.Services.AddPulseDatabase();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<StationIngestor>();
 builder.Services.AddScoped<ObservationPurger>();
+builder.Services.AddScoped<StudyAreaLoader>();
 // Líneas temporales ya calculadas, hasta la siguiente ingesta de cada fuente.
 builder.Services.AddMemoryCache(o => o.SizeLimit = 200);
 builder.Services.AddHttpClient<BicingArchiveDownloader>(http =>
@@ -74,6 +76,7 @@ api.MapSourcesEndpoints();
 api.MapStationsEndpoints();
 api.MapTimelineEndpoints();
 api.MapFramesEndpoints();
+api.MapScenariosEndpoints();
 
 await app.RunAsync();
 return 0;

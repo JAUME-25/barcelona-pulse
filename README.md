@@ -1,18 +1,18 @@
 # Barcelona Pulse
 
 Mapa de las estaciones de Bicing de Barcelona con la disponibilidad de cada una y la procedencia
-de cada dato. Más adelante: reproducción del histórico y escenarios de cobertura.
+de cada dato, reproducción del histórico y escenarios de cobertura con estaciones hipotéticas.
 
 **Estado (6 de octubre de 2026):** B0 a B3 terminados: la aplicación muestra y reproduce días
-reales de Bicing (el histórico público del Ajuntament) y una demo sintética, sin mezclarlos.
-Siguiente, B4 (escenarios de cobertura). No está desplegada. Detalle en
-[docs/roadmap.md](docs/roadmap.md).
+reales de Bicing (el histórico público del Ajuntament) y una demo sintética, sin mezclarlos. B4
+(escenarios de cobertura) en curso: el cálculo ya está en la API; falta la pantalla. No está
+desplegada. Detalle en [docs/roadmap.md](docs/roadmap.md).
 
 ## Qué hay
 
 - **API** ASP.NET Core sobre .NET 10 con PostgreSQL 18 y PostGIS 3.6: fuentes de datos,
-  estaciones y su estado en un instante, y la línea temporal y los fotogramas para reproducir
-  un periodo, con OpenAPI.
+  estaciones y su estado en un instante, la línea temporal y los fotogramas para reproducir un
+  periodo y la cobertura de escenarios hipotéticos, con OpenAPI.
 - **Ingesta** por línea de comandos, idempotente y con registro de cada ejecución.
 - **Web** React + MapLibre: mapa, leyenda que también filtra, lista accesible y detalle; modo
   «Reproducir» para recorrer un día del histórico paso a paso, con los huecos a la vista.
@@ -32,6 +32,7 @@ Siguiente, B4 (escenarios de cobertura). No está desplegada. Detalle en
 cp .env.example .env
 docker compose up -d --build api
 docker compose run --rm api ingest demo
+docker compose run --rm api ingest study-areas
 npm --prefix apps/web ci
 npm --prefix apps/web run dev
 ```
@@ -41,7 +42,8 @@ La web queda en http://localhost:5173 y la API en http://127.0.0.1:5080 (documen
 
 `docker compose up` arranca PostGIS, aplica las migraciones (servicio `migrate`) y después
 levanta la API. `ingest demo` se puede repetir: la segunda vez informa de 0 observaciones nuevas
-y 572 ya existentes.
+y 572 ya existentes. `ingest study-areas` carga las áreas de estudio de la cobertura (Barcelona y
+sus 10 distritos, del Ajuntament); repetirlo deja lo mismo.
 
 Para ver datos reales, importa un día del histórico de Bicing (descarga unos 25 MB del portal
 de Open Data BCN y tarda ~20 s):
@@ -126,11 +128,12 @@ docker-compose.yml        PostGIS, migraciones, API y contenedor del SDK
   anterior o igual a T. Si es más antigua que la tolerancia de su fuente, la estación pasa a «sin
   dato reciente» y sus recuentos quedan vacíos: no se rellena, no se interpola y no se supone
   vacía. Ver [ADR 0005](docs/adr/0005-estado-en-un-instante.md).
-- **Qué significará la simulación de cobertura (B4).** El área a menos de cierta distancia en
-  línea recta de alguna estación, medida en metros (EPSG:25831), sin contar dos veces los
-  solapes y recortada a un área de estudio declarada. No es tiempo caminando, ni población
-  cubierta, ni una predicción de viajes o esperas. Ver
-  [ADR 0004](docs/adr/0004-coordenadas-y-crs.md).
+- **Qué significa la cobertura (B4).** La superficie a menos de cierta distancia en línea recta
+  de alguna estación, medida en metros (EPSG:25831), sin contar dos veces los solapes y recortada
+  a un área de estudio declarada: Barcelona (101,7 km², la unión de sus distritos) o un distrito.
+  Con la red real del 20-8-2026 y 300 m, el 56 % de esa superficie. No es tiempo caminando, ni
+  población cubierta, ni una predicción de viajes o esperas, y la capacidad no la cambia. Los
+  escenarios no se guardan. Ver [ADR 0013](docs/adr/0013-cobertura-geometrica-sin-guardar.md).
 
 ## Licencia y atribuciones
 

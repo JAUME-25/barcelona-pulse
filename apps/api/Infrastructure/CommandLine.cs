@@ -2,6 +2,7 @@ using System.Globalization;
 using BarcelonaPulse.Api.Features.Ingestion;
 using BarcelonaPulse.Api.Features.Ingestion.BicingArchive;
 using BarcelonaPulse.Api.Features.Ingestion.Demo;
+using BarcelonaPulse.Api.Features.Scenarios;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -31,6 +32,9 @@ public static class CommandLine
               Aplica las migraciones pendientes.
           ingest demo
               Importa los datos sintéticos de demostración. Repetirlo no duplica nada.
+          ingest study-areas
+              Carga las áreas de estudio de la cobertura (Barcelona y sus 10 distritos) desde el
+              archivo oficial del Ajuntament que va dentro de la API. Repetirlo deja lo mismo.
           ingest bicing-archive (--day AAAA-MM-DD | --from AAAA-MM-DD --to AAAA-MM-DD)
                                 [--status-file RUTA --info-file RUTA]
               Importa días naturales (hora de Barcelona) del histórico mensual de Bicing del
@@ -95,6 +99,19 @@ public static class CommandLine
                     var ingestor = sp.GetRequiredService<StationIngestor>();
                     var run = await ingestor.IngestAsync(DemoFixtureAdapter.LoadEmbedded(), trigger: "cli", ct);
                     PrintSummary(run);
+                    return 0;
+                }
+
+            case ["ingest", "study-areas"]:
+                {
+                    var loader = sp.GetRequiredService<StudyAreaLoader>();
+                    var areas = await loader.LoadEmbeddedAsync(ct);
+                    foreach (var area in areas)
+                    {
+                        Console.WriteLine($"  {area.Id,-14} {area.Name,-22} {area.AreaSquareMeters / 1e6,8:0.000} km²");
+                    }
+
+                    Console.WriteLine($"Áreas de estudio: {areas.Count}. Fuente de los datos: Ayuntamiento de Barcelona (CC BY 4.0).");
                     return 0;
                 }
 

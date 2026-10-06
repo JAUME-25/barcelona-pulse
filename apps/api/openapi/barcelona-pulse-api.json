@@ -178,6 +178,82 @@
         }
       }
     },
+    "/api/study-areas": {
+      "get": {
+        "tags": [
+          "Scenarios"
+        ],
+        "summary": "Áreas de estudio para la cobertura: Barcelona y sus 10 distritos",
+        "operationId": "ListStudyAreas",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StudyAreaItem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scenarios/coverage": {
+      "post": {
+        "tags": [
+          "Scenarios"
+        ],
+        "summary": "Cobertura geométrica de la red real y de un escenario con estaciones hipotéticas",
+        "description": "Círculos del radio elegido alrededor de cada estación, unidos y recortados al área de estudio, medidos en EPSG:25831. Devuelve el modelo, sus supuestos y los parámetros. No se guarda nada y no dice nada de demanda, viajes ni esperas.",
+        "operationId": "ComputeCoverage",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoverageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoverageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/stations": {
       "get": {
         "tags": [
@@ -310,6 +386,253 @@
   },
   "components": {
     "schemas": {
+      "CoverageDifference": {
+        "required": [
+          "gainedSquareMeters",
+          "lostSquareMeters"
+        ],
+        "type": "object",
+        "properties": {
+          "gainedSquareMeters": {
+            "type": "number",
+            "format": "double"
+          },
+          "lostSquareMeters": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "description": "Lo que el escenario cubre y la base no, y al revés."
+      },
+      "CoverageGeometries": {
+        "required": [
+          "studyArea",
+          "base",
+          "scenario",
+          "gained",
+          "lost"
+        ],
+        "type": "object",
+        "properties": {
+          "studyArea": {
+            "$ref": "#/components/schemas/JsonElement"
+          },
+          "base": {
+            "$ref": "#/components/schemas/JsonElement"
+          },
+          "scenario": {
+            "$ref": "#/components/schemas/JsonElement"
+          },
+          "gained": {
+            "$ref": "#/components/schemas/JsonElement"
+          },
+          "lost": {
+            "$ref": "#/components/schemas/JsonElement"
+          }
+        },
+        "description": "Geometrías GeoJSON en WGS84 (lon, lat), simplificadas 1 m para dibujarlas."
+      },
+      "CoverageModel": {
+        "required": [
+          "name",
+          "version",
+          "assumptions"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "assumptions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "description": "Modelo con el que se ha calculado: nombre, versión y supuestos explícitos."
+      },
+      "CoverageReference": {
+        "required": [
+          "source",
+          "at",
+          "atBasis",
+          "stations"
+        ],
+        "type": "object",
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/SourceRef"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "atBasis": {
+            "$ref": "#/components/schemas/InstantBasis"
+          },
+          "stations": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "description": "Red base: de qué fuente, en qué instante y cuántas estaciones."
+      },
+      "CoverageRequest": {
+        "required": [
+          "source",
+          "studyArea",
+          "radiusMeters"
+        ],
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "description": "Fuente de la red base."
+          },
+          "studyArea": {
+            "type": "string",
+            "description": "Área de estudio (GET /api/study-areas): el denominador del porcentaje."
+          },
+          "radiusMeters": {
+            "type": "integer",
+            "description": "Radio en metros, en línea recta, de 50 a 1000.",
+            "format": "int32"
+          },
+          "at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Instante de referencia (ISO 8601 con zona): entran las estaciones con ubicación vigente entonces. Sin él, como en /api/stations."
+          },
+          "added": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/HypotheticalStation"
+            },
+            "description": "Estaciones hipotéticas."
+          },
+          "moved": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/MovedStation"
+            },
+            "description": "Estaciones reales en otra ubicación."
+          },
+          "removed": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "Estaciones reales que no están en el escenario."
+          }
+        },
+        "description": "Escenario: la red real en un instante, con estaciones añadidas, movidas o quitadas."
+      },
+      "CoverageResponse": {
+        "required": [
+          "model",
+          "reference",
+          "studyArea",
+          "radiusMeters",
+          "added",
+          "moved",
+          "removed",
+          "base",
+          "scenario",
+          "difference",
+          "geometries"
+        ],
+        "type": "object",
+        "properties": {
+          "model": {
+            "$ref": "#/components/schemas/CoverageModel"
+          },
+          "reference": {
+            "$ref": "#/components/schemas/CoverageReference"
+          },
+          "studyArea": {
+            "$ref": "#/components/schemas/StudyAreaItem"
+          },
+          "radiusMeters": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "added": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HypotheticalStation"
+            }
+          },
+          "moved": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MovedStation"
+            }
+          },
+          "removed": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          "base": {
+            "$ref": "#/components/schemas/CoverageResult"
+          },
+          "scenario": {
+            "$ref": "#/components/schemas/CoverageResult"
+          },
+          "difference": {
+            "$ref": "#/components/schemas/CoverageDifference"
+          },
+          "geometries": {
+            "$ref": "#/components/schemas/CoverageGeometries"
+          }
+        },
+        "description": "Resultado de un escenario, con todo lo necesario para reproducirlo."
+      },
+      "CoverageResult": {
+        "required": [
+          "stations",
+          "coveredSquareMeters",
+          "coveredShare"
+        ],
+        "type": "object",
+        "properties": {
+          "stations": {
+            "type": "integer",
+            "description": "Estaciones que entran en el cálculo.",
+            "format": "int32"
+          },
+          "coveredSquareMeters": {
+            "type": "number",
+            "description": "Metros cuadrados del área de estudio a menos del radio de alguna estación.",
+            "format": "double"
+          },
+          "coveredShare": {
+            "type": "number",
+            "description": "Proporción del área de estudio (0 a 1).",
+            "format": "double"
+          }
+        },
+        "description": "Superficie cubierta: la unión de los círculos, recortada al área de estudio."
+      },
       "Frame": {
         "required": [
           "at",
@@ -532,6 +855,31 @@
           }
         }
       },
+      "HypotheticalStation": {
+        "required": [
+          "id",
+          "longitude",
+          "latitude"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Etiqueta que pone el cliente (h1, h2…); se devuelve tal cual."
+          },
+          "longitude": {
+            "type": "number",
+            "description": "Longitud WGS84.",
+            "format": "double"
+          },
+          "latitude": {
+            "type": "number",
+            "description": "Latitud WGS84.",
+            "format": "double"
+          }
+        },
+        "description": "Estación inventada para el escenario. No se guarda en ningún sitio."
+      },
       "IngestionStatus": {
         "enum": [
           "running",
@@ -548,6 +896,7 @@
         ],
         "description": "Cómo se eligió el instante de la respuesta."
       },
+      "JsonElement": { },
       "LastIngestionSummary": {
         "required": [
           "startedAt",
@@ -591,6 +940,32 @@
             "format": "int32"
           }
         }
+      },
+      "MovedStation": {
+        "required": [
+          "station",
+          "longitude",
+          "latitude"
+        ],
+        "type": "object",
+        "properties": {
+          "station": {
+            "type": "integer",
+            "description": "Identificador interno de la estación.",
+            "format": "int64"
+          },
+          "longitude": {
+            "type": "number",
+            "description": "Nueva longitud WGS84.",
+            "format": "double"
+          },
+          "latitude": {
+            "type": "number",
+            "description": "Nueva latitud WGS84.",
+            "format": "double"
+          }
+        },
+        "description": "Estación real de la red base que en el escenario está en otro sitio."
       },
       "ObservationPeriod": {
         "required": [
@@ -1111,6 +1486,59 @@
           }
         }
       },
+      "StudyAreaItem": {
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "areaSquareMeters",
+          "source",
+          "attribution",
+          "license",
+          "note"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/StudyAreaKind"
+          },
+          "areaSquareMeters": {
+            "type": "number",
+            "format": "double"
+          },
+          "source": {
+            "type": "string"
+          },
+          "attribution": {
+            "type": "string"
+          },
+          "license": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Área de estudio, con su procedencia."
+      },
+      "StudyAreaKind": {
+        "enum": [
+          "municipality",
+          "district"
+        ]
+      },
       "TimelinePoint": {
         "required": [
           "at",
@@ -1226,6 +1654,9 @@
     },
     {
       "name": "History"
+    },
+    {
+      "name": "Scenarios"
     },
     {
       "name": "Stations"

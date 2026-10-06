@@ -24,9 +24,8 @@ que solo reenvían llamadas.
 | `Features/Stations` | Estaciones, versiones de atributos y observaciones; regla del estado en un instante; `GET /api/stations` y `GET /api/stations/{id}`. |
 | `Features/Ingestion` | Contrato normalizado, validación común, `StationIngestor` (idempotente) y adaptadores: `Demo/DemoFixtureAdapter` y `BicingArchive/BicingArchiveAdapter`. |
 | `Features/History` | Reproducir un periodo: línea temporal `GET /api/sources/{id}/timeline` (ADR 0009) y fotogramas `GET /api/sources/{id}/frames` (ADR 0010). |
+| `Features/Scenarios` | Cobertura (B4): áreas de estudio `GET /api/study-areas` y escenarios `POST /api/scenarios/coverage`, calculados en EPSG:25831 y sin guardar (ADR 0013). |
 | `Infrastructure` | `PulseDbContext`, migraciones, registro de servicios, CLI, utilidades de instantes y geometría. |
-
-Previsto: `Features/Scenarios` (B4), en su propia carpeta.
 
 La web (`apps/web`) sigue la misma idea: `features/stations` con el mapa, la lista, el detalle y
 las reglas de presentación; `features/history` con el modo «Reproducir»; `api` con el cliente
@@ -155,6 +154,8 @@ Entorno: Windows 11, 16 núcleos, Docker Desktop 29.6, compilación de producci�
 - Con dos semanas (2,16 millones de observaciones, 406 MB la tabla con índices) los tiempos de
   estado, fotogramas y línea temporal no cambian. `GET /api/sources`, que contaba todas las
   observaciones, pasó de 117–177 ms a 12 ms con el recuento guardado (ADR 0012).
+- Cobertura con la red real (544 estaciones, radio de 300 m, Barcelona): 0,33–0,37 s por
+  cálculo, 0,68 s la primera vez; 179 KB sin comprimir y 35 KB con Brotli (ADR 0013).
 - Reproducir un día entero a la velocidad más alta (compilación de producción, GPU): 43,7 s,
   23 peticiones y ningún 429; tareas largas del navegador, un 13 % del tiempo, la mayor de 90 ms.
   Sin ventana, Chromium pinta WebGL por software: con el servidor de desarrollo, cada paso
