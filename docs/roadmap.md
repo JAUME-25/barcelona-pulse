@@ -125,17 +125,20 @@ honesta de lo hecho.
      errores en la consola (`e2e/despliegue.capture.ts`). Mayo, medido cada 15 min: dato en el
      98,3 % de las estaciones de media y 12 de 2 688 pasos por debajo del 95 %, todos de
      madrugada (02:15 a 04:45) los miércoles 6, 13, 20 y 27.
-   - La rejilla tarda 12,5 s la primera vez que se abre después de arrancar la API (calcula las
-     cuatro semanas) y 0,5 s después; el resto de la ficha sale enseguida.
+   - La rejilla tardaba 12,5 s la primera vez que se abría después de arrancar la API (calcula
+     las cuatro semanas) y 0,5 s después. Ahora `infra/deploy.sh` la deja calculada
+     (`infra/warm-up.mjs`) y la caché de líneas temporales ya no caduca por tiempo. En local,
+     recién arrancada la API y con el precalentamiento, sale en 0,6 s. En producción falta
+     comprobarlo tras el próximo «Deploy now».
 4. **Pendiente.** Caso técnico para el portfolio: qué problema resuelve, decisiones, dificultades
    reales, mediciones y límites.
 
 ## Backlog
 
 - Límites: la rejilla de huecos se mide cada 15 min en el navegador, con una petición por semana
-  importada, y la primera vez tras arrancar la API tarda 12,5 s. Opciones: pedir esas semanas
-  al final de `infra/deploy.sh` para dejarlas calculadas, o un resumen por día y hora en la API
-  calculado en cada ingesta (también daría el detalle de 5 min).
+  importada. `deploy.sh` la deja calculada, pero si la API se reinicia sin desplegar (un
+  reinicio del servidor), la primera visita vuelve a esperar unos 12 s. Si molesta, un resumen
+  por día y hora en la API, calculado en cada ingesta (daría también el detalle de 5 min).
 - Mapa: los marcadores sin dato son discretos a propósito; si se filtran solo esos, cuesta
   verlos a escala de ciudad.
 - Web: los nombres reales llegan en mayúsculas («AV. CAN MARCET, 3»); valorar un formato de

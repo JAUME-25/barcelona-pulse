@@ -34,5 +34,12 @@ for attempt in $(seq 1 30); do
   sleep 2
 done
 
+# La rejilla de huecos de «Qué muestra y qué no» tarda unos 12 s en calcularse: se deja hecha
+# para que no la espere la primera visita. Desde la red del proyecto (`name:` de
+# compose.prod.yml + `_default`). Si falla, el despliegue sigue bien: se calcula al abrir la ficha.
+docker run --rm --network barcelona-pulse_default -v "$PWD/infra:/infra:ro" node:24-slim \
+  node /infra/warm-up.mjs http://api:8080 \
+  || echo "No se ha podido dejar calculada la rejilla de huecos; se calculará al abrir la ficha." >&2
+
 # Imágenes y capas de compilación que ya no se usan.
 docker image prune -f > /dev/null

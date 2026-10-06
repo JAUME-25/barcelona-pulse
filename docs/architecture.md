@@ -156,9 +156,13 @@ de Playwright añade el retraso de sus comprobaciones: la lista parecía tardar 
   mismo método daba en móvil con la red real el HTML a 242 ms y la lista a 885 ms; el mapa,
   igual (2,1 s). Con los límites visibles, el inicial pasa a 313 KB (97 KB comprimido; tiempos
   sin volver a medir).
-- «Qué muestra y qué no» en producción (VPS de Forge, 6-10-2026): la rejilla de huecos sale a
+- «Qué muestra y qué no» en producción (VPS de Forge, 6-10-2026): la rejilla de huecos salía a
   los 12,5 s la primera vez después de arrancar la API, que calcula a la vez las cuatro semanas
   de mayo cada 15 min, y a los 0,5 s cuando ya las tiene en memoria (cada semana, 56–190 ms).
+  Desde entonces `infra/deploy.sh` las deja calculadas (`infra/warm-up.mjs`) y la caché de
+  líneas temporales no caduca por tiempo: cambia de clave con cada ingesta o purga y la acota
+  el límite de 200 entradas. En local, recién arrancada la API: precalentar 6 semanas, 11 s;
+  la rejilla después, 0,6 s.
 - Fluidez del mapa con la red real, arrastrando y acercando hasta ver los edificios en 3D (6 a
   10 s de gesto): en escritorio, 60 fps en los tres modos y ningún fotograma de más de 50 ms;
   en móvil, 48–49 fps al explorar y al reproducir (p95 de 50 ms, 11–13 fotogramas de más de

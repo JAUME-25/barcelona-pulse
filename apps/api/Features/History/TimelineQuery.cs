@@ -179,8 +179,10 @@ public static class TimelineQuery
                     reader.IsDBNull(7) ? null : (int)reader.GetInt64(7)));
             }
 
-            cache.Set(key, (IReadOnlyList<TimelinePoint>)points,
-                new MemoryCacheEntryOptions { Size = 1, SlidingExpiration = TimeSpan.FromHours(1) });
+            // Sin caducidad por tiempo: la clave cambia con cada ingesta o purga y el límite de la
+            // caché (200 entradas, Program.cs) acota la memoria. Así sigue ahí lo que deja calculado
+            // infra/warm-up.mjs al desplegar, aunque nadie lo pida en horas.
+            cache.Set(key, (IReadOnlyList<TimelinePoint>)points, new MemoryCacheEntryOptions { Size = 1 });
             return points;
         }
         finally

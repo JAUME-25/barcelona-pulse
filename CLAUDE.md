@@ -86,7 +86,9 @@ Jaume ejecuta los comandos en Forge y pega la salida.
   también pueden agotarlo (sale «Too Many Requests»): espera un minuto.
 - «Qué muestra y qué no» pide una línea temporal por semana importada y la guarda en la página
   (`features/limits/quality.ts`): sin eso, abrirla y cerrarla agotaba el límite. Cada recarga
-  vuelve a pedirlas.
+  vuelve a pedirlas. `infra/warm-up.mjs` (lo lanza `deploy.sh`) deja esas mismas semanas
+  calculadas en la API: si cambia cómo las pide la web (paso o semanas), cambia también el
+  script, o la primera visita vuelve a esperar unos 12 s.
 - Una estación sin ninguna observación hasta el momento mostrado no «nunca ha informado»: al
   principio del periodo importado puede no haber empezado aún. Se dice «Ningún dato hasta este
   momento».

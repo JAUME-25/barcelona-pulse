@@ -93,8 +93,9 @@ Cada paso en Forge o en Cloudflare se hace mirando la pantalla real (los paneles
    ```
 
 5. **Script de despliegue** del sitio: el `git pull` de Forge y después `bash infra/deploy.sh`
-   (compila la web, levanta la base de datos y la API, aplica las migraciones y falla si la API
-   no responde en `/health/ready`).
+   (compila la web, levanta la base de datos y la API, aplica las migraciones, falla si la API
+   no responde en `/health/ready` y deja calculada la rejilla de huecos de «Qué muestra y qué
+   no» con `infra/warm-up.mjs`, para que la primera visita no espere unos 12 s).
 6. **Primer despliegue**: «Deploy now».
 7. **Certificado** de Let's Encrypt desde Forge.
 8. **nginx del sitio**, con el certificado ya puesto: en el bloque `server` de HTTPS, quitar el
@@ -147,6 +148,12 @@ no despliega: un push con la CI en rojo no debería publicarse.
 
 - Otro periodo: `ingest bicing-archive --from … --to …` como arriba (hasta 31 días por vez y,
   mientras el portal conteste 403 al servidor, con los archivos del mes subidos aparte).
+- Después de importar o quitar días, la rejilla de huecos se vuelve a calcular. Para dejarla
+  hecha sin esperar al próximo despliegue:
+
+  ```bash
+  docker run --rm --network barcelona-pulse_default -v "$PWD/infra:/infra:ro" node:24-slim node /infra/warm-up.mjs http://api:8080
+  ```
 - Quitar días: `purge bicing-bcn --from … --to …` dice qué borraría; con `--yes`, lo borra
   (ADR 0012).
 - Copias: no hacen falta para la demo; todo sale de los archivos públicos y se puede volver a
