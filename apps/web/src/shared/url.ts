@@ -9,5 +9,15 @@ export function writeParam(name: string, value: string | null): void {
   const url = new URL(window.location.href);
   if (value === null) url.searchParams.delete(name);
   else url.searchParams.set(name, value);
-  window.history.replaceState(null, '', url);
+  replaceUrl(url);
+}
+
+/** Cambia la URL sin añadir entrada al historial. */
+export function replaceUrl(url: URL): void {
+  try {
+    window.history.replaceState(null, '', url);
+  } catch {
+    // Safari lanza SecurityError con más de 100 cambios seguidos: la URL se queda como estaba,
+    // pero la aplicación sigue.
+  }
 }

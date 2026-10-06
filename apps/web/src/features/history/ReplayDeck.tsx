@@ -79,6 +79,7 @@ export function ReplayDeck({ replay }: { replay: Replay }) {
         toleranceMinutes={
           replay.dayState.status === 'ready' ? replay.dayState.data.toleranceMinutes : null
         }
+        onRetry={replay.dayState.status === 'error' ? replay.retryDay : undefined}
       />
       <WeekDials replay={replay} />
 

@@ -7,6 +7,7 @@ import '@fontsource/barlow-semi-condensed/latin-ext-600.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
+import { ErrorBoundary } from './app/ErrorBoundary';
 import { applyTheme } from './app/theme';
 import { detectLang, LANG_PARAM, setLang } from './i18n';
 import { LanguageRoot } from './i18n/LanguageRoot';
@@ -25,6 +26,8 @@ if (root === null) throw new Error('Falta el elemento #root');
 
 createRoot(root).render(
   <StrictMode>
-    <LanguageRoot>{(current) => <App key={current} />}</LanguageRoot>
+    <ErrorBoundary>
+      <LanguageRoot>{(current) => <App key={current} />}</LanguageRoot>
+    </ErrorBoundary>
   </StrictMode>,
 );

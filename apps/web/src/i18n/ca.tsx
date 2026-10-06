@@ -105,6 +105,7 @@ export const ca: Messages = {
     unsupported:
       'Aquest navegador no pot dibuixar el mapa perquè no té WebGL2. La llista d’estacions continua disponible.',
     degraded: 'Una part del mapa base no s’ha carregat.',
+    lost: 'El mapa s’ha aturat un moment. Torna tan bon punt el navegador ho permeti.',
     region: 'Mapa d’estacions',
     pitch: 'Vista 3D',
     zoomIn: 'Apropar',
@@ -131,6 +132,8 @@ export const ca: Messages = {
     listTitle: 'Estacions',
     source: 'Font',
     demoSuffix: '(demo)',
+    crashed: 'Alguna cosa ha fallat en pintar l’aplicació.',
+    reload: 'Recarregar',
   },
 
   api: {

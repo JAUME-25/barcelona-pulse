@@ -9,12 +9,15 @@ import type { Replay } from './useReplay';
 /** 44 px de lado; la semana se pide por horas: 24 barras por banda. */
 const MINI: DialShape = { c: 22, emptyR: 6, fullR: 14, band: 7, stepAngle: (2 * Math.PI) / 24 };
 
+/** Sin puntos: discontinuo si no hay datos; si aún no se sabe (cargando o fallo), neutro. */
 function MiniDial({
   points,
   scale,
+  pending,
 }: {
   points: readonly TimelinePoint[] | undefined;
   scale: number;
+  pending: boolean;
 }) {
   const paths = useMemo(
     () => (points === undefined ? null : dialPaths(points, scale, MINI)),
@@ -31,8 +34,18 @@ function MiniDial({
     >
       {paths === null ? (
         <>
-          <circle cx={MINI.c} cy={MINI.c} r={MINI.emptyR} className="week-dial__gap" />
-          <circle cx={MINI.c} cy={MINI.c} r={MINI.fullR} className="week-dial__gap" />
+          <circle
+            cx={MINI.c}
+            cy={MINI.c}
+            r={MINI.emptyR}
+            className={pending ? 'week-dial__ring' : 'week-dial__gap'}
+          />
+          <circle
+            cx={MINI.c}
+            cy={MINI.c}
+            r={MINI.fullR}
+            className={pending ? 'week-dial__ring' : 'week-dial__gap'}
+          />
         </>
       ) : (
         <>
@@ -84,6 +97,8 @@ export function WeekDials({ replay }: { replay: Replay }) {
   const scale = weekScale(replay);
   const available = useMemo(() => new Set(replay.days), [replay.days]);
   const moreWeeks = replay.previousWeekDay !== undefined || replay.nextWeekDay !== undefined;
+  // Mientras llega la semana, o si no ha llegado, un día importado no es un día sin datos.
+  const weekPending = replay.weekState.status !== 'ready';
   return (
     <div className="week-dials">
       {moreWeeks && <WeekArrow replay={replay} direction={-1} />}
@@ -103,7 +118,11 @@ export function WeekDials({ replay }: { replay: Replay }) {
                 replay.selectDay(d);
               }}
             >
-              <MiniDial points={replay.weekByDay.get(d)} scale={scale} />
+              <MiniDial
+                points={replay.weekByDay.get(d)}
+                scale={scale}
+                pending={hasData && weekPending}
+              />
               <span aria-hidden="true">
                 {formatShortWeekday(d)}
                 <br />

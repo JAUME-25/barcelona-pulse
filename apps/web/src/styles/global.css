@@ -61,6 +61,21 @@ code {
   border: 0;
 }
 
+/* Si algo falla al pintar la aplicación (ErrorBoundary). */
+.app-crash {
+  width: min(460px, calc(100% - 32px));
+  margin: 20vh auto 0;
+  padding: 22px 26px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--panel-shadow);
+}
+
+.app-crash p {
+  margin: 0 0 16px;
+}
+
 .button {
   display: inline-flex;
   align-items: center;

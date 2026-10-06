@@ -114,11 +114,24 @@ export function Clock({ replay }: { replay: Replay }) {
 export function Counts({
   point,
   toleranceMinutes = null,
+  onRetry,
 }: {
   point: TimelinePoint | undefined;
   toleranceMinutes?: number | null;
+  /** Si la línea temporal del día ha fallado: lo dice y deja reintentar, no «cargando» sin fin. */
+  onRetry?: (() => void) | undefined;
 }) {
   const m = t().replay;
+  if (onRetry !== undefined) {
+    return (
+      <div className="replay-counts replay-counts--note replay-counts--failed" role="alert">
+        <p>{m.dayFailed}</p>
+        <button type="button" className="button" onClick={onRetry}>
+          {t().app.retry}
+        </button>
+      </div>
+    );
+  }
   if (point === undefined) {
     return <p className="replay-counts replay-counts--note">{m.loadingDay}</p>;
   }

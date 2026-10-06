@@ -527,7 +527,45 @@ describe('App', () => {
       '00:00, martes, 10 de marzo de 2026. Sin datos.',
     );
     expect(screen.getByText(/Sin datos en este momento/)).toBeTruthy();
-    expect(new URLSearchParams(window.location.search).get('hora')).toBe('00:00');
+    // La hora va a la URL cuando la pista se queda quieta, no en cada paso.
+    await waitFor(() => {
+      expect(new URLSearchParams(window.location.search).get('hora')).toBe('00:00');
+    });
+  });
+
+  it('si no llega el día, lo dice y deja reintentar; la semana sin llegar no parece vacía', async () => {
+    let dayAttempts = 0;
+    mockApi((path, url) => {
+      if (path === '/api/sources') return json([demoSource]);
+      if (path === '/api/sources/demo/frames') return json(framesFor(url));
+      if (path === '/api/sources/demo/timeline') {
+        if (url.searchParams.get('step') === '60') return json({ title: 'Error' }, 500);
+        dayAttempts += 1;
+        return dayAttempts === 1 ? json({ title: 'Error' }, 500) : json(timelineFor(url));
+      }
+      return json({ title: 'Petición inesperada' }, 500);
+    });
+    const user = userEvent.setup();
+    window.history.replaceState(null, '', '/?fuente=demo&modo=reproducir&hora=08:30');
+    const { container } = renderApp();
+
+    const failed = await screen.findByText('No se ha podido cargar el día.');
+    expect(screen.queryByText('Cargando el día…')).toBeNull();
+    // El día importado, sin su semana, no se dibuja con el discontinuo de «sin datos».
+    const imported = screen.getByRole('button', { name: 'mar 10' });
+    expect(imported.querySelectorAll('.week-dial__gap')).toHaveLength(0);
+    expect(container.querySelectorAll('.week-dial__gap').length).toBeGreaterThan(0);
+
+    await user.click(
+      within(failed.closest('[role="alert"]') as HTMLElement).getByRole('button', {
+        name: 'Reintentar',
+      }),
+    );
+    const slider = await screen.findByRole('slider', { name: 'Momento del día' });
+    await waitFor(() => {
+      expect(slider.getAttribute('aria-valuetext')).toMatch(/^08:30,/);
+    });
+    expect(dayAttempts).toBe(2);
   });
 
   it('al saltar a una hora que no ha llegado no enseña la de antes; si falla, lo dice y reintenta', async () => {

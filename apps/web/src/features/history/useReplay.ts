@@ -22,6 +22,8 @@ export const SPEEDS: readonly Speed[] = ['lenta', 'normal', 'rapida'];
 const SPEED_MS: Record<Speed, number> = { lenta: 700, normal: 350, rapida: 150 };
 
 const NO_POINTS: readonly TimelinePoint[] = [];
+/** La hora va a la URL cuando la pista lleva este rato quieta. */
+const URL_SETTLE_MS = 400;
 
 function rangeOfDays(first: string, last: string, stepMinutes: number): TimelineRange {
   return {
@@ -125,11 +127,28 @@ export function useReplay(
     };
   }, [playing, speed, count, stations]);
 
-  // La URL guarda el día y la hora al parar, no en cada paso de la reproducción.
+  // La URL guarda el día y la hora al parar, no en cada paso de la reproducción ni del arrastre
+  // por la pista (Safari no admite más de 100 cambios de URL seguidos).
   const pausedClock = !playing && point !== undefined ? localClock(point.at) : null;
+  const pendingClockRef = useRef<string | null>(null);
   useEffect(() => {
-    if (pausedClock !== null) writeParam('hora', pausedClock);
+    if (pausedClock === null) return;
+    pendingClockRef.current = pausedClock;
+    const timer = window.setTimeout(() => {
+      writeParam('hora', pausedClock);
+      pendingClockRef.current = null;
+    }, URL_SETTLE_MS);
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [pausedClock]);
+  // Si se desmonta antes (al cambiar de idioma), la última hora no se pierde.
+  useEffect(
+    () => () => {
+      if (pendingClockRef.current !== null) writeParam('hora', pendingClockRef.current);
+    },
+    [],
+  );
 
   const seek = useCallback(
     (target: number) => {

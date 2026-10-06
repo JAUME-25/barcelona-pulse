@@ -110,6 +110,12 @@ function MapStatusMessage({ status }: { status: MapStatus }) {
           {m.degraded}
         </p>
       );
+    case 'lost':
+      return (
+        <p className="map-message" role="status">
+          {m.lost}
+        </p>
+      );
     default:
       return null;
   }

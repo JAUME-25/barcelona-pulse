@@ -34,7 +34,9 @@ export type MapStatus =
   | { kind: 'ready' }
   /** Parte del mapa base no carga, pero el mapa funciona. */
   | { kind: 'degraded' }
-  /** El estilo o el contexto gráfico han fallado: no hay mapa. */
+  /** El navegador ha retirado el contexto gráfico (p. ej., al volver de otra app): vuelve solo. */
+  | { kind: 'lost' }
+  /** El estilo no ha cargado o el mapa no se ha podido crear: no hay mapa. */
   | { kind: 'failed' }
   /** El navegador no puede crear un contexto WebGL2. */
   | { kind: 'unsupported' };
@@ -156,6 +158,24 @@ function frameStations(map: MapLibreMap, stations: readonly StationItem[], paddi
 
 function hasCameraInUrl(): boolean {
   return new URLSearchParams(window.location.hash.slice(1)).has(CAMERA_HASH);
+}
+
+/**
+ * MapLibre quita «#mapa» de la URL al quitar el mapa. Se deja para el siguiente: al cambiar de
+ * idioma (la aplicación se vuelve a montar) o al recuperar el contexto gráfico, la cámara sigue
+ * donde estaba.
+ */
+function removeKeepingCamera(map: MapLibreMap): void {
+  const hash = window.location.hash;
+  map.remove();
+  if (window.location.hash === hash) return;
+  const url = new URL(window.location.href);
+  url.hash = hash;
+  try {
+    window.history.replaceState(window.history.state, '', url);
+  } catch {
+    // Safari limita los cambios de URL seguidos (ver writeParam): se pierde la cámara, nada más.
+  }
 }
 
 function prefersReducedMotion(): boolean {
@@ -329,6 +349,8 @@ export function StationMap({
   // Se mira al montar: en cuanto la cámara se mueve, MapLibre reescribe el hash.
   const cameraFromUrlRef = useRef(hasCameraInUrl());
   const [mapReady, setMapReady] = useState(false);
+  // Se crea otro mapa cuando el navegador devuelve el contexto gráfico.
+  const [generation, setGeneration] = useState(0);
   // La cámara de Fanals empieza inclinada (THEME.camera.pitch).
   const [oblique, setOblique] = useState(true);
 
@@ -407,11 +429,33 @@ export function StationMap({
       instance.on('pitchend', () => {
         setOblique(instance.getPitch() > 5);
       });
+      // Un fallo suelto (una tesela) deja el aviso hasta que la vista vuelve a cargar sin fallos.
+      let degraded = false;
+      let errorSinceMove = false;
+      instance.on('movestart', () => {
+        errorSinceMove = false;
+      });
       instance.on('error', () => {
+        errorSinceMove = true;
+        degraded = loadedRef.current;
         onStatusRef.current({ kind: loadedRef.current ? 'degraded' : 'failed' });
       });
+      instance.on('idle', () => {
+        if (!degraded || errorSinceMove || !loadedRef.current) return;
+        degraded = false;
+        onStatusRef.current({ kind: 'ready' });
+      });
+      // MapLibre destruye el estilo al perder el contexto: hasta que vuelva, nadie toca el mapa.
       instance.on('webglcontextlost', () => {
-        onStatusRef.current({ kind: 'failed' });
+        if (loadedRef.current) onMapReadyRef.current?.(null);
+        loadedRef.current = false;
+        mapRef.current = null;
+        setMapReady(false);
+        onStatusRef.current({ kind: 'lost' });
+      });
+      // Al volver, otro mapa con lo de ahora (estaciones, selección, modo) y la cámara de la URL.
+      instance.on('webglcontextrestored', () => {
+        setGeneration((g) => g + 1);
       });
     };
 
@@ -426,9 +470,10 @@ export function StationMap({
       if (loadedRef.current) onMapReadyRef.current?.(null);
       mapRef.current = null;
       loadedRef.current = false;
-      map?.remove();
+      setMapReady(false);
+      if (map !== null) removeKeepingCamera(map);
     };
-  }, []);
+  }, [generation]);
 
   // Datos: se sustituyen en la fuente existente.
   useEffect(() => {

@@ -134,6 +134,16 @@
   font-size: 0.875rem;
 }
 
+.replay-counts--failed {
+  gap: 8px 12px;
+  align-items: center;
+  color: var(--ink);
+}
+
+.replay-counts--failed p {
+  margin: 0;
+}
+
 /* Reproductor */
 .replay-deck {
   position: relative;

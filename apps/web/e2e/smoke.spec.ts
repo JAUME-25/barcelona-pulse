@@ -133,7 +133,8 @@ test('reproducir la demo: momento en hora de Barcelona, pasos de 5 min y horas s
   await page.keyboard.press('Home');
   await expect(slider).toHaveAttribute('aria-valuetext', /^00:00, .*Sin datos\.$/);
   await expect(page.getByText(/Sin datos en este momento/)).toBeVisible();
-  expect(new URL(page.url()).searchParams.get('hora')).toBe('00:00');
+  // La hora va a la URL cuando la pista se queda quieta, no en cada paso.
+  await expect.poll(() => new URL(page.url()).searchParams.get('hora')).toBe('00:00');
 });
 
 test('en catalán por la URL y en inglés con el selector, sin perder la estación abierta', async ({

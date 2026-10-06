@@ -91,6 +91,7 @@ export const es = {
     unsupported:
       'Este navegador no puede dibujar el mapa porque no tiene WebGL2. La lista de estaciones sigue disponible.',
     degraded: 'Parte del mapa base no ha cargado.',
+    lost: 'El mapa se ha detenido un momento. Vuelve en cuanto el navegador lo permita.',
     region: 'Mapa de estaciones',
     pitch: 'Vista 3D',
     zoomIn: 'Acercar',
@@ -117,6 +118,8 @@ export const es = {
     listTitle: 'Estaciones',
     source: 'Fuente',
     demoSuffix: '(demo)',
+    crashed: 'Algo ha fallado al pintar la aplicación.',
+    reload: 'Recargar',
   },
 
   api: {

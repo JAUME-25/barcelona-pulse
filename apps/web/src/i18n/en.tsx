@@ -88,6 +88,7 @@ export const en: Messages = {
     unsupported:
       'This browser cannot draw the map because it does not support WebGL2. The station list is still available.',
     degraded: 'Part of the base map did not load.',
+    lost: 'The map has paused for a moment. It comes back as soon as the browser allows it.',
     region: 'Station map',
     pitch: '3D view',
     zoomIn: 'Zoom in',
@@ -114,6 +115,8 @@ export const en: Messages = {
     listTitle: 'Stations',
     source: 'Source',
     demoSuffix: '(demo)',
+    crashed: 'Something went wrong while drawing the app.',
+    reload: 'Reload',
   },
 
   api: {
