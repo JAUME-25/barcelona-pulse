@@ -324,7 +324,10 @@ describe('App', () => {
     renderApp();
 
     expect(await screen.findByText('Datos reales')).toBeTruthy();
-    expect(screen.getByText(/Es un momento del pasado, no el estado actual./)).toBeTruthy();
+    // El periodo importado, con el mes y el año, y que no es el estado actual.
+    expect(
+      screen.getByText(/Datos históricos · agosto de 2026\. No es el estado actual\./),
+    ).toBeTruthy();
     expect(document.querySelector('.source-notice__time')?.textContent).toMatch(
       /20 de agosto de 2026.*23:55/,
     );

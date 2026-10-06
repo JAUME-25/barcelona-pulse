@@ -20,10 +20,13 @@ function Moment({ label, iso }: { label: string; iso: string }) {
 export function SourceNotice({
   response,
   compact = false,
+  months = null,
 }: {
   response: StationsResponse;
   /** Sin el momento: al reproducir, lo enseña el control de tiempo. */
   compact?: boolean;
+  /** Meses de los datos importados («mayo de 2026»), para el histórico. */
+  months?: string | null;
 }) {
   const { source } = response;
 
@@ -51,7 +54,11 @@ export function SourceNotice({
     <div className="source-notice source-notice--observed">
       <p className="source-notice__lead">
         <span className="source-notice__badge source-notice__badge--real">Datos reales</span>
-        {historical ? 'Es un momento del pasado, no el estado actual.' : `${source.name}.`}
+        {!historical
+          ? `${source.name}.`
+          : months === null
+            ? 'Es un momento del pasado, no el estado actual.'
+            : `Datos históricos · ${months}. No es el estado actual.`}
       </p>
       {compact ? null : historical ? (
         <Moment label="Momento mostrado" iso={response.at} />

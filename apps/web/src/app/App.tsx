@@ -41,7 +41,7 @@ import {
   useSources,
   useStations,
 } from '../features/stations/useStationData';
-import { plural } from '../shared/format';
+import { formatMonths, plural } from '../shared/format';
 import { readParam, writeParam } from '../shared/url';
 import './App.css';
 
@@ -387,7 +387,11 @@ export function App() {
           </label>
         )}
         {response !== null && (
-          <SourceNotice response={response} compact={replaying || experimenting} />
+          <SourceNotice
+            response={response}
+            compact={replaying || experimenting}
+            months={source === undefined ? null : formatMonths(source.days)}
+          />
         )}
       </header>
 

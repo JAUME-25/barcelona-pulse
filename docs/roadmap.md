@@ -97,9 +97,14 @@ honesta de lo hecho.
 1. **Hecho.** Rendimiento con la red real (544 estaciones) en escritorio y móvil, carga y
    fluidez de los tres modos (`docs/architecture.md`). MapLibre pasa a su propio fragmento: en
    móvil, la lista llega a los 533 ms en vez de 885.
-2. **Pendiente de decidir (Jaume).** Despliegue: dónde (el VPS de Forge o uno aparte), con qué
-   subdominio y qué semanas de datos se publican (ADR 0012; una laborable de otoño enseñaría
-   mejor los desplazamientos al trabajo que agosto).
+2. **En curso.** Despliegue en `pulse.jaumeperez.com` con las cuatro semanas del 4 al 31 de mayo
+   de 2026 (decidido por Jaume el 6-10-2026). Mayo comprobado en local: 28 días sin rechazos,
+   4 229 268 observaciones, 549 estaciones con dato en el 98,1 % de los pasos de 5 min de
+   media; 20 de 8 064 pasos por debajo del 90 % (miércoles 6, 13, 20 y 27, unos minutos) y
+   ninguno vacío; unos 0,83 GB en la base. Servidor: Jaume prefiere un VPS aparte si cuesta
+   parecido; el CX23 no está disponible y el primero con 2 GB es el CPX12 (14,51 €/mes con
+   IVA). Si sale caro, el VPS de Forge, comprobando antes memoria y disco. La web dice
+   «Datos históricos · mayo de 2026» y la fecha completa del instante.
 3. **Pendiente.** Límites visibles en la propia web: de qué fecha son los datos, que no es tiempo
    real, qué mide y qué no la cobertura, de dónde sale cada cosa.
 4. **Pendiente.** Caso técnico para el portfolio: qué problema resuelve, decisiones, dificultades

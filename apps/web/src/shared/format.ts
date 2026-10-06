@@ -59,3 +59,27 @@ export function formatDuration(fromIso: string, toIso: string): string {
 export function plural(count: number, singular: string, pluralForm: string): string {
   return `${count} ${count === 1 ? singular : pluralForm}`;
 }
+
+const monthName = new Intl.DateTimeFormat('es-ES', { month: 'long', timeZone: 'UTC' });
+
+function joinWithY(items: readonly string[]): string {
+  return items.length <= 1
+    ? (items[0] ?? '')
+    : `${items.slice(0, -1).join(', ')} y ${items.at(-1)}`;
+}
+
+/**
+ * Meses que cubren unos días locales («2026-05-04»…): «mayo de 2026», «mayo y agosto de 2026» o
+ * «diciembre de 2025 y enero de 2026». Sin días, null.
+ */
+export function formatMonths(days: readonly string[]): string | null {
+  const months = [...new Set(days.map((d) => d.slice(0, 7)))].sort();
+  if (months.length === 0) return null;
+  const byYear = new Map<string, string[]>();
+  for (const ym of months) {
+    const [year = '', month = '1'] = ym.split('-');
+    const name = monthName.format(Date.UTC(Number(year), Number(month) - 1, 15));
+    byYear.set(year, [...(byYear.get(year) ?? []), name]);
+  }
+  return joinWithY([...byYear].map(([year, names]) => `${joinWithY(names)} de ${year}`));
+}
