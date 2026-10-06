@@ -64,9 +64,36 @@ public sealed record CoverageResult(int Stations, double CoveredSquareMeters, do
 /// <summary>Lo que el escenario cubre y la base no, y al revés.</summary>
 public sealed record CoverageDifference(double GainedSquareMeters, double LostSquareMeters);
 
+/// <summary>Qué le pasa a una estación en el escenario.</summary>
+public enum ChangeKind
+{
+    Added,
+    Moved,
+    Removed,
+}
+
+/// <summary>
+/// Alcance de una estación que cambia: su círculo entero, sin recortar al área de estudio. La
+/// nueva y la movida, en su sitio del escenario; la quitada, en el de la red base.
+/// </summary>
+/// <param name="Kind">Nueva, movida o quitada.</param>
+/// <param name="Added">Etiqueta de la estación nueva (h1…); null en las reales.</param>
+/// <param name="Station">Estación real movida o quitada; null en las nuevas.</param>
+/// <param name="SquareMetersInArea">Parte del círculo dentro del área de estudio, al metro cuadrado.</param>
+/// <param name="Circle">El mismo polígono del cálculo (64 lados), en GeoJSON WGS84.</param>
+public sealed record CoverageReach(
+    ChangeKind Kind, string? Added, long? Station, double SquareMetersInArea, JsonElement Circle);
+
 /// <summary>Geometrías GeoJSON en WGS84 (lon, lat), simplificadas 1 m para dibujarlas.</summary>
+/// <param name="StudyArea">Área de estudio.</param>
+/// <param name="Base">Superficie cubierta por la red base.</param>
+/// <param name="Scenario">Superficie cubierta por el escenario.</param>
+/// <param name="Gained">Lo que cubre el escenario y la base no.</param>
+/// <param name="Lost">Lo que cubre la base y el escenario no.</param>
+/// <param name="Reach">Círculo de cada estación nueva, movida o quitada, en ese orden y en el de la petición; sin simplificar.</param>
 public sealed record CoverageGeometries(
-    JsonElement StudyArea, JsonElement Base, JsonElement Scenario, JsonElement Gained, JsonElement Lost);
+    JsonElement StudyArea, JsonElement Base, JsonElement Scenario, JsonElement Gained, JsonElement Lost,
+    IReadOnlyList<CoverageReach> Reach);
 
 /// <summary>Resultado de un escenario, con todo lo necesario para reproducirlo.</summary>
 public sealed record CoverageResponse(
@@ -104,7 +131,7 @@ public static class CoverageQuery
     [
         "Distancia en línea recta desde cada estación, no a pie por calles: no es una isócrona.",
         "Cada estación cubre un círculo del radio elegido; los solapes se cuentan una sola vez.",
-        "Superficies en EPSG:25831 (metros). Cada círculo es un polígono de 64 lados: 0,16 % menos de área.",
+        "Superficies en EPSG:25831 (metros), redondeadas al metro cuadrado. Cada círculo es un polígono de 64 lados: 0,16 % menos de área.",
         "El porcentaje es sobre el área de estudio elegida, no sobre la población ni sobre otra zona.",
         "Entran todas las estaciones con ubicación vigente en el instante de referencia, estén o no operativas.",
         "La capacidad no cambia la cobertura. Nada de esto dice cuántos viajes, esperas o demanda habría.",
@@ -133,12 +160,22 @@ public static class CoverageQuery
               AND (v.valid_to IS NULL OR v.valid_to > @at)
         ),
         moved AS (
-            SELECT m.id, ST_Transform(ST_SetSRID(ST_MakePoint(m.lon, m.lat), 4326), 25831) AS g
-            FROM unnest(@moved_ids, @moved_lon, @moved_lat) AS m(id, lon, lat)
+            SELECT m.n, m.id, ST_Transform(ST_SetSRID(ST_MakePoint(m.lon, m.lat), 4326), 25831) AS g
+            FROM unnest(@moved_ids, @moved_lon, @moved_lat) WITH ORDINALITY AS m(id, lon, lat, n)
         ),
         added AS (
-            SELECT ST_Transform(ST_SetSRID(ST_MakePoint(a.lon, a.lat), 4326), 25831) AS g
-            FROM unnest(@added_lon, @added_lat) AS a(lon, lat)
+            SELECT a.n, a.label, ST_Transform(ST_SetSRID(ST_MakePoint(a.lon, a.lat), 4326), 25831) AS g
+            FROM unnest(@added_labels, @added_lon, @added_lat) WITH ORDINALITY AS a(label, lon, lat, n)
+        ),
+        reach AS (
+            SELECT 0 AS k, 'added' AS kind, a.n, a.label, NULL::bigint AS station, ST_Buffer(a.g, @radius, @buffer) AS g
+            FROM added a
+            UNION ALL
+            SELECT 1, 'moved', m.n, NULL, m.id, ST_Buffer(m.g, @radius, @buffer) FROM moved m
+            UNION ALL
+            SELECT 2, 'removed', r.n, NULL, b.id, ST_Buffer(b.g, @radius, @buffer)
+            FROM unnest(@removed) WITH ORDINALITY AS r(id, n)
+            JOIN base b ON b.id = r.id
         ),
         scenario AS (
             SELECT b.g FROM base b WHERE NOT (b.id = ANY(@removed)) AND NOT (b.id = ANY(@moved_ids))
@@ -163,7 +200,12 @@ public static class CoverageQuery
             ST_AsGeoJSON(ST_Transform(ST_SimplifyPreserveTopology(d.base, @tolerance), 4326), 6),
             ST_AsGeoJSON(ST_Transform(ST_SimplifyPreserveTopology(d.scenario, @tolerance), 4326), 6),
             ST_AsGeoJSON(ST_Transform(ST_SimplifyPreserveTopology(d.gained, @tolerance), 4326), 6),
-            ST_AsGeoJSON(ST_Transform(ST_SimplifyPreserveTopology(d.lost, @tolerance), 4326), 6)
+            ST_AsGeoJSON(ST_Transform(ST_SimplifyPreserveTopology(d.lost, @tolerance), 4326), 6),
+            (SELECT coalesce(json_agg(json_build_object(
+                        'kind', r.kind, 'added', r.label, 'station', r.station,
+                        'inArea', ST_Area(ST_Intersection(r.g, (SELECT g FROM area))),
+                        'circle', ST_AsGeoJSON(ST_Transform(r.g, 4326), 6)::json) ORDER BY r.k, r.n), '[]'::json)::text
+             FROM reach r)
         FROM diff d
         """;
 
@@ -217,6 +259,7 @@ public static class CoverageQuery
             command.Parameters.Add(new("moved_ids", NpgsqlDbType.Array | NpgsqlDbType.Bigint) { Value = moved.Select(m => m.Station).ToArray() });
             command.Parameters.Add(new("moved_lon", NpgsqlDbType.Array | NpgsqlDbType.Double) { Value = moved.Select(m => m.Longitude).ToArray() });
             command.Parameters.Add(new("moved_lat", NpgsqlDbType.Array | NpgsqlDbType.Double) { Value = moved.Select(m => m.Latitude).ToArray() });
+            command.Parameters.Add(new("added_labels", NpgsqlDbType.Array | NpgsqlDbType.Text) { Value = added.Select(a => a.Id).ToArray() });
             command.Parameters.Add(new("added_lon", NpgsqlDbType.Array | NpgsqlDbType.Double) { Value = added.Select(a => a.Longitude).ToArray() });
             command.Parameters.Add(new("added_lat", NpgsqlDbType.Array | NpgsqlDbType.Double) { Value = added.Select(a => a.Latitude).ToArray() });
             command.Parameters.Add(new("removed", NpgsqlDbType.Array | NpgsqlDbType.Bigint) { Value = removed.ToArray() });
@@ -225,13 +268,15 @@ public static class CoverageQuery
             await reader.ReadAsync(ct);
             var baseStations = (int)reader.GetInt64(0);
             var scenarioStations = (int)reader.GetInt64(1);
-            var baseArea = reader.GetDouble(2);
-            var scenarioArea = reader.GetDouble(3);
-            var gained = reader.GetDouble(4);
-            var lost = reader.GetDouble(5);
+            // Al metro cuadrado: una estación en zona ya cubierta deja restos de coma flotante
+            // (1e-8 m²) que no son superficie ganada ni perdida.
+            var baseArea = Math.Round(reader.GetDouble(2));
+            var scenarioArea = Math.Round(reader.GetDouble(3));
+            var gained = Math.Round(reader.GetDouble(4));
+            var lost = Math.Round(reader.GetDouble(5));
             var geometries = new CoverageGeometries(
                 Json(reader.GetString(6)), Json(reader.GetString(7)), Json(reader.GetString(8)),
-                Json(reader.GetString(9)), Json(reader.GetString(10)));
+                Json(reader.GetString(9)), Json(reader.GetString(10)), Reach(reader.GetString(11)));
             await reader.CloseAsync();
             await tx.CommitAsync(ct);
 
@@ -272,5 +317,18 @@ public static class CoverageQuery
     {
         using var doc = JsonDocument.Parse(geoJson);
         return doc.RootElement.Clone();
+    }
+
+    private static List<CoverageReach> Reach(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        return doc.RootElement.EnumerateArray()
+            .Select(r => new CoverageReach(
+                SnakeCaseEnum<ChangeKind>.Parse(r.GetProperty("kind").GetString()!),
+                r.GetProperty("added").ValueKind == JsonValueKind.Null ? null : r.GetProperty("added").GetString(),
+                r.GetProperty("station").ValueKind == JsonValueKind.Null ? null : r.GetProperty("station").GetInt64(),
+                Math.Round(r.GetProperty("inArea").GetDouble()),
+                r.GetProperty("circle").Clone()))
+            .ToList();
     }
 }

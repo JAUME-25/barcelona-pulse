@@ -139,6 +139,11 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /**
+     * @description Qué le pasa a una estación en el escenario.
+     * @enum {unknown}
+     */
+    ChangeKind: 'added' | 'moved' | 'removed';
     /** @description Lo que el escenario cubre y la base no, y al revés. */
     CoverageDifference: {
       /** Format: double */
@@ -148,11 +153,18 @@ export interface components {
     };
     /** @description Geometrías GeoJSON en WGS84 (lon, lat), simplificadas 1 m para dibujarlas. */
     CoverageGeometries: {
+      /** @description Área de estudio. */
       studyArea: components['schemas']['JsonElement'];
+      /** @description Superficie cubierta por la red base. */
       base: components['schemas']['JsonElement'];
+      /** @description Superficie cubierta por el escenario. */
       scenario: components['schemas']['JsonElement'];
+      /** @description Lo que cubre el escenario y la base no. */
       gained: components['schemas']['JsonElement'];
+      /** @description Lo que cubre la base y el escenario no. */
       lost: components['schemas']['JsonElement'];
+      /** @description Círculo de cada estación nueva, movida o quitada, en ese orden y en el de la petición; sin simplificar. */
+      reach: components['schemas']['CoverageReach'][];
     };
     /** @description Modelo con el que se ha calculado: nombre, versión y supuestos explícitos. */
     CoverageModel: {
@@ -160,6 +172,28 @@ export interface components {
       /** Format: int32 */
       version: number;
       assumptions: string[];
+    };
+    /**
+     * @description Alcance de una estación que cambia: su círculo entero, sin recortar al área de estudio. La
+     *     nueva y la movida, en su sitio del escenario; la quitada, en el de la red base.
+     */
+    CoverageReach: {
+      /** @description Nueva, movida o quitada. */
+      kind: components['schemas']['ChangeKind'];
+      /** @description Etiqueta de la estación nueva (h1…); null en las reales. */
+      added: null | string;
+      /**
+       * Format: int64
+       * @description Estación real movida o quitada; null en las nuevas.
+       */
+      station: null | number;
+      /**
+       * Format: double
+       * @description Parte del círculo dentro del área de estudio, al metro cuadrado.
+       */
+      squareMetersInArea: number;
+      /** @description El mismo polígono del cálculo (64 lados), en GeoJSON WGS84. */
+      circle: components['schemas']['JsonElement'];
     };
     /** @description Red base: de qué fuente, en qué instante y cuántas estaciones. */
     CoverageReference: {

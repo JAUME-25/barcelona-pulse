@@ -30,14 +30,20 @@ de demanda. También pide no guardar sin límite escenarios anónimos.
 - **Límites**: radio de 50 a 1000 m, hasta 50 estaciones hipotéticas y 100 movidas, todas dentro
   de la zona de Barcelona; solo se mueven o quitan estaciones de la red base; 10 s como mucho por
   cálculo (`statement_timeout`). Las geometrías se devuelven en WGS84 simplificadas 1 m para
-  dibujarlas; las superficies se calculan sin simplificar.
+  dibujarlas; las superficies se calculan sin simplificar y se redondean al metro cuadrado (una
+  estación en zona ya cubierta dejaba restos de coma flotante de 1e-8 m² como «ganancia»).
+- **Alcance de cada cambio** (`geometries.reach`): el círculo entero de cada estación nueva,
+  movida o quitada (el mismo polígono del cálculo, sin recortar) y la parte que cae dentro del
+  área de estudio. La web dibuja el de las nuevas y movidas aunque no ganen nada, y explica por
+  qué un cambio no mueve la superficie: zona ya cubierta o fuera del área de estudio.
 
 ## Consecuencias
 
 - Comprobado contra PostGIS: un círculo de 300 m mide 282 289 m² (64 lados), dos estaciones en
   el mismo punto cuentan una vez, dos círculos solapados se unen sin doble conteo, una estación
-  en la esquina de un cuadrado de estudio cubre un cuarto exacto, un cambio de capacidad no
-  cambia nada y el mismo escenario da el mismo resultado byte a byte.
+  en la esquina de un cuadrado de estudio cubre un cuarto exacto, una nueva rodeada de otras
+  gana 0 m² exactos, una fuera del área de estudio no alcanza nada de ella, un cambio de
+  capacidad no cambia nada y el mismo escenario da el mismo resultado byte a byte.
 - Con la red real del 20-8-2026 (544 estaciones): 56,95 km² a menos de 300 m, el 55,99 % de
   Barcelona; 0,33–0,37 s por cálculo y 35 KB comprimidos (179 KB sin comprimir).
 - El porcentaje es sobre superficie, no sobre población: Collserola, Montjuïc y el puerto

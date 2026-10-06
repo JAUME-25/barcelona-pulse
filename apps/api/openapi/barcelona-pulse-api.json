@@ -386,6 +386,14 @@
   },
   "components": {
     "schemas": {
+      "ChangeKind": {
+        "enum": [
+          "added",
+          "moved",
+          "removed"
+        ],
+        "description": "Qué le pasa a una estación en el escenario."
+      },
       "CoverageDifference": {
         "required": [
           "gainedSquareMeters",
@@ -410,24 +418,37 @@
           "base",
           "scenario",
           "gained",
-          "lost"
+          "lost",
+          "reach"
         ],
         "type": "object",
         "properties": {
           "studyArea": {
+            "description": "Área de estudio.",
             "$ref": "#/components/schemas/JsonElement"
           },
           "base": {
+            "description": "Superficie cubierta por la red base.",
             "$ref": "#/components/schemas/JsonElement"
           },
           "scenario": {
+            "description": "Superficie cubierta por el escenario.",
             "$ref": "#/components/schemas/JsonElement"
           },
           "gained": {
+            "description": "Lo que cubre el escenario y la base no.",
             "$ref": "#/components/schemas/JsonElement"
           },
           "lost": {
+            "description": "Lo que cubre la base y el escenario no.",
             "$ref": "#/components/schemas/JsonElement"
+          },
+          "reach": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoverageReach"
+            },
+            "description": "Círculo de cada estación nueva, movida o quitada, en ese orden y en el de la petición; sin simplificar."
           }
         },
         "description": "Geometrías GeoJSON en WGS84 (lon, lat), simplificadas 1 m para dibujarlas."
@@ -455,6 +476,47 @@
           }
         },
         "description": "Modelo con el que se ha calculado: nombre, versión y supuestos explícitos."
+      },
+      "CoverageReach": {
+        "required": [
+          "kind",
+          "added",
+          "station",
+          "squareMetersInArea",
+          "circle"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "description": "Nueva, movida o quitada.",
+            "$ref": "#/components/schemas/ChangeKind"
+          },
+          "added": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Etiqueta de la estación nueva (h1…); null en las reales."
+          },
+          "station": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "description": "Estación real movida o quitada; null en las nuevas.",
+            "format": "int64"
+          },
+          "squareMetersInArea": {
+            "type": "number",
+            "description": "Parte del círculo dentro del área de estudio, al metro cuadrado.",
+            "format": "double"
+          },
+          "circle": {
+            "description": "El mismo polígono del cálculo (64 lados), en GeoJSON WGS84.",
+            "$ref": "#/components/schemas/JsonElement"
+          }
+        },
+        "description": "Alcance de una estación que cambia: su círculo entero, sin recortar al área de estudio. La\nnueva y la movida, en su sitio del escenario; la quitada, en el de la red base."
       },
       "CoverageReference": {
         "required": [

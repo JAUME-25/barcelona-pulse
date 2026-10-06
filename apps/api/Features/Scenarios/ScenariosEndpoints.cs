@@ -101,13 +101,20 @@ public static class ScenariosEndpoints
 
         // Solo se mueven o quitan estaciones que están en la red base de ese instante.
         var baseIds = await CoverageQuery.BaseStationIdsAsync(db, source.Id, at, ct);
-        var unknown = moved.Select(m => m.Station).Concat(removed).Where(id => !baseIds.Contains(id)).Distinct().ToList();
-        if (unknown.Count > 0)
+        var unknownErrors = new Dictionary<string, string[]>();
+        var changed = new (string Field, IEnumerable<long> Ids)[] { ("moved", moved.Select(m => m.Station)), ("removed", removed) };
+        foreach (var (field, ids) in changed)
         {
-            return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+            var unknown = ids.Where(id => !baseIds.Contains(id)).Distinct().ToList();
+            if (unknown.Count > 0)
             {
-                ["moved"] = [$"Estaciones que no están en la red base en ese instante: {string.Join(", ", unknown.Take(10))}."],
-            });
+                unknownErrors[field] = [$"Estaciones que no están en la red base en ese instante: {string.Join(", ", unknown.Take(10))}."];
+            }
+        }
+
+        if (unknownErrors.Count > 0)
+        {
+            return TypedResults.ValidationProblem(unknownErrors);
         }
 
         return TypedResults.Ok(await CoverageQuery.ComputeAsync(

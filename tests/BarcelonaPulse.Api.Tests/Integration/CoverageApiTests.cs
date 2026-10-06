@@ -176,27 +176,30 @@ public sealed class CoverageApiTests(CoverageFixture fixture) : IClassFixture<Co
         Assert.True(result.Base.CoveredSquareMeters < 2 * Circle);
     }
 
+    /// <summary>Área de estudio de prueba: un cuadrado de 1 km de lado con la esquina suroeste en el punto de partida.</summary>
+    private async Task EnsureTestSquareAsync()
+    {
+        fixture.Database.RequireAvailable();
+        await using var connection = new NpgsqlConnection(fixture.Database.ConnectionString);
+        await connection.OpenAsync(Ct);
+        await using var command = new NpgsqlCommand("""
+            INSERT INTO study_areas (id, name, kind, geometry, area_square_meters, source, attribution, license, note, input_sha256, loaded_at)
+            SELECT 'test-square', 'Cuadrado de prueba', 'district', ST_Multi(ST_MakeEnvelope(x, y, x + 1000, y + 1000, 25831)),
+                   1000000, 'prueba', 'prueba', NULL, NULL, 'prueba', now()
+            FROM (SELECT ST_X(g) AS x, ST_Y(g) AS y
+                  FROM (SELECT ST_Transform(ST_SetSRID(ST_MakePoint(@lon, @lat), 4326), 25831) AS g) a) b
+            ON CONFLICT (id) DO NOTHING
+            """, connection);
+        command.Parameters.AddWithValue("lon", Lon);
+        command.Parameters.AddWithValue("lat", Lat);
+        await command.ExecuteNonQueryAsync(Ct);
+    }
+
     [Fact]
     public async Task Coverage_is_clipped_to_the_study_area()
     {
-        // Un cuadrado de 1 km de lado con una estación en su esquina: cubre exactamente un cuarto de círculo.
-        fixture.Database.RequireAvailable();
-        await using (var connection = new NpgsqlConnection(fixture.Database.ConnectionString))
-        {
-            await connection.OpenAsync(Ct);
-            await using var command = new NpgsqlCommand("""
-                INSERT INTO study_areas (id, name, kind, geometry, area_square_meters, source, attribution, license, note, input_sha256, loaded_at)
-                SELECT 'test-square', 'Cuadrado de prueba', 'district', ST_Multi(ST_MakeEnvelope(x, y, x + 1000, y + 1000, 25831)),
-                       1000000, 'prueba', 'prueba', NULL, NULL, 'prueba', now()
-                FROM (SELECT ST_X(g) AS x, ST_Y(g) AS y
-                      FROM (SELECT ST_Transform(ST_SetSRID(ST_MakePoint(@lon, @lat), 4326), 25831) AS g) a) b
-                ON CONFLICT (id) DO NOTHING
-                """, connection);
-            command.Parameters.AddWithValue("lon", Lon);
-            command.Parameters.AddWithValue("lat", Lat);
-            await command.ExecuteNonQueryAsync(Ct);
-        }
-
+        // Una estación en la esquina del cuadrado: cubre exactamente un cuarto de círculo.
+        await EnsureTestSquareAsync();
         await IngestStationsAsync("cov-clip", Station("s1", Lon, Lat));
 
         var result = await CoverageAsync(new { source = "cov-clip", studyArea = "test-square", radiusMeters = Radius, at = At });
@@ -230,11 +233,12 @@ public sealed class CoverageApiTests(CoverageFixture fixture) : IClassFixture<Co
             removed = new[] { idA },
         });
 
+        // Superficies al metro cuadrado: a menos de 1 m² de la exacta.
         Assert.Equal((2, 2), (result.Base.Stations, result.Scenario.Stations));
-        Assert.Equal(2 * Circle, result.Base.CoveredSquareMeters, 1);
-        Assert.Equal(2 * Circle, result.Scenario.CoveredSquareMeters, 1);
-        Assert.Equal(2 * Circle, result.Difference.GainedSquareMeters, 1);
-        Assert.Equal(2 * Circle, result.Difference.LostSquareMeters, 1);
+        Assert.Equal(2 * Circle, result.Base.CoveredSquareMeters, 1d);
+        Assert.Equal(2 * Circle, result.Scenario.CoveredSquareMeters, 1d);
+        Assert.Equal(2 * Circle, result.Difference.GainedSquareMeters, 1d);
+        Assert.Equal(2 * Circle, result.Difference.LostSquareMeters, 1d);
         // Devuelve el escenario tal cual se pidió, con el modelo y sus supuestos.
         Assert.Equal("h1", Assert.Single(result.Added).Id);
         Assert.Equal(idB, Assert.Single(result.Moved).Station);
@@ -243,6 +247,104 @@ public sealed class CoverageApiTests(CoverageFixture fixture) : IClassFixture<Co
         Assert.Contains(result.Model.Assumptions, a => a.Contains("isócrona", StringComparison.Ordinal));
         // Lo ganado son dos círculos separados: una geometría GeoJSON de varias partes.
         Assert.Equal("MultiPolygon", result.Geometries.Gained.GetProperty("type").GetString());
+    }
+
+    [Fact]
+    public async Task A_station_in_ground_already_covered_gains_exactly_nothing()
+    {
+        // Cuatro estaciones en cuadrado (300 m de lado): cubren entero el círculo de una en el centro.
+        var corners = new List<NormalizedStation>();
+        foreach (var (dx, dy) in new[] { (-150, -150), (150, -150), (-150, 150), (150, 150) })
+        {
+            var (lon, lat) = await OffsetAsync(dx, dy);
+            corners.Add(Station($"c{corners.Count}", lon, lat));
+        }
+
+        await IngestStationsAsync("cov-dense", [.. corners]);
+
+        var result = await CoverageAsync(new
+        {
+            source = "cov-dense",
+            studyArea = "barcelona",
+            radiusMeters = Radius,
+            at = At,
+            added = new[] { new { id = "h1", longitude = Lon, latitude = Lat } },
+        });
+
+        // Sin restos de coma flotante: cero exacto, y la estación cuenta igual.
+        Assert.Equal((0d, 0d), (result.Difference.GainedSquareMeters, result.Difference.LostSquareMeters));
+        Assert.Equal(result.Base.CoveredSquareMeters, result.Scenario.CoveredSquareMeters);
+        Assert.Equal((4, 5), (result.Base.Stations, result.Scenario.Stations));
+    }
+
+    [Fact]
+    public async Task Every_change_comes_with_the_circle_of_the_calculation()
+    {
+        var b = await OffsetAsync(1000, 0);
+        var h = await OffsetAsync(0, 1000);
+        var bMoved = await OffsetAsync(1000, 1000);
+        await IngestStationsAsync("cov-reach", Station("a", Lon, Lat), Station("b", b.Lon, b.Lat));
+        long idA, idB;
+        await using (var db = fixture.Database.CreateContext())
+        {
+            idA = (await db.Stations.SingleAsync(s => s.SourceId == "cov-reach" && s.SourceStationId == "a", Ct)).Id;
+            idB = (await db.Stations.SingleAsync(s => s.SourceId == "cov-reach" && s.SourceStationId == "b", Ct)).Id;
+        }
+
+        var result = await CoverageAsync(new
+        {
+            source = "cov-reach",
+            studyArea = "barcelona",
+            radiusMeters = Radius,
+            at = At,
+            added = new[] { new { id = "h1", longitude = h.Lon, latitude = h.Lat } },
+            moved = new[] { new { station = idB, longitude = bMoved.Lon, latitude = bMoved.Lat } },
+            removed = new[] { idA },
+        });
+
+        // Nuevas, movidas y quitadas, en ese orden.
+        Assert.Collection(result.Geometries.Reach,
+            r => Assert.Equal((ChangeKind.Added, "h1", (long?)null), (r.Kind, r.Added, r.Station)),
+            r => Assert.Equal((ChangeKind.Moved, (string?)null, (long?)idB), (r.Kind, r.Added, r.Station)),
+            r => Assert.Equal((ChangeKind.Removed, (string?)null, (long?)idA), (r.Kind, r.Added, r.Station)));
+
+        // Cada círculo es el polígono de 64 lados del cálculo, con el área del círculo de 300 m,
+        // y queda entero dentro de Barcelona.
+        await using var connection = new NpgsqlConnection(fixture.Database.ConnectionString);
+        await connection.OpenAsync(Ct);
+        foreach (var reach in result.Geometries.Reach)
+        {
+            Assert.Equal("Polygon", reach.Circle.GetProperty("type").GetString());
+            Assert.Equal(65, reach.Circle.GetProperty("coordinates")[0].GetArrayLength());
+            await using var command = new NpgsqlCommand(
+                "SELECT ST_Area(ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON(@g), 4326), 25831))", connection);
+            command.Parameters.AddWithValue("g", reach.Circle.GetRawText());
+            var area = (double)(await command.ExecuteScalarAsync(Ct))!;
+            Assert.InRange(area, Circle * 0.999, Circle * 1.001);
+            Assert.Equal(Circle, reach.SquareMetersInArea, 1d);
+        }
+    }
+
+    [Fact]
+    public async Task A_station_outside_the_study_area_reaches_none_of_it()
+    {
+        // El cuadrado de prueba empieza en el punto de partida; la nueva queda 2 km al sur.
+        await EnsureTestSquareAsync();
+        var far = await OffsetAsync(0, -2000);
+        await IngestStationsAsync("cov-outside", Station("s1", Lon, Lat));
+
+        var result = await CoverageAsync(new
+        {
+            source = "cov-outside",
+            studyArea = "test-square",
+            radiusMeters = Radius,
+            at = At,
+            added = new[] { new { id = "h1", longitude = far.Lon, latitude = far.Lat } },
+        });
+
+        var reach = Assert.Single(result.Geometries.Reach);
+        Assert.Equal(0, reach.SquareMetersInArea);
+        Assert.Equal(0, result.Difference.GainedSquareMeters);
     }
 
     [Fact]
@@ -333,5 +435,10 @@ public sealed class CoverageApiTests(CoverageFixture fixture) : IClassFixture<Co
         Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, tooMany.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, noSource.StatusCode);
+        // El error va en el campo que lo tiene: una quitada que no existe, en «removed».
+        using var body = JsonDocument.Parse(await unknown.Content.ReadAsStringAsync(Ct));
+        var errors = body.RootElement.GetProperty("errors");
+        Assert.True(errors.TryGetProperty("removed", out _));
+        Assert.False(errors.TryGetProperty("moved", out _));
     }
 }
