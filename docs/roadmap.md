@@ -167,13 +167,15 @@ honesta de lo hecho.
    ningún caso raro; 53 cambian algo más que mayúsculas y espacios (7 nombres cortados que se
    completan con su dirección). El dato guardado no cambia y el buscador encuentra los dos.
    Revisado en la lista, el detalle, «Qué muestra y qué no» y Experimentar, en escritorio, 375 y
-   320 px. En `743c39c`; sin desplegar.
+   320 px. En `743c39c`; en producción desde el 6-10-2026, desplegado junto con los idiomas.
 7. **Hecho.** La aplicación en catalán e inglés (`docs/design.md`, «Idiomas»), con el
    selector que eligió Jaume el 6-10-2026 (ES · CA · EN en la cabecera). Pruebas: unitarias de
    textos de los dos idiomas y de la detección, una de la app con el selector y una de humo
    (catalán por la URL, inglés con el selector). Usada en el navegador con la red real en las
    cuatro vistas, en escritorio, 375 y 320 px, sin errores, sin scroll lateral y sin palabras en
-   otro idioma fuera de los datos (`e2e/idiomas.capture.ts`). Sin desplegar.
+   otro idioma fuera de los datos (`e2e/idiomas.capture.ts`). En `0f88dee`, en producción desde
+   el 6-10-2026: comprobado desde fuera con esas mismas capturas en los tres idiomas, en
+   escritorio, 375 y 320 px, con el selector, sin errores en la consola.
 
 ## Backlog
 
