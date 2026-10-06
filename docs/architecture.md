@@ -170,7 +170,9 @@ de Playwright añade el retraso de sus comprobaciones: la lista parecía tardar 
   16 núcleos): con la API recién arrancada y la caché vacía, la rejilla tardaba 3,2 s; con
   `TimelineWarmUp`, unos 10 s después de arrancar ya las tiene todas (1,6–1,9 s por semana) y
   la rejilla sale en 42 ms. Si alguien abre la ficha en esos primeros segundos, aún la calcula
-  su petición.
+  su petición. En producción (despliegue de `e40ef77`, que ya no precalienta): a la primera,
+  las 4 semanas en 173 ms pedidas desde fuera y la rejilla en el navegador en 374 ms en
+  escritorio y 531 ms en móvil.
 - Fluidez del mapa con la red real, arrastrando y acercando hasta ver los edificios en 3D (6 a
   10 s de gesto): en escritorio, 60 fps en los tres modos y ningún fotograma de más de 50 ms;
   en móvil, 48–49 fps al explorar y al reproducir (p95 de 50 ms, 11–13 fotogramas de más de

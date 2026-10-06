@@ -78,3 +78,50 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  e2e:
+    name: Humo en navegador (web, API y PostGIS)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      # Como en local (README): PostGIS, migraciones y API con Docker Compose y el .env de ejemplo.
+      - name: PostGIS, migraciones y API
+        run: |
+          cp .env.example .env
+          docker compose up -d --build api
+          for attempt in $(seq 1 60); do
+            curl -fs http://127.0.0.1:5080/health/ready > /dev/null && exit 0
+            sleep 2
+          done
+          echo "La API no responde en /health/ready." >&2
+          exit 1
+      - name: El demo y las áreas de estudio
+        run: |
+          docker compose run --rm api ingest demo
+          docker compose run --rm api ingest study-areas
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: apps/web/.nvmrc
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+        working-directory: apps/web
+      - name: Chromium para Playwright
+        run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+      # Compila la web, la sirve con vite preview (que reenvía /api a la API) y la usa en
+      # escritorio y móvil, con el mapa base bloqueado.
+      - name: Pruebas de humo
+        run: npm run test:e2e
+        working-directory: apps/web
+      - name: Registro de la API
+        if: failure()
+        run: docker compose logs migrate api
+      - name: Trazas de Playwright
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: trazas-playwright
+          path: apps/web/test-results/
+          retention-days: 7

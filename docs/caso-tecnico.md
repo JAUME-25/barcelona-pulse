@@ -119,10 +119,11 @@ Ahora cada estación nueva o movida enseña su círculo de alcance, y un aviso d
 no cambia. Por el camino apareció otro caso: restos de coma flotante (1e-8 m²) contaban como
 superficie ganada. Las superficies se redondean al metro cuadrado.
 
-**La primera visita a los límites esperaba 12,5 s.** La rejilla de huecos calcula las cuatro
-semanas de mayo la primera vez que se abre tras arrancar la API. Ahora el despliegue la deja
-calculada y la caché no caduca por tiempo (cambia de clave con cada importación): 0,58 s a la
-primera.
+**La primera visita a los límites esperaba 12,5 s.** La rejilla de huecos calculaba las cuatro
+semanas de mayo la primera vez que se abría tras arrancar la API. Dejarla calculada al desplegar
+no bastaba: un reinicio, una importación o una purga devolvían la espera a la primera visita.
+Ahora la calcula la propia API al arrancar y comprueba cada 5 minutos que siga en la caché: tras
+desplegar, la rejilla sale a la primera en 0,37 s (0,53 s en móvil).
 
 ## Mediciones
 
@@ -145,7 +146,8 @@ software, así que la fluidez se mide con la GPU.
 | Carga en escritorio: lista / mapa | 0,12 s / 0,85 s |
 | Arrastrar y acercar el mapa | 60 fps en escritorio; 48–49 en móvil (60 en Experimentar) |
 | Producción, mayo de 2026 | 28 días, 4 229 269 observaciones, 548 estaciones; con dato, el 98,3 % de las estaciones de media y ningún paso vacío |
-| Despliegue completo | 59 s, con la rejilla de huecos ya calculada |
+| Rejilla de huecos a la primera, tras desplegar (producción) | 0,37 s en escritorio y 0,53 s en móvil; antes, 12,5 s |
+| Despliegue completo | 43 s |
 
 Los tiempos de carga se midieron con 297 KB de JavaScript inicial (90 KB comprimido); con los
 límites visibles son 313 KB (97 KB) y no se han vuelto a medir. Detalle y cómo repetir cada
@@ -153,7 +155,7 @@ medición: [arquitectura](architecture.md#mediciones).
 
 ## Pruebas
 
-- 151 pruebas de backend, unitarias y de integración contra PostGIS real (no un proveedor en
+- 153 pruebas de backend, unitarias y de integración contra PostGIS real (no un proveedor en
   memoria), y 71 de la web, unitarias y de componentes. La CI las pasa y comprueba además el
   formato, el lint, los tipos, que el contrato OpenAPI esté al día y que no falte ninguna
   migración.
@@ -180,9 +182,9 @@ medición: [arquitectura](architecture.md#mediciones).
   fuente.
 - El mapa base es un servicio gratuito sin garantía (OpenFreeMap). Si falla, la lista de
   estaciones sigue funcionando.
-- Si la API se reinicia sin un despliegue, la primera visita a «Qué muestra y qué no» vuelve a
-  esperar unos 12 s.
-- Solo en español. Sin monitor externo de disponibilidad todavía.
+- En los primeros segundos tras arrancar la API (unos 15 s con mayo), quien abra «Qué muestra y
+  qué no» aún espera a que se calcule la rejilla de huecos.
+- Solo en español.
 
 ## Ficha técnica
 
@@ -192,7 +194,7 @@ medición: [arquitectura](architecture.md#mediciones).
 | Datos | PostgreSQL 18 con PostGIS 3.6; SharpCompress para leer los .7z |
 | Web | React 19, TypeScript, Vite y MapLibre GL JS 6 con teselas de OpenFreeMap; cliente tipado desde OpenAPI |
 | Pruebas | xUnit v3, Vitest y Playwright |
-| Entrega | Docker Compose, GitHub Actions y un VPS de Hetzner gestionado con Laravel Forge, detrás de nginx |
+| Entrega | Docker Compose, GitHub Actions y un VPS de Hetzner gestionado con Laravel Forge, detrás de nginx; monitor externo cada 5 minutos |
 
 Más detalle: [arquitectura](architecture.md), [decisiones (ADR)](adr/),
 [modelo de datos](data-model.md), [fuentes](data-sources.md) y [despliegue](despliegue.md).

@@ -77,11 +77,13 @@ escenario: `&modo=experimentar&radio=300&area=barcelona&nuevas=2.166,41.3635&qui
 | Backend: unitarias e integración con PostGIS real | `docker compose run --rm -e BP_REQUIRE_DB=true sdk dotnet test` | Docker |
 | Web: unitarias y de componentes | `npm --prefix apps/web test` | Node |
 | Web: lint, tipos y formato | `npm --prefix apps/web run lint`, `typecheck`, `format:check` | Node |
-| Humo en navegador (escritorio y móvil) | `npm --prefix apps/web run test:e2e` | API con el demo importado |
+| Humo en navegador (escritorio y móvil) | `npm --prefix apps/web run test:e2e` | API con el demo y las áreas de estudio importados |
 
 - Sin `BP_TEST_POSTGRES`, las pruebas de integración salen como **omitidas**, nunca como
   pasadas. Con `BP_REQUIRE_DB=true` fallan. Dentro del contenedor `sdk` la variable ya está
   definida.
+- La CI pasa todas, también la de humo: levanta PostGIS, las migraciones y la API con Docker
+  Compose, como aquí, e importa el demo y las áreas de estudio.
 - La prueba de humo bloquea el mapa base para no depender de un servicio público: comprueba la
   lógica y que la aplicación sigue siendo usable sin mapa. El mapa conectado se revisa con las
   capturas, que también usan la pantalla (desde `apps/web`:
@@ -126,7 +128,7 @@ tests/BarcelonaPulse.Api.Tests/   pruebas de backend (unitarias e integración c
 scripts/                  generador del fixture de demostración
 docs/                     arquitectura, fuentes, modelo de datos, hoja de ruta, ADR y muestras
 docker-compose.yml        PostGIS, migraciones, API y contenedor del SDK
-.github/workflows/ci.yml  CI: API con PostGIS y web
+.github/workflows/ci.yml  CI: API con PostGIS, web y humo en navegador
 ```
 
 ## Decisiones que conviene entender

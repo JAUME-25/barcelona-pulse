@@ -138,7 +138,9 @@ honesta de lo hecho.
      primera visita. Desde el 6-10-2026 la deja calculada la propia API (`TimelineWarmUp`): al
      arrancar y cada 5 minutos, si falta alguna semana en la caché. `infra/warm-up.mjs` sobra y se
      quita. En local: 6 semanas en unos 10 s al arrancar y la rejilla después en 42 ms (antes,
-     3,2 s en frío). Pendiente de desplegar y medir en producción.
+     3,2 s en frío). En producción desde el 6-10-2026 (`e40ef77`, despliegue de 43 s ya sin
+     precalentar): a la primera, las 4 semanas en 173 ms pedidas desde fuera y la rejilla en el
+     navegador en 374 ms en escritorio y 531 ms en móvil (`e2e/despliegue.capture.ts`).
 4. **En curso.** Caso técnico para el portfolio: qué problema resuelve, decisiones, dificultades
    reales, mediciones y límites. El texto está en `docs/caso-tecnico.md` (6-10-2026), con las
    cifras de las ADR, de `docs/architecture.md` y de producción, y las pruebas de la CI de
@@ -153,6 +155,11 @@ honesta de lo hecho.
    - Se llega desde «Programas a medida»: en «Lo que ya he hecho», después del CRM y de Cuadra,
      y en su cierre (decidido por Jaume el 6-10-2026, que también dio por buenas las
      traducciones). Falta publicarla cuando Jaume lo diga.
+5. **Hecho en local.** Pruebas de humo en la CI: un trabajo nuevo levanta PostGIS, las
+   migraciones y la API con Docker Compose (como en local), importa el demo y las áreas de
+   estudio y pasa las 8 pruebas de humo en escritorio y móvil. Si falla, deja el registro de la
+   API y las trazas de Playwright. Ensayado el 6-10-2026 desde una base vacía (proyecto
+   `bp-ci`, otros puertos): 16 de 16. Falta verlo en GitHub.
 
 ## Backlog
 
@@ -169,7 +176,6 @@ honesta de lo hecho.
 - Experimentar: añadir y mover estaciones sin ratón ni pantalla táctil (hoy solo se deshace con
   el teclado). Probar el arrastre con el dedo en un teléfono de verdad (en Playwright solo se ha
   probado el toque para añadir).
-- Web: E2E en CI (Compose con API y PostGIS) cuando haya despliegue.
 - Tiempo real con el token de Open Data BCN (`Authorization: <token>`; un 302 a `/tokens` es un
   fallo de autenticación): tarea programada y «Última observación» con frescura medida.
 - API: caché HTTP con validación para `/api/stations`.
