@@ -129,6 +129,13 @@ export const ca: Messages = {
         : `${String(shown)} de ${String(total)} estacions`,
     noMatch: 'Cap estació no coincideix amb la cerca i els filtres.',
     showAll: 'Mostrar-les totes',
+    order: 'Ordre',
+    orders: {
+      name: 'Nom',
+      bikes: 'Més bicis',
+      docks: 'Més ancoratges lliures',
+      ebikes: 'Més elèctriques',
+    },
     listTitle: 'Estacions',
     source: 'Font',
     demoSuffix: '(demo)',

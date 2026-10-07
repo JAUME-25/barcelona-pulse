@@ -286,7 +286,26 @@ honesta de lo hecho.
     - Pruebas: 168 de la web (nuevas: el día representativo, la hora de reloj en los días de 23
       y 25 h, el instante con y sin día pedido, y la ida y vuelta con «Cambiar momento»). Usado
       en el navegador con la red real en escritorio, 375 y 320 px, en los tres idiomas y con la
-      demo, sin errores en la consola ni desbordes.
+      demo, sin errores en la consola ni desbordes. En `56c26f3`.
+13. **Hecho** en local (7-10-2026, sin commit). Buscar y ordenar como se busca una estación,
+    segundo bloque de la misma propuesta:
+    - La búsqueda encuentra también por barrio y por distrito («Poblenou», «Gràcia»), que no
+      suelen ir en el nombre, y mientras se busca el mapa encuadra los resultados aunque se
+      hubiera movido antes (`frameFollows` en `StationMap`). Intro abre la primera de la lista.
+    - Cada fila lleva el barrio junto al estado («Con bicis · el Poblenou»), para situar la
+      estación al buscar o al ordenar por cifras.
+    - «Orden», junto al recuento: por nombre o, de más a menos, por bicis, anclajes libres o
+      eléctricas (`sortStations`); las que no enseñan cifra (sin dato, fuera de servicio) van al
+      final y a igual cifra se conserva el nombre. Solo el orden de la lista: el mapa no cambia.
+      Se oculta con el detalle abierto; no va en la URL (eso es del bloque de compartir).
+    - Al elegir una estación a escala de ciudad (zoom < 13, sin números en los marcadores), el
+      mapa se acerca a ella a nivel de calle; al llegar con un enlace se respeta su cámara.
+    - Pruebas: 173 de la web (nuevas: búsqueda por barrio y distrito, los cuatro órdenes con
+      empates y sin cifra, y una de la app con el orden, el barrio en la fila, la búsqueda por
+      barrio e Intro). Usado en el navegador con la red real: «gràcia» da 31 de 548 y el mapa se
+      va a Gràcia; «Más bicis» pone primero la de 18; Intro abre la primera y el mapa pasa de
+      z12,5 a z14 sobre ella; recuento y «Orden» en una línea a 375 px y en dos a 320 px, sin
+      desbordes, en los tres idiomas y sin errores en la consola.
 
 ## Siguiente
 

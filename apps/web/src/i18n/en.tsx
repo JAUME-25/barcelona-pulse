@@ -112,6 +112,13 @@ export const en: Messages = {
         : `${String(shown)} of ${String(total)} stations`,
     noMatch: 'No station matches the search and the filters.',
     showAll: 'Show all',
+    order: 'Sort',
+    orders: {
+      name: 'Name',
+      bikes: 'Most bikes',
+      docks: 'Most free docks',
+      ebikes: 'Most e-bikes',
+    },
     listTitle: 'Stations',
     source: 'Source',
     demoSuffix: '(demo)',

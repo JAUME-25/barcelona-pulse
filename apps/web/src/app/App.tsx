@@ -33,7 +33,11 @@ import {
   AVAILABILITY_ORDER,
   countByAvailability,
   filterStations,
+  LIST_ORDERS,
+  normalizeForSearch,
+  sortStations,
   type Availability,
+  type ListOrder,
 } from '../features/stations/availability';
 import { districtKey, summarizeByDistrict } from '../features/stations/districts';
 import { DistrictSummary } from '../features/stations/DistrictSummary';
@@ -266,6 +270,11 @@ export function App() {
     () => filterStations(all, query, visible, activeDistrict),
     [all, query, visible, activeDistrict],
   );
+  // Orden de la lista (el mapa no lo necesita): por nombre o por cifras, de más a menos.
+  const [order, setOrder] = useState<ListOrder>('name');
+  const listed = useMemo(() => sortStations(filtered, order), [filtered, order]);
+  // Mientras se busca, el mapa encuadra los resultados, aunque se haya movido antes.
+  const searching = normalizeForSearch(query.trim());
   const selected =
     selectedKey === null ? undefined : all.find((s) => s.sourceStationId === selectedKey);
   const selectedId = selected?.id ?? null;
@@ -490,12 +499,39 @@ export function App() {
                 setQuery(e.target.value);
                 if (selectedKey !== null) closeDetail();
               }}
+              // Intro abre la primera estación de la lista.
+              onKeyDown={(e) => {
+                const first = listed[0];
+                if (e.key === 'Enter' && searching !== '' && first !== undefined) {
+                  e.preventDefault();
+                  select(first.id);
+                }
+              }}
             />
           </div>
-          {/* Al reproducir cambia en cada paso: anunciarlo no dejaría oír nada más. */}
-          <p className="panel-tools__count" aria-live={replaying ? 'off' : 'polite'}>
-            {m.count(filtered.length, inDistrict.length)}
-          </p>
+          <div className="panel-tools__row">
+            {/* Al reproducir cambia en cada paso: anunciarlo no dejaría oír nada más. */}
+            <p className="panel-tools__count" aria-live={replaying ? 'off' : 'polite'}>
+              {m.count(filtered.length, inDistrict.length)}
+            </p>
+            {selected === undefined && (
+              <label className="list-order">
+                <span>{m.order}</span>
+                <select
+                  value={order}
+                  onChange={(e) => {
+                    setOrder(e.target.value as ListOrder);
+                  }}
+                >
+                  {LIST_ORDERS.map((value) => (
+                    <option key={value} value={value}>
+                      {m.orders[value]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
         </div>
         {selected !== undefined ? (
           <StationDetail
@@ -519,7 +555,7 @@ export function App() {
             )}
             <h2 className="list-title">{m.listTitle}</h2>
             <StationList
-              stations={filtered}
+              stations={listed}
               at={response.at}
               selectedId={selectedId}
               onSelect={select}
@@ -584,18 +620,21 @@ export function App() {
           <Suspense fallback={<div className="station-map" aria-hidden="true" />}>
             <StationMap
               stations={experimenting ? scenarioStations : filtered}
-              frame={experimenting ? all : inDistrict}
+              frame={experimenting ? all : searching === '' ? inDistrict : filtered}
               frameKey={sourceId ?? ''}
-              // Con otro distrito se encuadra el distrito, solo si no se ha movido el mapa antes.
+              // Con otro distrito se encuadra el distrito, solo si no se ha movido el mapa antes;
+              // con una búsqueda, sus resultados, siempre.
               frameMode={
-                experimenting || activeDistrict === null
+                experimenting
                   ? shownMode
-                  : `${shownMode}:${activeDistrict}`
+                  : `${shownMode}${activeDistrict === null ? '' : `:${activeDistrict}`}${searching === '' ? '' : `?${searching}`}`
               }
+              frameFollows={!experimenting && searching !== ''}
               framePadding={
                 replaying ? REPLAY_FRAME : experimenting ? EXPERIMENT_FRAME : EXPLORE_FRAME
               }
               selectedId={experimenting ? null : selectedId}
+              zoomOnSelect={selectedByUser}
               variant={experimenting ? 'network' : 'availability'}
               buildings={!experimenting}
               onSelect={experimenting ? tapStation : select}

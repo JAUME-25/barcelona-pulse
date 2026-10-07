@@ -88,6 +88,7 @@ export function normalizeForSearch(text: string): string {
 /**
  * Las estaciones que se ven en la lista y en el mapa: las de las categorías activas, las que
  * casan con la búsqueda y, si se ha elegido uno, las del distrito (`''` son las que no tienen).
+ * Por nombre.
  */
 export function filterStations(
   stations: readonly StationItem[],
@@ -101,15 +102,55 @@ export function filterStations(
       .filter((s) => visible.has(availabilityOf(s.state)))
       .filter((s) => district === null || (s.district ?? '') === district)
       .map((s) => ({ s, name: stationName(s) }))
-      // Por el nombre que se ve y por el que publica la fuente, que puede traer palabras cortadas.
+      // Por el nombre que se ve y por el que publica la fuente, que puede traer palabras
+      // cortadas; y por el barrio y el distrito: «Gràcia» o «Poblenou» no suelen ir en el nombre.
       .filter(
         ({ s, name }) =>
           q === '' ||
           normalizeForSearch(name).includes(q) ||
           normalizeForSearch(s.name).includes(q) ||
-          normalizeForSearch(s.sourceStationId).includes(q),
+          normalizeForSearch(s.sourceStationId).includes(q) ||
+          normalizeForSearch(s.neighbourhood ?? '').includes(q) ||
+          normalizeForSearch(s.district ?? '').includes(q),
       )
       .sort((a, b) => collator.compare(a.name, b.name))
       .map(({ s }) => s)
   );
+}
+
+/** Orden de la lista: por nombre o, de más a menos, por bicis, anclajes libres o eléctricas. */
+export type ListOrder = 'name' | 'bikes' | 'docks' | 'ebikes';
+export const LIST_ORDERS: readonly ListOrder[] = ['name', 'bikes', 'docks', 'ebikes'];
+
+/** La cifra por la que se ordena; null si no se enseña (sin dato o fuera de servicio). */
+function orderValue(station: StationItem, order: ListOrder): number | null {
+  const category = availabilityOf(station.state);
+  if (category === 'unknown' || category === 'outOfService') return null;
+  switch (order) {
+    case 'bikes':
+      return station.state.bikesAvailable;
+    case 'docks':
+      return station.state.docksAvailable;
+    case 'ebikes':
+      return station.state.ebikesAvailable;
+    case 'name':
+      return null;
+  }
+}
+
+/**
+ * Ordena una lista que ya viene por nombre. Por cifras va de más a menos; las estaciones sin la
+ * cifra (sin dato, fuera de servicio o una fuente que no la publica) quedan al final, y a igual
+ * cifra se conserva el orden por nombre.
+ */
+export function sortStations(stations: readonly StationItem[], order: ListOrder): StationItem[] {
+  if (order === 'name') return [...stations];
+  return stations
+    .map((s) => ({ s, value: orderValue(s, order) }))
+    .sort((a, b) => {
+      if (a.value === null) return b.value === null ? 0 : 1;
+      if (b.value === null) return -1;
+      return b.value - a.value;
+    })
+    .map(({ s }) => s);
 }

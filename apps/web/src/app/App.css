@@ -315,11 +315,38 @@
   color: var(--ink-2);
 }
 
+/* Recuento a la izquierda y el orden de la lista a la derecha; a 320 px caben en una línea. */
+.panel-tools__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
 .panel-tools__count {
-  margin: 8px 0 0;
+  margin: 0;
   color: var(--ink-2);
   font-size: 0.9375rem;
   font-variant-numeric: tabular-nums;
+}
+
+.list-order {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+}
+.list-order select {
+  min-height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-solid);
+  color: var(--ink);
+  font: inherit;
 }
 
 .list-title {

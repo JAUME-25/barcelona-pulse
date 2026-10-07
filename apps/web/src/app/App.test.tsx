@@ -456,6 +456,61 @@ describe('App', () => {
     expect(screen.getByText(/no permite coger bicis/)).toBeTruthy();
   });
 
+  it('la lista se ordena por cifras, enseña el barrio, y la búsqueda encuentra por barrio e Intro abre la primera', async () => {
+    const real = [
+      stationFixture({
+        id: 31,
+        sourceStationId: '31',
+        name: 'C/ GRAN DE GRÀCIA, 141',
+        district: 'Gràcia',
+        neighbourhood: 'la Vila de Gràcia',
+        state: { bikesAvailable: 2, ebikesAvailable: 2, docksAvailable: 20 },
+      }),
+      stationFixture({
+        id: 32,
+        sourceStationId: '32',
+        name: 'C/ PUJADES, 174',
+        district: 'Sant Martí',
+        neighbourhood: 'el Poblenou',
+        state: { bikesAvailable: 15, ebikesAvailable: 1, docksAvailable: 5 },
+      }),
+      stationFixture({
+        id: 33,
+        sourceStationId: '33',
+        name: 'C/ ARAGÓ, 288',
+        district: 'Eixample',
+        neighbourhood: "la Dreta de l'Eixample",
+        state: { freshness: 'none', status: 'unknown', bikesAvailable: null, docksAvailable: null },
+      }),
+    ];
+    mockApi((path) => json(path === '/api/sources' ? [observedSource] : observedResponse(real)));
+    const user = userEvent.setup();
+    window.history.replaceState(null, '', '/');
+    renderApp();
+
+    const names = () =>
+      [...document.querySelectorAll('.station-list__name')].map((n) => n.textContent);
+    await screen.findByText('3 estaciones');
+    expect(names()).toEqual(['C/ Aragó, 288', 'C/ Gran de Gràcia, 141', 'C/ Pujades, 174']);
+    // El barrio junto al estado, para situar la estación.
+    expect(screen.getByText('· el Poblenou')).toBeTruthy();
+
+    // Por bicis, de más a menos; la que no tiene dato, al final.
+    await user.selectOptions(screen.getByLabelText('Orden'), 'bikes');
+    expect(names()).toEqual(['C/ Pujades, 174', 'C/ Gran de Gràcia, 141', 'C/ Aragó, 288']);
+    await user.selectOptions(screen.getByLabelText('Orden'), 'ebikes');
+    expect(names()).toEqual(['C/ Gran de Gràcia, 141', 'C/ Pujades, 174', 'C/ Aragó, 288']);
+
+    // «poblenou» no está en ningún nombre: se encuentra por el barrio. Intro abre la primera.
+    const search = screen.getByLabelText('Buscar estación');
+    await user.type(search, 'poblenou');
+    expect(screen.getByText('1 de 3 estaciones')).toBeTruthy();
+    expect(names()).toEqual(['C/ Pujades, 174']);
+    await user.keyboard('{Enter}');
+    expect(await screen.findByRole('heading', { level: 2, name: 'C/ Pujades, 174' })).toBeTruthy();
+    expect(new URLSearchParams(window.location.search).get('estacion')).toBe('32');
+  });
+
   it('«Cambiar momento» lleva a Reproducir en ese momento y, al volver, se queda el elegido', async () => {
     mockApi((path, url) => {
       if (path === '/api/sources') return json([observedSource]);

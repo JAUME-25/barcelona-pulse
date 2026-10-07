@@ -40,6 +40,8 @@ function Figure({ value, unit }: { value: number | null; unit: string }) {
 interface StationRowProps {
   id: number;
   name: string;
+  /** El barrio, para situar la estación cuando se busca o se ordena por cifras. */
+  place: string | null;
   category: Availability;
   summaryText: string;
   bikes: number | null;
@@ -55,6 +57,7 @@ interface StationRowProps {
 const StationRow = memo(function StationRow({
   id,
   name,
+  place,
   category,
   summaryText,
   bikes,
@@ -79,6 +82,7 @@ const StationRow = memo(function StationRow({
           <span className="station-list__name">{name}</span>
           <span className="station-list__summary">
             {summaryText}
+            {place !== null && <span className="station-list__place"> · {place}</span>}
             {bikes !== null && (
               <span className="visually-hidden">
                 , {m.srBikes(bikes)}
@@ -118,6 +122,7 @@ export function StationList({ stations, at, selectedId, onSelect }: StationListP
             key={station.id}
             id={station.id}
             name={stationName(station)}
+            place={station.neighbourhood}
             category={category}
             summaryText={summary(station, at)}
             bikes={known ? station.state.bikesAvailable : null}

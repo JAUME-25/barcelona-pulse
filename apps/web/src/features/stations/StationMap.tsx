@@ -59,9 +59,19 @@ interface StationMapProps {
    * no ha movido el mapa: si se ha acercado a su barrio, ahí se queda.
    */
   frameMode?: string;
+  /**
+   * El encuadre sigue a `frame` aunque la persona haya movido el mapa: mientras se busca, el
+   * mapa enseña los resultados.
+   */
+  frameFollows?: boolean;
   /** Margen extra que tapan otros controles sobre el mapa (solo escritorio). */
   framePadding?: { top?: number; right: number; bottom: number; left?: number } | undefined;
   selectedId: number | null;
+  /**
+   * Al elegir una estación a escala de ciudad (sin números en los marcadores), acercar el mapa
+   * hasta verla con sus vecinas. No al llegar con un enlace: se respeta su cámara.
+   */
+  zoomOnSelect?: boolean;
   /**
    * «availability»: color y número según el estado. «network»: todas iguales y sin número,
    * para cuando lo que importa es dónde están (escenarios de cobertura).
@@ -337,8 +347,10 @@ export function StationMap({
   frame,
   frameKey,
   frameMode = '',
+  frameFollows = false,
   framePadding,
   selectedId,
+  zoomOnSelect = false,
   variant = 'availability',
   buildings = true,
   onSelect,
@@ -359,6 +371,7 @@ export function StationMap({
   const onSelectRef = useRef(onSelect);
   const onStatusRef = useRef(onStatusChange);
   const onMapReadyRef = useRef(onMapReady);
+  const zoomOnSelectRef = useRef(zoomOnSelect);
   const fittedKeyRef = useRef<string | null>(null);
   const fittedModeRef = useRef<string | null>(null);
   // La persona ha movido la cámara (o ha elegido una estación) desde el último encuadre. Una
@@ -376,6 +389,7 @@ export function StationMap({
     onSelectRef.current = onSelect;
     onStatusRef.current = onStatusChange;
     onMapReadyRef.current = onMapReady;
+    zoomOnSelectRef.current = zoomOnSelect;
   });
 
   // Creación y limpieza del mapa. El estilo se descarga y se adapta antes de crearlo.
@@ -549,8 +563,8 @@ export function StationMap({
     }
   }, [buildings, mapReady]);
 
-  // Encuadre: abarcando todas las estaciones al abrir y con cada fuente; al cambiar de modo, solo
-  // si la persona no ha movido el mapa.
+  // Encuadre: abarcando todas las estaciones al abrir y con cada fuente; al cambiar de modo o de
+  // distrito, solo si la persona no ha movido el mapa; mientras se busca, siempre.
   useEffect(() => {
     const map = mapRef.current;
     const sameFrame = fittedKeyRef.current === frameKey && fittedModeRef.current === frameMode;
@@ -560,17 +574,18 @@ export function StationMap({
     fittedKeyRef.current = frameKey;
     fittedModeRef.current = frameMode;
     // Si la URL ya trae una cámara, se respeta en vez de encuadrar.
-    if (firstTime && cameraFromUrlRef.current) return;
-    if (onlyMode && movedByUserRef.current) return;
+    if (firstTime && cameraFromUrlRef.current && !frameFollows) return;
+    if (onlyMode && movedByUserRef.current && !frameFollows) return;
     const floatingPanel = window.innerWidth >= 768;
     const padding = floatingPanel
       ? { top: padTop, right: padRight, bottom: padBottom, left: padLeft }
       : { top: 24, right: 24, bottom: 24, left: 24 };
     frameStations(map, frame, padding);
     movedByUserRef.current = false;
-  }, [frame, frameKey, frameMode, mapReady, padTop, padRight, padBottom, padLeft]);
+  }, [frame, frameKey, frameMode, frameFollows, mapReady, padTop, padRight, padBottom, padLeft]);
 
-  // Selección: resalta y, si queda fuera de la vista, centra la estación.
+  // Selección: resalta y, si queda fuera de la vista o el mapa está a escala de ciudad (sin
+  // números, la elegida no se distingue), centra la estación acercándose a nivel de calle.
   useEffect(() => {
     selectedRef.current = selectedId;
     const map = mapRef.current;
@@ -585,7 +600,8 @@ export function StationMap({
     const left = window.innerWidth >= 768 ? FLOATING_PANEL_PX : width * 0.1;
     const visible =
       point.x > left && point.x < width * 0.9 && point.y > height * 0.1 && point.y < height * 0.9;
-    if (!visible) {
+    const cityScale = zoomOnSelectRef.current && map.getZoom() < 13;
+    if (!visible || cityScale) {
       // Como si la hubiera movido a mano: al cambiar de modo, el mapa se queda en la estación.
       movedByUserRef.current = true;
       // En escritorio se centra en la parte del mapa que no tapa el panel.

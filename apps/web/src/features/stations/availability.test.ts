@@ -5,6 +5,7 @@ import {
   availabilityOf,
   countByAvailability,
   filterStations,
+  sortStations,
   AVAILABILITY_ORDER,
 } from './availability';
 
@@ -110,5 +111,78 @@ describe('filterStations', () => {
     const withoutUnknown = new Set(AVAILABILITY_ORDER.filter((c) => c !== 'unknown'));
     expect(filterStations(stations, '', withoutUnknown).map((s) => s.id)).not.toContain(3);
     expect(countByAvailability(stations).unknown).toBe(1);
+  });
+
+  it('busca también por barrio y por distrito, que no suelen ir en el nombre', () => {
+    const real = [
+      stationFixture({
+        id: 20,
+        name: 'C/ GRAN DE GRÀCIA, 141',
+        district: 'Gràcia',
+        neighbourhood: 'la Vila de Gràcia',
+      }),
+      stationFixture({
+        id: 21,
+        name: 'C/ PUJADES, 174',
+        district: 'Sant Martí',
+        neighbourhood: 'el Poblenou',
+      }),
+      stationFixture({ id: 22, name: 'C/ ARAGÓ, 288', district: 'Eixample', neighbourhood: null }),
+    ];
+    const ids = (q: string) => filterStations(real, q, all).map((s) => s.id);
+    expect(ids('poblenou')).toEqual([21]);
+    expect(ids('gracia')).toEqual([20]);
+    expect(ids('sant marti')).toEqual([21]);
+    expect(ids('eixample')).toEqual([22]);
+  });
+});
+
+describe('sortStations', () => {
+  const byName = [
+    stationFixture({
+      id: 1,
+      name: 'A',
+      state: { bikesAvailable: 3, docksAvailable: 20, ebikesAvailable: 0 },
+    }),
+    stationFixture({
+      id: 2,
+      name: 'B',
+      state: { bikesAvailable: 12, docksAvailable: 5, ebikesAvailable: 7 },
+    }),
+    stationFixture({
+      id: 3,
+      name: 'C',
+      state: { freshness: 'none', status: 'unknown', bikesAvailable: null, docksAvailable: null },
+    }),
+    stationFixture({
+      id: 4,
+      name: 'D',
+      state: { bikesAvailable: 12, docksAvailable: 9, ebikesAvailable: 2 },
+    }),
+    stationFixture({
+      id: 5,
+      name: 'E',
+      state: { status: 'closed', bikesAvailable: 0, docksAvailable: 0 },
+    }),
+  ];
+  const ids = (list: readonly { id: number }[]) => list.map((s) => s.id);
+
+  it('por nombre deja la lista como viene', () => {
+    expect(ids(sortStations(byName, 'name'))).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it('por cifras va de más a menos, a igual cifra por nombre, y sin cifra al final', () => {
+    // Sin dato y cerrada no enseñan cifras: no pueden ir entre las que sí.
+    expect(ids(sortStations(byName, 'bikes'))).toEqual([2, 4, 1, 3, 5]);
+    expect(ids(sortStations(byName, 'docks'))).toEqual([1, 4, 2, 3, 5]);
+    expect(ids(sortStations(byName, 'ebikes'))).toEqual([2, 4, 1, 3, 5]);
+  });
+
+  it('una fuente que no publica la cifra la manda al final', () => {
+    const noTypes = [
+      stationFixture({ id: 6, name: 'F', state: { ebikesAvailable: null } }),
+      stationFixture({ id: 7, name: 'G', state: { ebikesAvailable: 1 } }),
+    ];
+    expect(ids(sortStations(noTypes, 'ebikes'))).toEqual([7, 6]);
   });
 });
