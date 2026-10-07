@@ -66,6 +66,7 @@ public sealed record StationState(
 /// <param name="Longitude">Longitud WGS84.</param>
 /// <param name="Latitude">Latitud WGS84.</param>
 /// <param name="Capacity">Capacidad publicada; nula si la fuente no la da.</param>
+/// <param name="Altitude">Altitud en metros publicada por la fuente; nula si no la da.</param>
 /// <param name="MetadataAssumed">
 /// Los atributos se publicaron después del instante consultado y se asumen vigentes
 /// también antes (primera versión conocida).
@@ -81,6 +82,7 @@ public sealed record StationItem(
     double Longitude,
     double Latitude,
     int? Capacity,
+    double? Altitude,
     bool MetadataAssumed,
     StationState State);
 
@@ -93,6 +95,7 @@ public sealed record StationsResponse(
     bool Truncated,
     IReadOnlyList<StationItem> Stations);
 
+/// <summary>Una versión de los atributos de la estación; la altitud en metros, nula si la fuente no la da.</summary>
 public sealed record StationVersionItem(
     string Name,
     string? Address,
@@ -101,6 +104,7 @@ public sealed record StationVersionItem(
     double Longitude,
     double Latitude,
     int? Capacity,
+    double? Altitude,
     DateTimeOffset? ValidFrom,
     DateTimeOffset? ValidTo,
     DateTimeOffset FirstSeenAt);

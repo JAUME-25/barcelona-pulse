@@ -197,6 +197,11 @@ panel.
   Sant Andreu, Horta-Guinardó y Gràcia»); las barras divergentes por distrito, en bicis por
   estación para comparar distritos de distinto tamaño; y las seis que más se llenan y las seis
   que más se vacían, con «2 → 41 de 43». Cada una abre su ficha del momento de llegada.
+- «Por altitud» (8-10-2026, con la altitud del archivo ya importada): las estaciones con balance
+  y altitud publicada en tres tercios («Hasta 15 m», «De 15 a 40 m», «Más de 40 m»; los límites
+  salen de los datos), con las mismas barras que los distritos. El 13-5-2026 de 7 a 10, las más
+  bajas ganan 4,0 bicis por estación, las intermedias pierden 5,4 y las más altas 1,6: por la
+  mañana las bicis bajan, y salen sobre todo de la franja media.
 - La clave, en la leyenda del mapa, con el recuento de cada clase; en móvil, el sello dice las
   dos horas.
 - Son dos estados, no viajes, y se dice: lo que entra y sale entre medias no se ve. Sin dato no es
@@ -230,8 +235,9 @@ completa en un solo sitio y, junto a cada dato, lo justo para no malinterpretarl
   importación (cuándo, cómo acabó y sus recuentos). Y fuera de la ficha, tres avisos que antes
   se callaban: un enlace con una estación que no está en la fuente, un enlace con un día no
   importado (se enseña otro) y una respuesta recortada por la API. En la ficha de la estación,
-  desde cuándo se conoce y, plegados, sus cambios de nombre, sitio o capacidad con fecha: la API
-  los guardaba por versiones y la web no los enseñaba.
+  desde cuándo se conoce y, plegados, sus cambios de nombre, sitio, capacidad o altitud con
+  fecha: la API los guardaba por versiones y la web no los enseñaba. Desde el 8-10-2026, la
+  altitud publicada («Altitud · 41 m») entre los datos de la estación; sin ella, no se nombra.
 - Junto al dato:
   - bajo la pista de Reproducir, a qué horas faltan datos;
   - «N de M con dato» y, en Experimentar, «En línea recta · Superficie, no población · No mide

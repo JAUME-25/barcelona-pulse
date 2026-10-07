@@ -531,12 +531,37 @@ honesta de lo hecho.
       totales, clave, las dos horas en la URL y Atrás) y `e2e/balance.capture.ts` con el mapa
       real: escritorio a escala de ciudad y de calle, 375 px (mapa, panel y distritos, en los
       tres idiomas) y 320 px. Tipos, lint y formato en verde.
+27. **Hecho** en local (8-10-2026). La altitud de las estaciones, el segundo punto que quedaba
+    de la propuesta:
+    - `station_versions.altitude` (metros, nula si la fuente no la da; migración
+      `StationAltitude`). El adaptador del histórico la lee de `altitude`; «NA» o un valor
+      ilegible dejan la estación sin ella, no la rechazan. Cuenta como atributo solo cuando la
+      publican las dos partes que se comparan: una versión guardada sin ella la toma de una
+      publicación con los mismos atributos sin abrir otra versión (`FillAltitude`), porque la
+      altitud de un sitio no cambia, solo se conoce más tarde; otra altitud con los mismos
+      atributos (la estación se movió) sí abre versión (`docs/data-model.md`, «Versiones de
+      atributos»).
+    - API: `altitude` en `/api/stations`, en los fotogramas y en las versiones del detalle;
+      OpenAPI y `schema.d.ts` regenerados.
+    - Web: «Altitud · 41 m» en la ficha (sin ella, no se nombra), el cambio de altitud entre
+      versiones en «Cambios de esta estación», y en Balance «Por altitud»: tres tercios por la
+      altitud publicada con las barras de los distritos (`docs/design.md`).
+    - Base local: reimportados el 4, 13, 20 y 27 de mayo y el 17 y 28 de agosto (unos 15 s cada
+      uno, 0 versiones nuevas): 544 a 546 de 548 estaciones con altitud según el instante (de 2
+      a 184 m; mediana 26). El 13-5-2026 de 7 a 10: hasta 15 m, +4,0 bicis por estación (181
+      estaciones); de 15 a 40 m, −5,4 (171); más de 40 m, −1,6 (178).
+    - Pruebas: 212 de backend (nuevas: la altitud del archivo en metros y ausente sin rechazar;
+      una publicada después completa la versión y otra distinta abre una; la altitud en la API
+      del histórico) con los fixtures regenerados; 216 de la web (tercios por altitud, la ficha
+      con y sin altitud); `balance.capture.ts` comprueba los tres tercios con el mapa real.
+      Formato de .NET y web, lint y tipos en verde.
+    - Pendiente en producción: tras desplegar, reimportar un día de mayo para que las versiones
+      tomen la altitud (hasta entonces, sin «Por altitud» ni altitud en la ficha).
 
 ## Siguiente
 
-- Lo que queda de la propuesta del 7-10-2026, en este orden (el balance entre dos horas se hizo
-  el 8-10-2026, B5.26):
-  - Altitud de las estaciones: migración y reimportar (en local ya se puede).
+- Lo que queda de la propuesta del 7-10-2026, en este orden (el balance entre dos horas y la
+  altitud se hicieron el 8-10-2026, B5.26 y B5.27):
   - Página del contrato OpenAPI.
   - Nacimiento y retirada de estaciones.
   - Tabla de resumen por hora: lo que falta para que una semana de la línea temporal baje de

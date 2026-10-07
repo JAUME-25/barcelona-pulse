@@ -96,6 +96,13 @@ export const en: Messages = {
       return `${win}; ${lose}.`;
     },
     byDistrict: 'By district',
+    byAltitude: 'By altitude',
+    band: {
+      low: (max: number) => `Up to ${String(max)} m`,
+      mid: (min: number, max: number) => `${String(min)} to ${String(max)} m`,
+      high: (min: number) => `Above ${String(min)} m`,
+    },
+    altitudeNote: 'Three groups with the same number of stations, by their published altitude.',
     perStation: (value: string) => `${value} per station`,
     districtMeta: (stations: number, net: string) => `${String(stations)} stations · ${net} bikes`,
     topGain: 'Filling up the most',
@@ -361,6 +368,8 @@ export const en: Messages = {
     unavailable: 'Unavailable',
     capacity: 'Published capacity',
     notPublished: 'Not published',
+    altitude: 'Altitude',
+    metres: (metres: number) => `${String(Math.round(metres))} m`,
     nearby: 'Nearby',
     nearbyNote:
       'The closest ones, as the crow flies (not on foot), with their state at this moment.',
@@ -380,6 +389,8 @@ export const en: Messages = {
     changeName: (from, to) => `from “${from}” to “${to}”`,
     changeAddress: (from, to) => `address from “${from ?? '—'}” to “${to ?? '—'}”`,
     changeMoved: (distance) => `moved ${distance}`,
+    changeAltitude: (from: number, to: number) =>
+      `altitude from ${String(from)} to ${String(to)} m`,
     metadataAssumed:
       'The name, location and capacity come from a publication later than this moment.',
   },

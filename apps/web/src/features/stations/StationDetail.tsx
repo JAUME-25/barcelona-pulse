@@ -85,6 +85,8 @@ function changeText(change: VersionChange): string {
       return m.changeAddress(change.from, change.to);
     case 'moved':
       return m.changeMoved(distanceLabel(change.meters));
+    case 'altitude':
+      return m.changeAltitude(change.from, change.to);
   }
 }
 
@@ -265,6 +267,12 @@ export function StationDetail({
                 <time dateTime={state.lastObservedAt}>{formatDateTime(state.lastObservedAt)}</time>
               )}
             </dd>
+          </>
+        )}
+        {station.altitude !== null && (
+          <>
+            <dt>{m.altitude}</dt>
+            <dd>{m.metres(station.altitude)}</dd>
           </>
         )}
         <dt>{m.source}</dt>

@@ -112,8 +112,11 @@ public static partial class BicingArchiveAdapter
             }
 
             var (district, neighbourhood) = ParseArea(row["cross_street"]);
+            // La altitud es un dato secundario: si falta («NA») o no se entiende, la estación
+            // entra sin ella, no se rechaza.
+            double? altitude = TryDouble(row["altitude"], out var metres) ? metres : null;
             var station = new NormalizedStation(id, name, row["address"], lon, lat, capacity, seenAt,
-                district, neighbourhood);
+                district, neighbourhood, altitude);
 
             var changes = byStation.TryGetValue(id, out var list) ? list : byStation[id] = [];
             if (changes.Count == 0 || !SameAttributes(changes[^1], station))

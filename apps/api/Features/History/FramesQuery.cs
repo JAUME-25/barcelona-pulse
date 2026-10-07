@@ -17,6 +17,7 @@ namespace BarcelonaPulse.Api.Features.History;
 /// <param name="Longitude">Longitud WGS84.</param>
 /// <param name="Latitude">Latitud WGS84.</param>
 /// <param name="Capacity">Capacidad publicada; nula si la fuente no la da.</param>
+/// <param name="Altitude">Altitud en metros publicada por la fuente; nula si no la da.</param>
 /// <param name="AssumedUntil">
 /// Si es la primera versión conocida, cuándo se publicó: en los pasos anteriores sus atributos se
 /// asumen (lo mismo que <c>metadataAssumed</c> en GET /api/stations). Nulo en las demás.
@@ -31,6 +32,7 @@ public sealed record FrameStation(
     double Longitude,
     double Latitude,
     int? Capacity,
+    double? Altitude,
     DateTimeOffset? AssumedUntil);
 
 /// <summary>Estado de una estación en un paso.</summary>
@@ -70,7 +72,8 @@ public static class FramesQuery
 
     private const string VersionsSql = """
         SELECT v.station_id, s.source_station_id, v.name, v.address, v.district, v.neighbourhood,
-               ST_X(v.location), ST_Y(v.location), v.capacity, v.valid_from, v.valid_to, v.first_seen_at
+               ST_X(v.location), ST_Y(v.location), v.capacity, v.valid_from, v.valid_to, v.first_seen_at,
+               v.altitude
         FROM station_versions v
         JOIN stations s ON s.id = v.station_id
         WHERE s.source_id = @source
@@ -176,6 +179,7 @@ public static class FramesQuery
                     Longitude: reader.GetDouble(6),
                     Latitude: reader.GetDouble(7),
                     Capacity: reader.IsDBNull(8) ? null : reader.GetInt32(8),
+                    Altitude: reader.IsDBNull(12) ? null : reader.GetDouble(12),
                     AssumedUntil: validFrom is null ? reader.GetFieldValue<DateTimeOffset>(11) : null),
                 StationId: reader.GetInt64(0),
                 ValidFrom: validFrom,

@@ -9,7 +9,7 @@ Esquema en `apps/api/Infrastructure/Migrations`.
 | --- | --- | --- |
 | `data_sources` | Fuente: `kind` (`observed` o `synthetic`), nombre, atribución, licencia, tolerancia de frescura, recuento de observaciones (lo llevan ingesta y purga) y cuántas purgas ha habido (`purge_generation`, para la versión de los datos de la ADR 0014). | `id` (texto: `demo`, …) |
 | `stations` | Identidad estable de una estación dentro de su fuente. | `(source_id, source_station_id)` |
-| `station_versions` | Nombre, dirección, distrito, barrio, ubicación (`geometry(Point,4326)`) y capacidad durante un intervalo. | una vigente por estación |
+| `station_versions` | Nombre, dirección, distrito, barrio, ubicación (`geometry(Point,4326)`), capacidad y altitud (metros, si la fuente la publica) durante un intervalo. | una vigente por estación |
 | `station_observations` | Estado publicado en un instante: estado, bicis (total, mecánicas, eléctricas), anclajes libres, deshabilitados, si presta y si admite devoluciones, y marcas de calidad. | `(station_id, observed_at)` |
 | `ingestion_runs` | Cada ingesta: fuente, adaptador y versión, entrada y sha256, periodo de las observaciones nuevas que guardó (`period_from`, `period_to`; nulo si no guardó ninguna: las repetidas no cuentan, ADR 0014) y periodo que dice cubrir (`covered_from`, `covered_to`), recuentos (nuevas, duplicadas, en conflicto, rechazadas), resultado y, si sus días se quitaron, cuándo (`purged_at`). | |
 | `ingestion_rejections` | Registros rechazados con su motivo (hasta 1 000 por ingesta; el total va en `ingestion_runs`). | |
@@ -46,7 +46,10 @@ esa versión, la adelanta (`first_seen_at`). Si se importa después un periodo a
 intermedio, completa la historia: la versión que se suponía vigente hacia atrás pasa a empezar
 cuando se publicó por primera vez, o el tramo ya conocido se parte. Un cambio dentro de un tramo
 conocido dura hasta el final del periodo importado y después siguen los atributos que ya se
-conocían. Lo que ya estaba observado no cambia.
+conocían. Lo que ya estaba observado no cambia. La altitud (desde el 8-10-2026) cuenta como
+atributo solo cuando la publican las dos partes que se comparan: una versión guardada sin ella
+(importada antes de leerla del archivo) la toma de una publicación con los mismos atributos sin
+abrir otra versión, porque la altitud de un sitio no cambia, solo se conoce más tarde.
 
 **Estado en un instante** (ADR 0005). Última observación con `observed_at ≤ T`. Si su antigüedad
 supera la tolerancia de la fuente (30 min en la demo, 15 min en el histórico de Bicing; límite

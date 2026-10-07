@@ -115,6 +115,8 @@ public sealed class BicingArchiveIngestionTests(PostgisDatabase database) : ICla
 
         var s3 = afternoon.Stations.Single(s => s.SourceStationId == "3");
         Assert.Equal(33, s3.Capacity);
+        Assert.Equal(12, s3.Altitude);
+        Assert.Null(afternoon.Stations.Single(s => s.SourceStationId == "4").Altitude);
         Assert.Equal(Freshness.Current, s3.State.Freshness);
         Assert.False(s3.State.IsRenting);
         Assert.True(s3.State.IsReturning);

@@ -919,6 +919,7 @@
           "longitude",
           "latitude",
           "capacity",
+          "altitude",
           "assumedUntil"
         ],
         "type": "object",
@@ -974,6 +975,14 @@
             ],
             "description": "Capacidad publicada; nula si la fuente no la da.",
             "format": "int32"
+          },
+          "altitude": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "description": "Altitud en metros publicada por la fuente; nula si no la da.",
+            "format": "double"
           },
           "assumedUntil": {
             "type": [
@@ -1627,6 +1636,7 @@
           "longitude",
           "latitude",
           "capacity",
+          "altitude",
           "metadataAssumed",
           "state"
         ],
@@ -1683,6 +1693,14 @@
             ],
             "description": "Capacidad publicada; nula si la fuente no la da.",
             "format": "int32"
+          },
+          "altitude": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "description": "Altitud en metros publicada por la fuente; nula si no la da.",
+            "format": "double"
           },
           "metadataAssumed": {
             "type": "boolean",
@@ -1897,6 +1915,7 @@
           "longitude",
           "latitude",
           "capacity",
+          "altitude",
           "validFrom",
           "validTo",
           "firstSeenAt"
@@ -1939,6 +1958,13 @@
             ],
             "format": "int32"
           },
+          "altitude": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
           "validFrom": {
             "type": [
               "null",
@@ -1957,7 +1983,8 @@
             "type": "string",
             "format": "date-time"
           }
-        }
+        },
+        "description": "Una versión de los atributos de la estación; la altitud en metros, nula si la fuente no la da."
       },
       "StudyAreaItem": {
         "required": [

@@ -10,7 +10,8 @@ export type VersionChange =
   | { kind: 'capacity'; from: number | null; to: number | null }
   | { kind: 'name'; from: string; to: string }
   | { kind: 'address'; from: string | null; to: string | null }
-  | { kind: 'moved'; meters: number };
+  | { kind: 'moved'; meters: number }
+  | { kind: 'altitude'; from: number; to: number };
 
 /** Una versión nueva: desde cuándo rige y qué cambió respecto a la anterior. */
 export interface VersionStep {
@@ -20,6 +21,12 @@ export interface VersionStep {
 
 /** Por debajo de esto, un cambio de ubicación es ruido de la fuente (la ingesta ya ignora ~1 cm). */
 const MOVED_MIN_METERS = 1;
+
+/**
+ * Un cambio de altitud cuenta solo entre dos versiones que la publican: una versión guardada sin
+ * ella (importada antes de leerla) no «subió» cuando la siguiente la trae.
+ */
+const ALTITUDE_MIN_METERS = 1;
 
 /** En orden de vigencia: la primera conocida (sin `validFrom`) delante. */
 export function sortVersions(versions: readonly StationVersionItem[]): StationVersionItem[] {
@@ -49,6 +56,17 @@ export function versionSteps(versions: readonly StationVersionItem[]): VersionSt
     }
     const meters = distanceMeters(previous, next);
     if (meters >= MOVED_MIN_METERS) changes.push({ kind: 'moved', meters });
+    if (
+      previous.altitude !== null &&
+      next.altitude !== null &&
+      Math.abs(previous.altitude - next.altitude) >= ALTITUDE_MIN_METERS
+    ) {
+      changes.push({
+        kind: 'altitude',
+        from: Math.round(previous.altitude),
+        to: Math.round(next.altitude),
+      });
+    }
     steps.push({ at: next.validFrom ?? next.firstSeenAt, changes });
   }
   return steps;

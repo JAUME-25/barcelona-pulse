@@ -48,7 +48,7 @@ public sealed class FramesApiTests(DemoApiFixture fixture) : IClassFixture<DemoA
                 var s = frames.Stations[fs.Station];
                 var assumed = s.AssumedUntil is { } until && frame.At < until;
                 return new StationItem(s.Id, s.SourceStationId, s.Name, s.Address, s.District, s.Neighbourhood,
-                    s.Longitude, s.Latitude, s.Capacity, assumed, fs.State);
+                    s.Longitude, s.Latitude, s.Capacity, s.Altitude, assumed, fs.State);
             })
             .OrderBy(s => s.Id),
         Json);

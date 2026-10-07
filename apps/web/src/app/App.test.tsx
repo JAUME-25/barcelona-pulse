@@ -91,6 +91,7 @@ const stations = [
     id: 13,
     sourceStationId: 'demo-013',
     name: 'Pl. de la Barceloneta',
+    altitude: 2.4,
     state: { status: 'closed', bikesAvailable: 0, docksAvailable: 0, docksDisabled: 27 },
   }),
 ];
@@ -126,6 +127,7 @@ function versionOf(
     longitude: station.longitude,
     latitude: station.latitude,
     capacity: station.capacity,
+    altitude: station.altitude,
     validFrom: null,
     validTo: null,
     firstSeenAt: '2026-03-10T06:00:00+00:00',
@@ -371,6 +373,8 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: 'Volver a la lista' }));
     await user.click(screen.getByRole('button', { name: /^Pl\. de Lesseps/ }));
     expect(screen.getByRole('heading', { level: 2, name: 'Pl. de Lesseps' })).toBeTruthy();
+    // Sin altitud publicada, la ficha no la nombra.
+    expect(screen.queryByText('Altitud')).toBeNull();
   });
 
   it('la búsqueda y la leyenda siguen a mano con el detalle abierto', async () => {
@@ -402,6 +406,9 @@ describe('App', () => {
     ).toBeTruthy();
     expect(screen.getByText('Fuera de servicio (cerrada)')).toBeTruthy();
     expect(screen.getByText(/La estación no está operativa/)).toBeTruthy();
+    // La altitud publicada, en metros enteros.
+    expect(screen.getByText('Altitud')).toBeTruthy();
+    expect(screen.getByText('2 m')).toBeTruthy();
   });
 
   it('la ficha dice cómo suele estar a cada hora, sin llamarlo previsión', async () => {

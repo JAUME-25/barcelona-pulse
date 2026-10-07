@@ -86,7 +86,11 @@ Pendiente de comprobar con un token válido: formato real, versión GBFS, si tra
   physical_configuration, lat, lon, altitude, address, cross_street, post_code, capacity,
   is_charging_station, short_name, nearby_distance, x_ride_code_support, rental_uris,
   last_updated, ttl`. `cross_street` trae distrito y barrio («02-Eixample/05-el Fort Pienc»).
-  `post_code` viene como número y pierde el cero inicial (`8013`): no se usa.
+  `post_code` viene como número y pierde el cero inicial (`8013`): no se usa. `altitude` se
+  guarda en metros en cada versión de la estación (desde el 8-10-2026); «NA» o un valor
+  ilegible dejan la estación sin altitud, no la rechazan. Lo importado antes de esa fecha no la
+  tiene hasta reimportar un día: la versión vigente la toma de la publicación con los mismos
+  atributos, sin abrir otra versión.
 - Estados: `IN_SERVICE`, `MAINTENANCE` y `NOT_IN_SERVICE`. Las 16 939 filas con `is_renting=0`
   y `is_returning=0` coinciden exactamente con los dos estados no operativos. Hay 75 filas en
   servicio que admiten devolver pero no prestar.

@@ -103,6 +103,29 @@ public sealed class IngestionTests(PostgisDatabase database) : IClassFixture<Pos
     }
 
     [Fact]
+    public async Task An_altitude_published_later_completes_the_version_and_a_different_one_opens_another()
+    {
+        database.RequireAvailable();
+        var source = Source("altitude");
+
+        // Importada antes de leer la altitud: la versión no la tiene.
+        await IngestAsync(Batch([Station("s1")], source: source));
+        // Los mismos atributos con altitud, más tarde: se completa, sin otra versión.
+        var filled = await IngestAsync(Batch([Station("s1", seenAt: T0.AddHours(3), altitude: 41)], source: source));
+        Assert.Equal(0, filled.StationVersionsCreated);
+        // Una publicación anterior con los mismos atributos tampoco la cambia (ya se conoce).
+        await IngestAsync(Batch([Station("s1", seenAt: T0.AddHours(-3), altitude: 41)], source: source));
+        // Otra altitud (la estación se movió de sitio) sí es otra versión.
+        var moved = await IngestAsync(Batch([Station("s1", seenAt: T0.AddDays(1), altitude: 60)], source: source));
+        Assert.Equal(1, moved.StationVersionsCreated);
+
+        await using var db = database.CreateContext();
+        var versions = await db.StationVersions.Where(v => v.Station.SourceId == "altitude")
+            .OrderBy(v => v.FirstSeenAt).Select(v => v.Altitude).ToListAsync();
+        Assert.Equal([41, 60], versions);
+    }
+
+    [Fact]
     public async Task Reimporting_a_period_with_several_versions_rejects_nothing()
     {
         database.RequireAvailable();

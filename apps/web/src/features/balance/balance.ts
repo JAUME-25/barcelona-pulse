@@ -33,6 +33,19 @@ export interface BalanceDistrict {
   perStation: number;
 }
 
+/**
+ * Un tercio de las estaciones con balance y altitud publicada: las más bajas, las intermedias o
+ * las más altas, con los metros que las delimitan (la baja no tiene mínimo; la alta, máximo).
+ */
+export interface BalanceBand {
+  key: 'low' | 'mid' | 'high';
+  min: number | null;
+  max: number | null;
+  stations: number;
+  net: number;
+  perStation: number;
+}
+
 export interface Balance {
   rows: readonly BalanceRow[];
   /** El balance de cada estación por su id, para el mapa; null, sin dato. */
@@ -49,6 +62,8 @@ export interface Balance {
   topLoss: readonly BalanceRow[];
   /** De más a menos balance por estación. Vacío si la fuente no publica distritos. */
   districts: readonly BalanceDistrict[];
+  /** De las más bajas a las más altas. Vacío si pocas estaciones publican altitud. */
+  altitudeBands: readonly BalanceBand[];
 }
 
 /** Cuántas estaciones salen en «las que más se llenan» y «las que más se vacían». */
@@ -122,7 +137,40 @@ export function computeBalance(before: StationsResponse, after: StationsResponse
     districts: [...districts.values()].sort(
       (a, b) => b.perStation - a.perStation || a.name.localeCompare(b.name, 'es'),
     ),
+    altitudeBands: altitudeBands(known),
   };
+}
+
+/** Con menos estaciones con altitud no hay tercios que comparar. */
+const MIN_BAND_ROWS = 6;
+
+/**
+ * Las estaciones con balance y altitud, en tres grupos con el mismo número de estaciones por
+ * altitud; los límites son las altitudes donde se corta (enteras). Un grupo que se quede vacío
+ * porque muchas estaciones comparten altitud no sale.
+ */
+export function altitudeBands(rows: readonly BalanceRow[]): BalanceBand[] {
+  const known = rows
+    .filter((r) => r.delta !== null && r.station.altitude !== null)
+    .map((r) => ({ altitude: r.station.altitude ?? 0, delta: r.delta ?? 0 }))
+    .sort((a, b) => a.altitude - b.altitude);
+  if (known.length < MIN_BAND_ROWS) return [];
+  const third = Math.floor(known.length / 3);
+  const lowMax = Math.round(known[third - 1]?.altitude ?? 0);
+  const midMax = Math.round(known[2 * third - 1]?.altitude ?? 0);
+  const bands: BalanceBand[] = [
+    { key: 'low', min: null, max: lowMax, stations: 0, net: 0, perStation: 0 },
+    { key: 'mid', min: lowMax, max: midMax, stations: 0, net: 0, perStation: 0 },
+    { key: 'high', min: midMax, max: null, stations: 0, net: 0, perStation: 0 },
+  ];
+  for (const { altitude, delta } of known) {
+    const band = altitude <= lowMax ? bands[0] : altitude <= midMax ? bands[1] : bands[2];
+    if (band === undefined) continue;
+    band.stations += 1;
+    band.net += delta;
+  }
+  for (const band of bands) band.perStation = band.stations === 0 ? 0 : band.net / band.stations;
+  return bands.filter((b) => b.stations > 0);
 }
 
 /** Los distritos que más ganan y los que más pierden por estación, hasta tres de cada. */

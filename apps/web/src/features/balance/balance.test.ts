@@ -83,6 +83,32 @@ describe('computeBalance', () => {
     expect(storyDistricts(balance.districts)).toEqual({ gainers: [], losers: ['Eixample'] });
   });
 
+  it('agrupa por altitud en tres tercios, solo con bastantes estaciones que la publiquen', () => {
+    const at = (id: number, altitude: number | null, bikes: number) =>
+      stationFixture({ id, name: `S${String(id)}`, altitude, state: { bikesAvailable: bikes } });
+    const start = stationsResponse([1, 2, 3, 4, 5, 6, 7].map((id) => at(id, null, 10)));
+    // Seis con altitud (la 7 no): las bajas ganan, las altas pierden.
+    const end = stationsResponse([
+      at(1, 5, 16),
+      at(2, 8, 14),
+      at(3, 20, 11),
+      at(4, 22, 9),
+      at(5, 60, 4),
+      at(6, 75, 2),
+      at(7, null, 30),
+    ]);
+    const bands = computeBalance(start, end).altitudeBands;
+    expect(bands.map((b) => [b.key, b.min, b.max, b.stations, b.net, b.perStation])).toEqual([
+      ['low', null, 8, 2, 10, 5],
+      ['mid', 8, 22, 2, 0, 0],
+      ['high', 22, null, 2, -14, -7],
+    ]);
+
+    // Con cinco o menos, nada que comparar.
+    const few = stationsResponse([1, 2, 3, 4, 5].map((id) => at(id, id * 10, 12)));
+    expect(computeBalance(start, few).altitudeBands).toEqual([]);
+  });
+
   it('sin distritos en la fuente no hay filas', () => {
     const plain = computeBalance(
       stationsResponse([stationFixture({ id: 1, state: { bikesAvailable: 1 } })]),

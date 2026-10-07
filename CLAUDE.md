@@ -138,6 +138,12 @@ Jaume ejecuta los comandos en Forge y pega la salida.
   `node scripts/make-bicing-archive-fixtures.mjs` usando bsdtar.
 - Importar un día real descarga ~25 MB del portal de Open Data BCN: no lo metas en pruebas ni
   en CI; para eso están los fixtures.
+- `OperatorTestStationTests` migra la base solo hasta `RemoveOperatorTestStation` y añade a mano
+  las columnas que el modelo de hoy espera (`purge_generation`, `altitude`): una columna nueva
+  en el modelo hay que añadirla ahí, o la prueba falla con «column … does not exist».
+- Los fixtures del histórico (`tests/…/Fixtures/BicingArchive/*.7z`) se regeneran con
+  `node scripts/make-bicing-archive-fixtures.mjs` al cambiar una columna; el CSV de información
+  va junto al .7z para leerlo sin descomprimir.
 
 ## Diseño
 

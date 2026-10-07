@@ -225,6 +225,7 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
 
             if (SameAttributes(active, ns))
             {
+                FillAltitude(active, ns);
                 continue;
             }
 
@@ -284,6 +285,7 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
         // distinto, acabará aquí y no donde se vio por primera vez.
         if (SameAttributes(known, ns))
         {
+            FillAltitude(known, ns);
             if (ns.SeenAt < known.FirstSeenAt)
             {
                 known.FirstSeenAt = ns.SeenAt;
@@ -299,6 +301,7 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
             && station.Versions.FirstOrDefault(v => v.ValidTo == covers.From) is { } previous
             && SameAttributes(previous, ns))
         {
+            FillAltitude(previous, ns);
             ContinuePrevious(station, previous, known, ns, latestKnown, covers, imported, rejections);
             return 0;
         }
@@ -446,6 +449,7 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
             Neighbourhood = v.Neighbourhood,
             Location = Geo.Point(v.Location.X, v.Location.Y),
             Capacity = v.Capacity,
+            Altitude = v.Altitude,
             ValidFrom = validFrom,
             ValidTo = validTo,
             FirstSeenAt = firstSeenAt,
@@ -606,11 +610,16 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
         Neighbourhood = Clean(ns.Neighbourhood),
         Location = Geo.Point(ns.Longitude, ns.Latitude),
         Capacity = ns.Capacity,
+        Altitude = ns.Altitude,
         ValidFrom = validFrom,
         FirstSeenAt = ns.SeenAt,
         IngestionRunId = run.Id,
     };
 
+    /// <summary>
+    /// Los mismos atributos. La altitud cuenta solo si las dos partes la publican: una versión
+    /// guardada sin ella (importada antes de leerla del archivo) sigue siendo la misma estación.
+    /// </summary>
     private static bool SameAttributes(StationVersion v, NormalizedStation ns) =>
         string.Equals(v.Name, ns.Name.Trim(), StringComparison.Ordinal)
         && string.Equals(v.Address, Clean(ns.Address), StringComparison.Ordinal)
@@ -618,7 +627,20 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
         && string.Equals(v.Neighbourhood, Clean(ns.Neighbourhood), StringComparison.Ordinal)
         && v.Capacity == ns.Capacity
         && Math.Abs(v.Location.X - ns.Longitude) < CoordinateTolerance
-        && Math.Abs(v.Location.Y - ns.Latitude) < CoordinateTolerance;
+        && Math.Abs(v.Location.Y - ns.Latitude) < CoordinateTolerance
+        && (v.Altitude is null || ns.Altitude is null || Math.Abs(v.Altitude.Value - ns.Altitude.Value) < AltitudeTolerance);
+
+    /// <summary>Metros por debajo de los cuales dos altitudes son la misma (el archivo las publica enteras).</summary>
+    private const double AltitudeTolerance = 0.5;
+
+    /// <summary>
+    /// Una versión guardada sin altitud la toma de una publicación con los mismos atributos: la
+    /// altitud del sitio no cambia, solo se conoce más tarde (reimportar un día la completa).
+    /// </summary>
+    private static void FillAltitude(StationVersion v, NormalizedStation ns)
+    {
+        if (v.Altitude is null && ns.Altitude is not null) v.Altitude = ns.Altitude;
+    }
 
     private static bool SameValues(NormalizedObservation a, NormalizedObservation b) =>
         a with { SourceStationId = b.SourceStationId } == b;

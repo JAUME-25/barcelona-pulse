@@ -29,6 +29,9 @@ public sealed class OperatorTestStationTests(PostgisDatabase database) : IClassF
             // él: se añade a mano, como lo haría su migración, que aquí no se aplica.
             await db.Database.ExecuteSqlRawAsync(
                 "ALTER TABLE data_sources ADD COLUMN purge_generation integer NOT NULL DEFAULT 0", ct);
+            // Y la altitud de las versiones (migración StationAltitude), por lo mismo.
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE station_versions ADD COLUMN altitude double precision NULL", ct);
         }
 
         // Como estaba en mayo de 2026: la 536 entre las demás, con sus observaciones.

@@ -189,7 +189,7 @@ public static class StationsEndpoints
         var versions = station.Versions
             .OrderBy(v => v.ValidFrom ?? DateTimeOffset.MinValue)
             .Select(v => new StationVersionItem(v.Name, v.Address, v.District, v.Neighbourhood, v.Location.X, v.Location.Y, v.Capacity,
-                v.ValidFrom, v.ValidTo, v.FirstSeenAt))
+                v.Altitude, v.ValidFrom, v.ValidTo, v.FirstSeenAt))
             .ToList();
 
         return TypedResults.Ok(new StationDetailResponse(

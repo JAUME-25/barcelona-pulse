@@ -29,6 +29,7 @@ export function stationsAt(frames: FramesResponse, at: string): StationsResponse
         longitude: s.longitude,
         latitude: s.latitude,
         capacity: s.capacity,
+        altitude: s.altitude,
         // Igual que metadataAssumed en la API: atributos publicados después del instante.
         metadataAssumed: s.assumedUntil !== null && t < Date.parse(s.assumedUntil),
         state,

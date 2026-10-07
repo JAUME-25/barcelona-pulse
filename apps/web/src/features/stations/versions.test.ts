@@ -10,6 +10,7 @@ const version = (extra: Partial<StationVersionItem> = {}): StationVersionItem =>
   longitude: 2.1699,
   latitude: 41.387,
   capacity: 27,
+  altitude: null,
   validFrom: null,
   validTo: null,
   firstSeenAt: '2026-05-04T05:00:00+00:00',

@@ -43,7 +43,10 @@ public sealed record SourceDescriptor(
     string? Url,
     TimeSpan StalenessTolerance);
 
-/// <summary>Atributos de una estación tal como la fuente los publicó en <see cref="SeenAt"/>.</summary>
+/// <summary>
+/// Atributos de una estación tal como la fuente los publicó en <see cref="SeenAt"/>. La altitud,
+/// en metros, solo si la fuente la publica.
+/// </summary>
 public sealed record NormalizedStation(
     string SourceStationId,
     string Name,
@@ -53,7 +56,8 @@ public sealed record NormalizedStation(
     int? Capacity,
     DateTimeOffset SeenAt,
     string? District = null,
-    string? Neighbourhood = null);
+    string? Neighbourhood = null,
+    double? Altitude = null);
 
 /// <summary>Instantes siempre en UTC. Recuentos nulos = no informados.</summary>
 public sealed record NormalizedObservation(

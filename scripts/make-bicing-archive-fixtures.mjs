@@ -31,8 +31,11 @@ const INFO_HEADER =
 const status = (id, bikes, mech, ebike, docks, reported, st, renting, returning, snapshot) =>
   [id, bikes, 'TRUE', `"${st}"`, 'NA', mech, ebike, docks, reported, 1, renting, returning, snapshot, 0].join(',');
 
+// Altitud en metros por estación; la 4 no la publica («NA») y la 5 la trae ilegible.
+const ALTITUDE = { 1: 20, 2: 35.5, 3: 12, 4: 'NA', 5: 'alta', 6: 8 };
+
 const info = (id, name, lat, lon, cross, capacity, snapshot) =>
-  [id, `"00000000-0000-0000-0000-00000000000${id}"`, `"${name}"`, '"ELECTRICBIKESTATION"', lat, lon, 20,
+  [id, `"00000000-0000-0000-0000-00000000000${id}"`, `"${name}"`, '"ELECTRICBIKESTATION"', lat, lon, ALTITUDE[id],
     `"${name}"`, cross === 'NA' ? 'NA' : `"${cross}"`, 8013, capacity, 'TRUE', id, 1000, 'TRUE', 'NA', snapshot, 0].join(',');
 
 const statusRows = [

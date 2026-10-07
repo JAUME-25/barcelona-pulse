@@ -40,13 +40,24 @@ test('balance: de 07:00 a 10:00 del 13 de mayo', async ({ page }, testInfo) => {
   await page.waitForTimeout(1200);
   await page.screenshot({ path: `captures/balance-${name}.png` });
 
+  // Por altitud (desde el 8-10-2026): tres tercios por la altitud publicada.
+  const bands = page.locator('.balance-bars').nth(1).locator('li');
+  await expect(bands).toHaveCount(3);
+  await expect(bands.first().locator('.balance-bars__name')).toHaveText(/^Hasta \d+ m$/);
+  console.log(
+    `[balance] ${name}: por altitud ${(await bands.allInnerTexts()).join(' | ').replace(/\s+/g, ' ')}`,
+  );
+
   if (mobile) {
     await page.locator('.balance__totals').scrollIntoViewIfNeeded();
     await page.waitForTimeout(300);
     await page.screenshot({ path: 'captures/balance-375-panel.png' });
-    await page.locator('.balance-bars').scrollIntoViewIfNeeded();
+    await page.locator('.balance-bars').first().scrollIntoViewIfNeeded();
     await page.waitForTimeout(300);
     await page.screenshot({ path: 'captures/balance-375-distritos.png' });
+    await page.locator('.balance-bars').nth(1).scrollIntoViewIfNeeded();
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: 'captures/balance-375-altitud.png' });
     // A 320 px, el selector de modos pasa a dos filas sin cortarse.
     await page.setViewportSize({ width: 320, height: 812 });
     await page.evaluate(() => {
@@ -66,6 +77,26 @@ test('balance: de 07:00 a 10:00 del 13 de mayo', async ({ page }, testInfo) => {
   await expect(page.getByRole('article')).toBeVisible();
   await page.waitForTimeout(1500);
   await page.screenshot({ path: 'captures/balance-calle-escritorio.png' });
+
+  // La ficha dice la altitud publicada (desde el 8-10-2026), en metros enteros: una estación
+  // que la tenga según la API (no todas: alguna la publica como «NA»).
+  const response = await page.request.get(
+    '/api/stations?source=bicing-bcn&at=2026-05-13T08:00:00Z',
+  );
+  const body = (await response.json()) as {
+    stations: { sourceStationId: string; altitude: number | null }[];
+  };
+  const withAltitude = body.stations.find((s) => s.altitude !== null);
+  expect(withAltitude).toBeDefined();
+  if (withAltitude === undefined || withAltitude.altitude === null) return;
+  await page.goto(`${VIEW}&estacion=${withAltitude.sourceStationId}`);
+  await waitForMap(page);
+  const facts = page.locator('.station-detail__facts');
+  await expect(facts).toContainText('Altitud');
+  await expect(facts).toContainText(`${String(Math.round(withAltitude.altitude))} m`);
+  await facts.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: 'captures/balance-ficha-altitud.png' });
 });
 
 // En catalán y en inglés, a 375 px: la clave, el panel y que nada desborde.

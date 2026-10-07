@@ -114,6 +114,13 @@ export const ca: Messages = {
       return `${win}; ${lose}.`;
     },
     byDistrict: 'Per districte',
+    byAltitude: 'Per altitud',
+    band: {
+      low: (max: number) => `Fins a ${String(max)} m`,
+      mid: (min: number, max: number) => `De ${String(min)} a ${String(max)} m`,
+      high: (min: number) => `Més de ${String(min)} m`,
+    },
+    altitudeNote: 'Tres grups amb el mateix nombre d’estacions, per la seva altitud publicada.',
     perStation: (value: string) => `${value} per estació`,
     districtMeta: (stations: number, net: string) => `${String(stations)} est. · ${net} bicis`,
     topGain: 'Les que més s’omplen',
@@ -381,6 +388,8 @@ export const ca: Messages = {
     unavailable: 'No disponibles',
     capacity: 'Capacitat publicada',
     notPublished: 'No publicada',
+    altitude: 'Altitud',
+    metres: (metres: number) => `${String(Math.round(metres))} m`,
     nearby: 'Properes',
     nearbyNote: 'Les més properes, en línia recta (no a peu), amb el seu estat en aquest moment.',
     last: 'Última observació',
@@ -399,6 +408,7 @@ export const ca: Messages = {
     changeName: (from, to) => `de «${from}» a «${to}»`,
     changeAddress: (from, to) => `adreça de «${from ?? '—'}» a «${to ?? '—'}»`,
     changeMoved: (distance) => `es va moure ${distance}`,
+    changeAltitude: (from: number, to: number) => `altitud de ${String(from)} a ${String(to)} m`,
     metadataAssumed:
       'El nom, la ubicació i la capacitat són d’una publicació posterior a aquest moment.',
   },

@@ -51,6 +51,17 @@ public sealed class BicingArchiveAdapterTests
     }
 
     [Fact]
+    public void Altitude_comes_in_metres_and_is_missing_without_rejecting_the_station()
+    {
+        var stations = BicingFixtures.Read().Stations;
+
+        Assert.Equal(20, stations.Single(s => s.SourceStationId == "1").Altitude);
+        Assert.Equal(35.5, stations.Single(s => s.SourceStationId == "2").Altitude);
+        // «NA»: la estación entra sin altitud.
+        Assert.Null(stations.Single(s => s.SourceStationId == "4").Altitude);
+    }
+
+    [Fact]
     public void Only_snapshots_of_the_requested_local_day_are_read()
     {
         var observations = BicingFixtures.Read().Observations;

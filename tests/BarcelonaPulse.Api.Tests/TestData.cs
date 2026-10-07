@@ -17,8 +17,9 @@ internal static class TestData
         new(id, kind, $"Fuente {id}", "Atribución de prueba", null, null, TimeSpan.FromMinutes(30));
 
     public static NormalizedStation Station(
-        string id, double lon = 2.17, double lat = 41.39, int? capacity = 20, DateTimeOffset? seenAt = null, string? name = null) =>
-        new(id, name ?? $"Estación {id}", null, lon, lat, capacity, seenAt ?? T0);
+        string id, double lon = 2.17, double lat = 41.39, int? capacity = 20, DateTimeOffset? seenAt = null, string? name = null,
+        double? altitude = null) =>
+        new(id, name ?? $"Estación {id}", null, lon, lat, capacity, seenAt ?? T0, Altitude: altitude);
 
     public static NormalizedObservation Observation(
         string stationId, DateTimeOffset at, int? bikes = 5, int? docks = 10,

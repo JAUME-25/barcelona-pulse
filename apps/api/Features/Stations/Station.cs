@@ -45,6 +45,13 @@ public sealed class StationVersion
     public int? Capacity { get; init; }
 
     /// <summary>
+    /// Altitud en metros, si la fuente la publica. Una versión guardada sin ella la toma de una
+    /// publicación posterior con los mismos atributos (no abre otra versión): la altitud de un
+    /// sitio no cambia, solo se conoce más tarde.
+    /// </summary>
+    public double? Altitude { get; set; }
+
+    /// <summary>
     /// Inicio de vigencia. Nulo en la primera versión conocida: no sabemos desde cuándo
     /// existe y se asume vigente hacia atrás (se marca al servirla para instantes anteriores).
     /// Si después se importa algo anterior, pasa a ser el momento en que se vio por primera vez.

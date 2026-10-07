@@ -23,6 +23,7 @@ export function frameStation(
     longitude: s.longitude,
     latitude: s.latitude,
     capacity: s.capacity,
+    altitude: s.altitude,
     assumedUntil,
   };
 }
@@ -39,6 +40,7 @@ export function stationFixture(overrides: StationOverrides = {}): StationItem {
     longitude: 2.1699,
     latitude: 41.387,
     capacity: 27,
+    altitude: null,
     metadataAssumed: false,
     ...rest,
     state: {

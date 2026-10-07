@@ -372,6 +372,11 @@ export interface components {
        */
       capacity: null | number;
       /**
+       * Format: double
+       * @description Altitud en metros publicada por la fuente; nula si no la da.
+       */
+      altitude: null | number;
+      /**
        * Format: date-time
        * @description Si es la primera versión conocida, cuándo se publicó: en los pasos anteriores sus atributos se
        *     asumen (lo mismo que `metadataAssumed` en GET /api/stations). Nulo en las demás.
@@ -676,6 +681,11 @@ export interface components {
        */
       capacity: null | number;
       /**
+       * Format: double
+       * @description Altitud en metros publicada por la fuente; nula si no la da.
+       */
+      altitude: null | number;
+      /**
        * @description Los atributos se publicaron después del instante consultado y se asumen vigentes
        *     también antes (primera versión conocida).
        */
@@ -739,6 +749,7 @@ export interface components {
       isReturning: null | boolean;
       qualityFlags: string[];
     };
+    /** @description Una versión de los atributos de la estación; la altitud en metros, nula si la fuente no la da. */
     StationVersionItem: {
       name: string;
       address: null | string;
@@ -750,6 +761,8 @@ export interface components {
       latitude: number;
       /** Format: int32 */
       capacity: null | number;
+      /** Format: double */
+      altitude: null | number;
       /** Format: date-time */
       validFrom: null | string;
       /** Format: date-time */

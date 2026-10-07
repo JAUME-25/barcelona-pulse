@@ -101,6 +101,14 @@ export const es = {
       return `${win}; ${lose}.`;
     },
     byDistrict: 'Por distrito',
+    byAltitude: 'Por altitud',
+    /** Tres grupos con el mismo número de estaciones, por su altitud publicada. */
+    band: {
+      low: (max: number) => `Hasta ${String(max)} m`,
+      mid: (min: number, max: number) => `De ${String(min)} a ${String(max)} m`,
+      high: (min: number) => `Más de ${String(min)} m`,
+    },
+    altitudeNote: 'Tres grupos con el mismo número de estaciones, por su altitud publicada.',
     perStation: (value: string) => `${value} por estación`,
     districtMeta: (stations: number, net: string) => `${String(stations)} est. · ${net} bicis`,
     topGain: 'Las que más se llenan',
@@ -374,6 +382,8 @@ export const es = {
     unavailable: 'No disponibles',
     capacity: 'Capacidad publicada',
     notPublished: 'No publicada',
+    altitude: 'Altitud',
+    metres: (metres: number) => `${String(Math.round(metres))} m`,
     nearby: 'Cercanas',
     nearbyNote: 'Las más próximas, en línea recta (no a pie), con su estado en este momento.',
     last: 'Última observación',
@@ -394,6 +404,7 @@ export const es = {
     changeAddress: (from: string | null, to: string | null) =>
       `dirección de «${from ?? '—'}» a «${to ?? '—'}»`,
     changeMoved: (distance: string) => `se movió ${distance}`,
+    changeAltitude: (from: number, to: number) => `altitud de ${String(from)} a ${String(to)} m`,
     metadataAssumed:
       'El nombre, la ubicación y la capacidad son de una publicación posterior a este momento.',
   },

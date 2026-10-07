@@ -8,9 +8,54 @@ import {
   signedDecimal,
   storyDistricts,
   type Balance,
+  type BalanceBand,
   type BalanceRow,
 } from './balance';
 import './balance.css';
+
+interface BarRow {
+  key: string;
+  name: string;
+  stations: number;
+  net: number;
+  perStation: number;
+}
+
+/** Barras divergentes: pérdidas a la izquierda y ganancias a la derecha, en bicis por estación. */
+function Bars({ rows }: { rows: readonly BarRow[] }) {
+  const m = t().balance;
+  const max = Math.max(0, ...rows.map((r) => Math.abs(r.perStation)));
+  return (
+    <ol className="balance-bars">
+      {rows.map((r) => {
+        const kind = r.perStation >= 0 ? 'gain' : 'loss';
+        const width = max === 0 ? 0 : (Math.abs(r.perStation) / max) * 50;
+        return (
+          <li key={r.key}>
+            <span className="balance-bars__name">{r.name}</span>
+            <span className="balance-bars__track" aria-hidden="true">
+              <span
+                className={`balance-bars__bar balance-bars__bar--${kind}`}
+                style={{ width: `${width.toFixed(1)}%` }}
+              />
+            </span>
+            <span className={`balance-bars__value balance-bars__value--${kind}`}>
+              {m.perStation(signedDecimal(r.perStation))}
+              <small>{m.districtMeta(r.stations, signed(r.net))}</small>
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function bandName(band: BalanceBand): string {
+  const m = t().balance.band;
+  if (band.key === 'low') return m.low(band.max ?? 0);
+  if (band.key === 'high') return m.high(band.min ?? 0);
+  return m.mid(band.min ?? 0, band.max ?? 0);
+}
 
 interface BalancePanelProps {
   days: readonly string[];
@@ -102,8 +147,6 @@ export function BalancePanel({
 }: BalancePanelProps) {
   const m = t().balance;
   const story = balance === null ? null : storyDistricts(balance.districts);
-  const maxPerStation =
-    balance === null ? 0 : Math.max(0, ...balance.districts.map((d) => Math.abs(d.perStation)));
 
   return (
     <section className="balance" aria-label={m.title}>
@@ -204,28 +247,14 @@ export function BalancePanel({
           {balance.districts.length > 0 && (
             <>
               <h3 className="balance__h">{m.byDistrict}</h3>
-              <ol className="balance-bars">
-                {balance.districts.map((d) => {
-                  const kind = d.perStation >= 0 ? 'gain' : 'loss';
-                  const width =
-                    maxPerStation === 0 ? 0 : (Math.abs(d.perStation) / maxPerStation) * 50;
-                  return (
-                    <li key={d.key}>
-                      <span className="balance-bars__name">{d.name}</span>
-                      <span className="balance-bars__track" aria-hidden="true">
-                        <span
-                          className={`balance-bars__bar balance-bars__bar--${kind}`}
-                          style={{ width: `${width.toFixed(1)}%` }}
-                        />
-                      </span>
-                      <span className={`balance-bars__value balance-bars__value--${kind}`}>
-                        {m.perStation(signedDecimal(d.perStation))}
-                        <small>{m.districtMeta(d.stations, signed(d.net))}</small>
-                      </span>
-                    </li>
-                  );
-                })}
-              </ol>
+              <Bars rows={balance.districts} />
+            </>
+          )}
+          {balance.altitudeBands.length > 0 && (
+            <>
+              <h3 className="balance__h">{m.byAltitude}</h3>
+              <Bars rows={balance.altitudeBands.map((b) => ({ ...b, name: bandName(b) }))} />
+              <p className="balance__hint">{m.altitudeNote}</p>
             </>
           )}
           {balance.topGain.length > 0 && (
