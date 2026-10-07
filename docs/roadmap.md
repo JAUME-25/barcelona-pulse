@@ -199,8 +199,61 @@ honesta de lo hecho.
      con una hora lenta y con un error simulado, y la cámara al cambiar de idioma, sin errores
      en la consola.
 
+9. **Hecho** el 7-10-2026, en `main` sin publicar todavía. Segunda revisión de backend y web y
+   sus arreglos, y el mapa base más legible:
+   - Web: el foco ya no salta al detalle al cambiar de día en Reproducir (en móvil la página
+     bajaba 487 px); una sola escritura de URL al pararse, no una por paso; al cambiar de día,
+     la misma hora de reloj (en un día de 25 h se iba una hora atrás); el paso anterior, bajo
+     la hora pedida, con lo que ya pasa de la tolerancia como desconocido; el fallo de la hora
+     pedida por adelantado no para la reproducción; con el dedo, la pista deja desplazar la
+     página; «Vista 3D» según la cámara del enlace; una tesela que no llega no da el mapa por
+     perdido; si falla el fragmento del mapa, la lista sigue; cambiar de modo no vuelve a
+     encuadrar si se ha movido el mapa; el recuento no se anuncia en cada paso.
+   - Backend: importar días seguidos fuera de orden ya no deja los atributos viejos a
+     medianoche ni rechaza el día que publica a las 00:00 en punto, y un periodo antiguo que
+     acaba como lo conocido no deja nada supuesto en medio (sin tocar días ya importados);
+     cobertura con tope de 100 quitadas, dos cálculos a la vez y 64 KB por petición; recuentos
+     e instantes que no se entienden se rechazan con su motivo; la caché de la línea temporal
+     cambia con el recuento de observaciones; los 429 llevan `Retry-After` y una IPv6 cuenta
+     por su /64.
+   - Mapa (`docs/design.md`, «Mapa base»): nombres de calle cortos y por prioridad, barrios,
+     metro, parques, portales, carriles bici de OSM y más contraste en calles y plantas.
+     Propuesto con capturas y medido con la compilación de producción: fluidez y carga iguales.
+   - Pruebas: 187 de backend, 140 de la web y 18 de humo; las nuevas fallan sin el arreglo.
+     Comprobado en el navegador (foco, pista con el dedo, encuadre, teselas que fallan), en los
+     tres idiomas a 1440, 375 y 320 px y la leyenda de 320 a 1440 px.
+   - Descartado de la revisión: «si falla la cobertura se ve el cálculo anterior» no pasa
+     (`useRemote` no guarda lo anterior tras un fallo); queda una prueba que lo vigila.
+10. **Hecho** el 7-10-2026, en `main` sin publicar todavía. El patrón de la estación y sin la
+    estación de pruebas del operador:
+    - «Cómo suele estar», en la ficha: una columna por hora, en laborables y en fin de semana,
+      con las veces que estuvo sin bicis, con pocas, con bicis, llena, fuera de servicio o sin
+      dato (los colores de la leyenda), y en frases («De 10 a 11 h estuvo sin bicis el 78 % del
+      tiempo»). Es lo que pasó en los días importados, no una previsión; los festivos cuentan
+      como laborables. Elegida entre tres formas (columnas, relojes y curva) por ser la más fácil
+      de leer, en el mismo idioma visual que la leyenda.
+    - API: `GET /api/stations/{id}/pattern`, el estado cada 15 min de cada día importado con la
+      regla del mapa, por hora y tipo de día; 25–35 ms con 42 días (sin JIT; con él, 0,9 s). La
+      web lo pide una vez por estación y página, aunque el detalle se vuelva a montar.
+    - La «Estación de TESTING (no usuarios)» del operador ya no se importa y la migración
+      `RemoveOperatorTestStation` la quita de lo importado con su recuento (en local, 549 → 548).
+    - Pruebas: 197 de backend (con PostGIS: la regla, cerrada no es vacía, días de 23 y 25 h y
+      la migración), 144 de la web y 18 de humo. Usado en el navegador en los tres idiomas a
+      1440, 375 y 320 px, sin desbordes ni errores, y al reproducir, una sola petición.
+
+## Siguiente
+
+- Propuestas: balance entre dos horas (dónde se acumulan y dónde se vacían; el
+  13-5-2026 de 7 a 10, el tercio de estaciones más cerca del mar ganó 5,2 bicis de media y el
+  intermedio perdió 6,1), estaciones que más tiempo pasan vacías o llenas, «cerca de mí» y una
+  lista que siga al mapa, y en móvil un mapa más arriba (empieza a 475 px de 812).
+
 ## Backlog
 
+- Ingesta fuera de orden: un periodo antiguo que acaba con otros atributos que los conocidos
+  aún supone los de antes hasta la versión siguiente, incluidos los minutos antes de la primera
+  publicación del día ya importado. Para resolverlo del todo, guardar cuándo se vio por última
+  vez cada versión (migración).
 - Límites: en los ~15 s que tarda la API en calcular la rejilla al arrancar, una visita que abra
   la ficha aún la calcula ella. Si llegara a importar, compartir el cálculo en curso entre
   peticiones o guardar un resumen por día y hora en cada ingesta.
