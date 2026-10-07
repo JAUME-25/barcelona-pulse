@@ -133,7 +133,9 @@ test('limites: notas junto a los datos y sello del mapa en móvil', async ({ pag
     // Reproducir un miércoles con huecos: a qué horas y quién cuenta como «con dato».
     await page.goto(`${REAL}&modo=reproducir&dia=2026-05-20&hora=10:00`);
     await waitForMap(page);
-    await expect(page.locator('.gap-caption')).toContainText('de 03:10 a 04:20', {
+    // El final del tramo depende de cuántas estaciones se conocen (548 en local con mayo y
+    // agosto, 547 en producción): con el umbral del 95 %, un paso cae a un lado o a otro.
+    await expect(page.locator('.gap-caption')).toContainText(/de 03:10 a 04:(15|20)/, {
       timeout: 20_000,
     });
     await page.getByRole('button', { name: /con dato$/ }).click();

@@ -45,6 +45,16 @@ function sizes(mobile: boolean) {
     : ([['escritorio', 1440, 900]] as const);
 }
 
+/**
+ * Estaciones de una fila de la tabla, leídas de la propia tabla: la base local y producción no
+ * tienen las mismas (548 con mayo y agosto, 547 solo con mayo). Sin `exact`: la fila elegida
+ * lleva una marca delante del nombre.
+ */
+async function rowStations(page: Page, name: string): Promise<number> {
+  const row = page.locator('tr', { has: page.getByRole('button', { name }) });
+  return Number((await row.locator('td').first().textContent())?.trim());
+}
+
 function watchErrors(page: Page): string[] {
   const problems: string[] = [];
   page.on('console', (m) => {
@@ -65,6 +75,11 @@ test('distritos: resumen, filtro por el Eixample y reproducir', async ({ page },
     await page.goto(EXPLORE);
     await waitForMap(page);
     await showSummary(page);
+    const total = await rowStations(page, 'Todos los distritos');
+    const inEixample = await rowStations(page, 'Eixample');
+    expect(total).toBeGreaterThan(inEixample);
+    expect(inEixample).toBeGreaterThan(0);
+    await expect(page.locator('.panel-tools__count')).toHaveText(`${String(total)} estaciones`);
     if (mobile) await noSideScroll(page, width);
     await shot('explorar');
 
@@ -77,12 +92,14 @@ test('distritos: resumen, filtro por el Eixample y reproducir', async ({ page },
       'aria-pressed',
       'false',
     );
-    await expect(page.locator('.panel-tools__count')).toHaveText('120 estaciones');
-    await expect(page.locator('.station-list__item')).toHaveCount(120);
+    await expect(page.locator('.panel-tools__count')).toHaveText(
+      `${String(inEixample)} estaciones`,
+    );
+    await expect(page.locator('.station-list__item')).toHaveCount(inEixample);
     const legendTotal = await page
       .locator('.availability-filter__count')
       .evaluateAll((els) => els.reduce((sum, el) => sum + Number(el.textContent), 0));
-    expect(legendTotal).toBe(120);
+    expect(legendTotal).toBe(inEixample);
     await page.waitForTimeout(800);
     await showSummary(page);
     await shot('eixample');
@@ -95,7 +112,7 @@ test('distritos: resumen, filtro por el Eixample y reproducir', async ({ page },
     // Pulsado otra vez, deja de filtrar.
     await eixample.click();
     await expect(eixample).toHaveAttribute('aria-pressed', 'false');
-    await expect(page.locator('.panel-tools__count')).toHaveText('548 estaciones');
+    await expect(page.locator('.panel-tools__count')).toHaveText(`${String(total)} estaciones`);
 
     // Plegada, la lista queda a mano; se recuerda al recargar.
     await page.locator('.district-section__summary').click();
