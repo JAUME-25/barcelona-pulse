@@ -5,7 +5,7 @@ import {
   AVAILABILITY_ORDER,
   type Availability,
 } from './availability';
-import { OctagonGlyph } from './OctagonGlyph';
+import { OctagonGlyph, TransitGlyph } from './OctagonGlyph';
 
 interface AvailabilityFilterProps {
   counts: Record<Availability, number>;
@@ -44,6 +44,17 @@ export function AvailabilityFilter({ counts, visible, onToggle }: AvailabilityFi
         })}
       </ul>
       <p className="availability-filter__help">{m.legendHelp}</p>
+      {/* Lo que el mapa base dibuja aparte de las estaciones, para orientarse. */}
+      <ul className="map-key" aria-label={m.mapKey}>
+        <li>
+          <span className="map-key__lane" aria-hidden="true" />
+          {m.bikeLane}
+        </li>
+        <li>
+          <TransitGlyph size={15} />
+          {m.transit}
+        </li>
+      </ul>
     </fieldset>
   );
 }

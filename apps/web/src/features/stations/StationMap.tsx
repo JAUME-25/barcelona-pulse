@@ -18,13 +18,20 @@ import { t } from '../../i18n';
 import { AVAILABILITY_ORDER, availabilityOf, type Availability } from './availability';
 import { loadNightStyle } from './basemap';
 import {
+  BIKE_LANES_LAYER,
   BUILDINGS_LAYER,
   HALO_LAYER,
   MARKERS_LAYER,
   NETWORK_IMAGE,
   STATIONS_SOURCE,
+  TRANSIT_IMAGE,
 } from './mapLayers';
-import { createHaloImage, createMarkerImage, PIXEL_RATIO } from './markerImages';
+import {
+  createHaloImage,
+  createMarkerImage,
+  createTransitImage,
+  PIXEL_RATIO,
+} from './markerImages';
 import './StationMap.css';
 
 setWorkerUrl(workerUrl);
@@ -60,7 +67,7 @@ interface StationMapProps {
    * para cuando lo que importa es dónde están (escenarios de cobertura).
    */
   variant?: MarkerVariant;
-  /** Edificios en 3D. Al experimentar no: taparían la cobertura. */
+  /** Edificios en 3D y carriles bici. Al experimentar no: taparían la cobertura o se confundirían con ella. */
   buildings?: boolean;
   onSelect: (id: number) => void;
   onStatusChange: (status: MapStatus) => void;
@@ -379,7 +386,19 @@ export function StationMap({
     let map: MapLibreMap | null = null;
     onStatusRef.current({ kind: 'loading' });
 
-    const create = (style: StyleSpecification) => {
+    const create = (loaded: StyleSpecification) => {
+      // Los carriles bici nacen ya ocultos al experimentar: sin parpadeo hasta el primer efecto.
+      const style: StyleSpecification = {
+        ...loaded,
+        layers: loaded.layers.map((l) =>
+          l.id === BIKE_LANES_LAYER
+            ? {
+                ...l,
+                layout: { ...l.layout, visibility: buildingsRef.current ? 'visible' : 'none' },
+              }
+            : l,
+        ),
+      };
       try {
         map = new MapLibreMap({
           container,
@@ -412,6 +431,13 @@ export function StationMap({
 
       const instance = map;
       mapRef.current = instance;
+      // El pictograma del metro lo pide el mapa base (basemap.ts) al leer las teselas: se dibuja
+      // cuando hace falta. En MapLibre 6 un oyente de «styleimagemissing» ya llega tarde.
+      instance.setMissingStyleImageResolver((id) => {
+        if (id === TRANSIT_IMAGE && !instance.hasImage(id)) {
+          instance.addImage(id, createTransitImage(), { pixelRatio: PIXEL_RATIO });
+        }
+      });
       // Un fallo suelto (una tesela) deja el aviso hasta que la vista vuelve a cargar sin fallos.
       let degraded = false;
       let errorSinceMove = false;
@@ -511,12 +537,16 @@ export function StationMap({
     map.setLayoutProperty(MARKERS_LAYER, 'text-field', MARKER_TEXT[variant]);
   }, [variant, mapReady]);
 
-  // Edificios en 3D: se ocultan sin quitar la capa (la cobertura se dibuja debajo de ella).
+  // Edificios en 3D y carriles bici: se ocultan sin quitar la capa (la cobertura se dibuja debajo
+  // de los edificios).
   useEffect(() => {
     buildingsRef.current = buildings;
     const map = mapRef.current;
-    if (!mapReady || map === null || map.getLayer(BUILDINGS_LAYER) === undefined) return;
-    map.setLayoutProperty(BUILDINGS_LAYER, 'visibility', buildings ? 'visible' : 'none');
+    if (!mapReady || map === null) return;
+    for (const id of [BUILDINGS_LAYER, BIKE_LANES_LAYER]) {
+      if (map.getLayer(id) !== undefined)
+        map.setLayoutProperty(id, 'visibility', buildings ? 'visible' : 'none');
+    }
   }, [buildings, mapReady]);
 
   // Encuadre: abarcando todas las estaciones al abrir y con cada fuente; al cambiar de modo, solo

@@ -414,6 +414,33 @@
   font-size: 0.875rem;
 }
 
+/* Lo que dibuja el mapa base aparte de las estaciones (no filtra nada). */
+.map-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 8px 0 0;
+  padding: 8px 0 0;
+  border-top: 1px solid var(--line);
+  color: var(--ink-2);
+  font-size: 0.875rem;
+  list-style: none;
+}
+
+.map-key li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.map-key__lane {
+  display: inline-block;
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--bike-lane);
+}
+
 /* Lista */
 .station-list {
   margin: 0 -10px;

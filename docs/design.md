@@ -171,13 +171,32 @@ municipio vecino y mar: después se ajusta con dónde caen las estaciones en pan
 El estilo `dark` de OpenFreeMap se transforma al cargarlo (`features/stations/basemap.ts`):
 
 - fondo azul noche (`#0b1422`) en lugar de negro;
-- calles más claras que las manzanas y con contorno las principales;
-- nombres de calle y de barrio claros, con halo oscuro y algo más grandes;
+- calles claramente más claras que las manzanas, con contorno las principales, y las peatonales
+  continuas (en Ciutat Vella son casi todas y el trazo discontinuo las hacía parecer caminos);
+- plantas de los edificios visibles antes del 3D (hasta z14), con su contorno;
 - nombres locales (`name`, como en las placas) en vez de la traducción inglesa;
-- barrios de clase `quarter` visibles (en OSM, la mayoría de barris de Barcelona);
-- parques y bosques en verde muy oscuro y agua en azul oscuro, para reconocer Montjuïc,
-  Collserola o el mar (los bosques sin el patrón del estilo, que no está en su sprite);
-- las etiquetas, después de todo lo demás.
+- nombres de calle como en los planos de Barcelona, sin «Carrer de» y con las abreviaturas de
+  las estaciones («Mallorca», «Av. Diagonal», «Pg. de Gràcia»), en minúscula: las principales
+  en negrita desde z12 y antes que las demás; el resto, desde z14. Propuesto con capturas y
+  aprobado por Jaume el 7-10-2026 frente al nombre completo, que no cabía en las calles cortas
+  (en el Gòtic a z16,6 se veían 3 nombres; así, 40). Los pasillos y andenes del metro, que OSM
+  también nombra, no;
+- barrios de clase `quarter` (en OSM, la mayoría de barris de Barcelona) de z14 a z16: la
+  tesela los trae desde z14 y el estilo los apagaba en z14, así que no salían nunca;
+- referencias para orientarse: metro, tren y tranvía desde z14 (pictograma redondo y claro, no
+  octógono, y el nombre en cursiva), parques desde z14 y jardines desde z16, y números de portal
+  desde z17 (las estaciones se llaman por su dirección);
+- carriles bici en verde (`#7ad08f`), solo los que OSM dibuja aparte de la calzada: no están
+  todos y así lo dicen la leyenda («También en el mapa») y «Qué muestra y qué no». Al
+  experimentar no se dibujan, como los edificios;
+- sin las flechas de sentido único;
+- parques y bosques en verde oscuro y agua en azul oscuro, para reconocer Montjuïc, Collserola o
+  el mar (los bosques sin el patrón del estilo, que no está en su sprite);
+- las etiquetas, después de todo lo demás. Prioridad al colocarlas: barrios, metro, parques,
+  calles principales, el resto de calles y portales.
+
+Medido el 7-10-2026 con la compilación de producción: la fluidez y la carga no cambian (ver
+`docs/architecture.md`).
 
 Edificios en 3D desde z14, opacos y más claros cuanto más altos (`#22334c` → `#435d86`),
 elegido por Jaume el 7-10-2026 entre tres (maqueta, noche y solo los altos). Van encima de calles
@@ -192,15 +211,24 @@ bicis y anclajes van a 24 px en la lista y a 56 px en el detalle; el momento del
 
 ## Contraste medido
 
-Ratios WCAG calculados con los colores de `theme.ts` y `basemap.ts` (5 de octubre de 2026):
+Ratios WCAG calculados con los colores de `theme.ts` y `basemap.ts` (5 de octubre de 2026; el
+mapa base, de nuevo el 7 de octubre):
 
 | Par | Ratio |
 | --- | --- |
 | Texto del panel / panel | 16,3:1 |
 | Texto secundario / panel | 9,8:1 |
-| Nombre de barrio / fondo | 15,0:1 |
-| Nombre de calle / fondo | 10,0:1 |
-| Nombre de calle / edificio 3D más claro | 3,6:1 |
+| Nombre de distrito / fondo | 15,0:1 |
+| Nombre de barrio / fondo | 12,8:1 |
+| Nombre de calle principal / fondo | 15,1:1 |
+| Nombre de calle / fondo | 11,4:1 (antes 10,0) |
+| Nombre de calle principal / edificio 3D más claro | 5,5:1 (antes 3,6) |
+| Nombre de calle / edificio 3D más claro | 4,1:1 |
+| Metro, tren y tranvía / fondo | 13,8:1 |
+| Parque / fondo | 9,4:1 |
+| Número de portal / fondo | 6,1:1 |
+| Carril bici / fondo · / calle | 9,9:1 · 4,4:1 |
+| Calle / manzana (líneas, antes del 3D) | 1,8:1 (antes 1,4) |
 | Marcadores / fondo (el más bajo, fuera de servicio) | 5,3:1 |
 | Número dentro del marcador (el más bajo, llena) | 7,4:1 |
 

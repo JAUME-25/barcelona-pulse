@@ -201,6 +201,9 @@ export const ca: Messages = {
     },
     legend: 'Què vol dir cada marcador',
     legendHelp: 'Prem una categoria per amagar-la o mostrar-la.',
+    mapKey: 'També al mapa',
+    bikeLane: 'Carril bici (OSM, no tots)',
+    transit: 'Metro, tren i tramvia',
   },
 
   list: {
@@ -370,6 +373,7 @@ export const ca: Messages = {
       'Un canvi en el nombre de bicis no és un viatge: no se sap d’on venen ni on van.',
       'La cobertura és geometria en línia recta. No és a peu, ni població, ni demanda.',
       'No prediu ni recomana res.',
+      'Els carrils bici del mapa no són tots: només els que OpenStreetMap dibuixa a part de la calçada.',
     ],
     origins: (months): Origin[] => {
       const when = months === null ? '' : `, ${months}`;
@@ -392,6 +396,11 @@ export const ca: Messages = {
         {
           what: 'Mapa base i edificis',
           who: 'OpenFreeMap, OpenMapTiles i OpenStreetMap',
+          terms: 'ODbL',
+        },
+        {
+          what: 'Carrers, carrils bici, metro i parcs',
+          who: 'OpenStreetMap, a través d’OpenMapTiles i OpenFreeMap',
           terms: 'ODbL',
         },
         { what: 'Estacions hipotètiques', who: 'Les poses tu', terms: 'No es guarden' },

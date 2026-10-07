@@ -179,6 +179,9 @@ export const es = {
     } as Record<string, string>,
     legend: 'Qué significa cada marcador',
     legendHelp: 'Pulsa una categoría para ocultarla o mostrarla.',
+    mapKey: 'También en el mapa',
+    bikeLane: 'Carril bici (OSM, no todos)',
+    transit: 'Metro, tren y tranvía',
   },
 
   list: {
@@ -371,6 +374,7 @@ export const es = {
       'Un cambio en el número de bicis no es un viaje: no se sabe de dónde vienen ni adónde van.',
       'La cobertura es geometría en línea recta. No es a pie, ni población, ni demanda.',
       'No predice ni recomienda nada.',
+      'Los carriles bici del mapa no son todos: solo los que OpenStreetMap dibuja aparte de la calzada.',
     ],
     /** De dónde sale cada cosa que se ve. */
     origins: (months: string | null): Origin[] => {
@@ -394,6 +398,11 @@ export const es = {
         {
           what: 'Mapa base y edificios',
           who: 'OpenFreeMap, OpenMapTiles y OpenStreetMap',
+          terms: 'ODbL',
+        },
+        {
+          what: 'Calles, carriles bici, metro y parques',
+          who: 'OpenStreetMap, a través de OpenMapTiles y OpenFreeMap',
           terms: 'ODbL',
         },
         { what: 'Estaciones hipotéticas', who: 'Las pones tú', terms: 'No se guardan' },

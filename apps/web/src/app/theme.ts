@@ -33,6 +33,10 @@ export const THEME = {
   halo: '#ffffff',
   textFont: ['Noto Sans Bold'],
   buildings: { low: '#22334c', high: '#435d86', opacity: 1 },
+  /** Carriles bici del mapa base: verde, que no usa ningún estado ni la cobertura. */
+  bikeLane: '#7ad08f',
+  /** Pictograma de metro, tren y tranvía: claro y redondo, distinto del octógono de Bicing. */
+  transit: { fill: '#dce4ee', ink: NIGHT },
   /**
    * Estados de estación. Escala cálida para «se acaban las bicis» (ámbar, naranja, rojo),
    * violeta para «no se puede devolver» y neutros para lo que no opera o no se sabe.
@@ -74,6 +78,7 @@ export const THEME = {
     '--coverage-2': '#16707f',
     '--coverage-3': '#26a9b8',
     '--coverage-4': '#7fe3ea',
+    '--bike-lane': '#7ad08f',
   },
 } as const;
 

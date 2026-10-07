@@ -184,6 +184,9 @@ export const en: Messages = {
     },
     legend: 'What each marker means',
     legendHelp: 'Tap a category to hide or show it.',
+    mapKey: 'Also on the map',
+    bikeLane: 'Bike lane (OSM, not all)',
+    transit: 'Metro, train and tram',
   },
 
   list: {
@@ -351,6 +354,7 @@ export const en: Messages = {
       'A change in the number of bikes is not a trip: nobody knows where they come from or where they go.',
       'Coverage is straight-line geometry. It is not walking distance, population or demand.',
       'It does not predict or recommend anything.',
+      'The bike lanes on the map are not all of them: only those OpenStreetMap draws apart from the road.',
     ],
     origins: (months): Origin[] => {
       const when = months === null ? '' : `, ${months}`;
@@ -373,6 +377,11 @@ export const en: Messages = {
         {
           what: 'Base map and buildings',
           who: 'OpenFreeMap, OpenMapTiles and OpenStreetMap',
+          terms: 'ODbL',
+        },
+        {
+          what: 'Streets, bike lanes, metro and parks',
+          who: 'OpenStreetMap, via OpenMapTiles and OpenFreeMap',
           terms: 'ODbL',
         },
         { what: 'Hypothetical stations', who: 'You place them', terms: 'Not stored' },

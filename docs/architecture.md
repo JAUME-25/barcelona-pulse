@@ -162,8 +162,12 @@ de Playwright añade el retraso de sus comprobaciones: la lista parecía tardar 
   y el del mapa 1,04 MB (273 KB) más su worker, 511 KB (143 KB). Con todo en un paquete, el
   mismo método daba en móvil con la red real el HTML a 242 ms y la lista a 885 ms; el mapa,
   igual (2,1 s). Con los límites visibles, el inicial pasa a 313 KB (97 KB comprimido) y, con
-  los nombres legibles y los tres idiomas, a 353 KB (107 KB comprimido); tiempos sin volver a
-  medir.
+  los nombres legibles y los tres idiomas, a 353 KB (107 KB comprimido).
+- Medido otra vez el 7-10-2026, `main` (`f1da256`) frente al mapa con los rótulos y las
+  referencias nuevas (calles, barrios, metro, parques, portales y carriles bici), dos rondas de
+  medianas de 5: mapa listo con la red real, 904–921 ms frente a 923–931 en escritorio y
+  2 211–2 315 frente a 2 221–2 261 en móvil; la lista, 137–139 frente a 136–138 y 610–613
+  frente a 592–596. Igual, dentro del ruido. El JavaScript, de 1 865 a 1 874 KB sin comprimir.
 - «Qué muestra y qué no» en producción (VPS de Forge, 6-10-2026): la rejilla de huecos salía a
   los 12,5 s la primera vez después de arrancar la API, que calcula a la vez las cuatro semanas
   de mayo cada 15 min, y a los 0,5 s cuando ya las tiene en memoria (cada semana, 56–190 ms).
@@ -183,7 +187,9 @@ de Playwright añade el retraso de sus comprobaciones: la lista parecía tardar 
   10 s de gesto): en escritorio, 60 fps en los tres modos y ningún fotograma de más de 50 ms;
   en móvil, 48–49 fps al explorar y al reproducir (p95 de 50 ms, 11–13 fotogramas de más de
   50 ms) y 60 al experimentar, cuyos marcadores no llevan número. Ninguna tarea larga durante
-  el gesto.
+  el gesto. Con el mapa nuevo (7-10-2026), lo mismo: 60 fps en escritorio en los tres modos; en
+  móvil, 48,4 al explorar (48,6 con `main` ese mismo día), 49,6 al reproducir y 60,1 al
+  experimentar.
 
 - API con la demo, 31 peticiones a `127.0.0.1`: `GET /api/stations?source=demo` mediana
   4,0 ms (p90 4,4 ms; 18,5 KB sin comprimir); con `bbox`, 3,7 ms; `GET /api/sources`, 3,4 ms.

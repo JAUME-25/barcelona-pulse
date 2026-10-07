@@ -39,6 +39,28 @@ export function OctagonGlyph({ category, size = 20 }: { category: Availability; 
   );
 }
 
+/** Metro, tren y tranvía, como en el mapa (createTransitImage): redondo, no octógono. */
+export function TransitGlyph({ size = 16 }: { size?: number }) {
+  const { fill, ink } = THEME.transit;
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+      <circle cx="9" cy="9" r="8.75" fill={ink} />
+      <circle cx="9" cy="9" r="7.4" fill={fill} />
+      <rect x="5.6" y="4.4" width="6.8" height="7.6" rx="1.6" fill={ink} />
+      <rect x="6.7" y="5.6" width="4.6" height="2.6" fill={fill} />
+      <circle cx="7.4" cy="10.1" r="0.75" fill={fill} />
+      <circle cx="10.6" cy="10.1" r="0.75" fill={fill} />
+      <path
+        d="M7 12.2 6 13.6 M11 12.2 12 13.6"
+        fill="none"
+        stroke={ink}
+        strokeWidth="1.1"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 /** Marca de la aplicación: una manzana con chaflanes y un pulso. */
 export function BrandMark() {
   return (

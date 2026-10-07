@@ -86,6 +86,50 @@ export function createMarkerImage(style: MarkerStyle): ImageData {
   return ctx.getImageData(0, 0, size, size);
 }
 
+/** Tamaño lógico del pictograma de transporte en píxeles CSS a icon-size 1. */
+export const TRANSIT_CSS_SIZE = 18;
+
+/**
+ * Metro, tren y tranvía: un círculo claro con la cara de un tren. Redondo y sin color de estado,
+ * para que no se confunda con una estación de Bicing (octógono). Mismo dibujo que TransitGlyph.
+ */
+export function createTransitImage(): ImageData {
+  const r = PIXEL_RATIO;
+  const size = TRANSIT_CSS_SIZE * r;
+  const ctx = canvas(size);
+  const { fill, ink } = THEME.transit;
+  const mid = size / 2;
+  ctx.fillStyle = ink;
+  ctx.beginPath();
+  ctx.arc(mid, mid, 9 * r - 0.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = fill;
+  ctx.beginPath();
+  ctx.arc(mid, mid, 7.4 * r, 0, Math.PI * 2);
+  ctx.fill();
+  // La cara del tren: cuerpo, parabrisas, faros y raíles.
+  ctx.fillStyle = ink;
+  ctx.beginPath();
+  ctx.roundRect(5.6 * r, 4.4 * r, 6.8 * r, 7.6 * r, 1.6 * r);
+  ctx.fill();
+  ctx.fillStyle = fill;
+  ctx.fillRect(6.7 * r, 5.6 * r, 4.6 * r, 2.6 * r);
+  ctx.beginPath();
+  ctx.arc(7.4 * r, 10.1 * r, 0.75 * r, 0, Math.PI * 2);
+  ctx.arc(10.6 * r, 10.1 * r, 0.75 * r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = ink;
+  ctx.lineWidth = 1.1 * r;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(7 * r, 12.2 * r);
+  ctx.lineTo(6 * r, 13.6 * r);
+  ctx.moveTo(11 * r, 12.2 * r);
+  ctx.lineTo(12 * r, 13.6 * r);
+  ctx.stroke();
+  return ctx.getImageData(0, 0, size, size);
+}
+
 /** Contorno de selección, mayor que el marcador. */
 export function createHaloImage(): ImageData {
   const size = Math.round(MARKER_CSS_SIZE * 1.7) * PIXEL_RATIO;
