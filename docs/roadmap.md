@@ -411,9 +411,8 @@ honesta de lo hecho.
     - Pruebas: una nueva contra PostGIS (la observación de 2025 repetida no cambia la versión
       del otro día; el periodo de cada ingesta; reimportar sin nada nuevo) y la compilación en
       la versión y en el ETag. `ingest` dice «sin observaciones nuevas» cuando no guarda nada. En
-      `506cd0b`. Pendiente en producción: reimportar los 28 días de mayo para que sus periodos
-      pasen a nulo y la versión por rango acote (hasta entonces, cada importación sigue
-      invalidando todas las semanas).
+      `506cd0b`. En producción, los 28 días de mayo se reimportaron el 8-10-2026 (con la
+      altitud, B5.27): sus periodos quedaron a nulo y desde entonces la versión por rango acota.
 21. **Hecho** y en producción desde el 7-10-2026. Topes y observabilidad, el punto 16 de la
     propuesta, lo que conviene tener firme antes del tiempo real:
     - Tope de espera en los cálculos caros (`Infrastructure/ComputationGate.cs`): la línea
@@ -531,9 +530,12 @@ honesta de lo hecho.
       totales, clave, las dos horas en la URL y Atrás) y `e2e/balance.capture.ts` con el mapa
       real: escritorio a escala de ciudad y de calle, 375 px (mapa, panel y distritos, en los
       tres idiomas) y 320 px. Tipos, lint y formato en verde.
-27. **Hecho** y en producción desde el 8-10-2026 (`498f3c3`, CI verde; la migración aplicada:
-    la API ya publica `altitude`, a nulo hasta reimportar mayo). La altitud de las estaciones,
-    el segundo punto que quedaba de la propuesta:
+27. **Hecho** y en producción desde el 8-10-2026 (`498f3c3`, CI verde). Jaume reimportó los 28
+    días de mayo desde los archivos subidos al servidor (28 ingestas, todas con avisos como la
+    primera vez, 0 observaciones nuevas, 3 versiones nuevas, los 28 periodos a nulo); comprobado
+    desde fuera: 545 de 547 estaciones con altitud el 4 y el 31 de mayo (543 el 13; de 2 a 184
+    m, mediana 26) y `balance.capture.ts` contra producción con los mismos tercios que en local.
+    La altitud de las estaciones, el segundo punto que quedaba de la propuesta:
     - `station_versions.altitude` (metros, nula si la fuente no la da; migración
       `StationAltitude`). El adaptador del histórico la lee de `altitude`; «NA» o un valor
       ilegible dejan la estación sin ella, no la rechazan. Cuenta como atributo solo cuando la
@@ -556,8 +558,6 @@ honesta de lo hecho.
       del histórico) con los fixtures regenerados; 216 de la web (tercios por altitud, la ficha
       con y sin altitud); `balance.capture.ts` comprueba los tres tercios con el mapa real.
       Formato de .NET y web, lint y tipos en verde.
-    - Pendiente en producción: tras desplegar, reimportar un día de mayo para que las versiones
-      tomen la altitud (hasta entonces, sin «Por altitud» ni altitud en la ficha).
 28. **Hecho** y en producción desde el 8-10-2026 (`7481a17`, con `1c99eae`, CI verde;
     comprobado desde fuera: Healthy, `/contrato.html` con la CSP de siempre,
     `/api/openapi/v1.json` con las 9 rutas y `altitude`, y `contrato.capture.ts` contra
@@ -620,8 +620,9 @@ honesta de lo hecho.
     lista»; `useScenario` llama a `setState` durante el render; `App.tsx` (970 líneas) y
     `StationMap.tsx` (770) mezclan los tres modos.
 - En móvil, el sello sobre el mapa como botón que abra «Qué muestra y qué no».
-- El caso técnico (`docs/caso-tecnico.md`, B5.4) no recoge lo hecho el 7-10-2026.
-- Producción: reimportar los 28 días de mayo para que la versión por rango acote (B5.20).
+- El caso técnico (`docs/caso-tecnico.md`, B5.4) no recoge lo hecho el 7 y el 8-10-2026.
+- La reimportación de mayo en producción (8-10-2026) abrió 3 versiones que en local, con los
+  mismos archivos, no se abrieron: mirar cuáles (`GET /api/stations/{id}` da las versiones).
 
 - Ingesta fuera de orden: un periodo antiguo que acaba con otros atributos que los conocidos
   aún supone los de antes hasta la versión siguiente, incluidos los minutos antes de la primera
