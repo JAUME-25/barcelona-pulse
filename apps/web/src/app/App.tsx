@@ -62,6 +62,7 @@ import { sourceName } from '../features/stations/sources';
 import { t } from '../i18n';
 import { formatMonths } from '../shared/format';
 import { historyPushed, pushParams, readParam, syncParam, writeParam } from '../shared/url';
+import { MOBILE_QUERY, useMediaQuery } from '../shared/useMediaQuery';
 import { stationName } from '../features/stations/names';
 import {
   DISTRICT_PARAM,
@@ -225,6 +226,8 @@ export function App() {
   const sourceId = source?.id ?? null;
 
   const [mode, setMode] = useState<Mode>(modeFromUrl);
+  // En móvil, el aviso de procedencia va plegado a una línea: el mapa empieza antes.
+  const mobile = useMediaQuery(MOBILE_QUERY);
   // El momento pedido (?dia=…&hora=…): lo que enseñan Explorar y Experimentar de un histórico y
   // donde empieza Reproducir. Al salir de Reproducir se queda el momento que se estaba viendo.
   const [moment, setMoment] = useState<Moment>(() => ({
@@ -876,6 +879,7 @@ export function App() {
             onChangeMoment={source?.period == null ? undefined : changeMoment}
             onThisHour={source?.period == null ? undefined : showThisHour}
             shareWithoutCamera={me !== null}
+            fold={mobile}
           />
         )}
       </header>

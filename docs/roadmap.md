@@ -466,7 +466,15 @@ honesta de lo hecho.
       se forzaba a falso), también.
     - Pruebas: 204 de la web (los pasos de versión: orden, qué cambió, bajo el metro no es
       traslado; en la app: la ficha con cambios y sin ellos, los tres avisos y que el de la
-      estación se va al elegir otra, la última importación en la ficha de límites).
+      estación se va al elegir otra, la última importación en la ficha de límites). En
+      `0dc7e4f`; el aviso del enlace, sin borde lateral, en `c211b1f`.
+24. **Hecho** en local (7-10-2026). Móvil con el mapa más arriba, el punto 7 de la propuesta:
+    cabecera plegable, elegida entre tres direcciones con capturas reales (`docs/design.md`,
+    «Móvil: cabecera plegable»). Sin lema, el idioma junto al nombre y la procedencia en una
+    línea que «Más» despliega; el mapa pasa de empezar a 555 px a unos 200 (266 a 320 px). Se
+    decide por el ancho de la ventana (`shared/useMediaQuery.ts`); en escritorio no cambia nada.
+    Pruebas: 205 de la web (en «móvil», plegado y desplegado) y `e2e/movil.capture.ts` con el
+    mapa real a 375 y 320 px, plegada y abierta. Usado en el navegador en los tres idiomas.
 
 ## Siguiente
 

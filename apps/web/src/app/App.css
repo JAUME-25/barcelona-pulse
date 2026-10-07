@@ -827,3 +827,87 @@
     font-size: 0.8125rem;
   }
 }
+
+/*
+ * Móvil: cabecera plegable (elegida el 7-10-2026 entre tres direcciones, docs/design.md). Sin
+ * lema, el idioma al lado del nombre y la procedencia en una línea que se despliega: el mapa
+ * empieza a unos 200 px en vez de 555.
+ */
+@media (max-width: 767px) {
+  .panel-head {
+    padding: 10px 16px 8px;
+  }
+  .brand {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+  .brand__tagline {
+    display: none;
+  }
+  .brand__name {
+    font-size: 1.25rem;
+  }
+  /* En la tercera columna: con solo la fila fija, la rejilla lo colocaba el primero. */
+  .lang-switch {
+    grid-column: 3;
+    grid-row: 1;
+    padding: 2px;
+  }
+  .lang-switch button {
+    min-width: 36px;
+    min-height: 28px;
+  }
+  .mode-switch {
+    margin-top: 8px;
+  }
+  .source-picker {
+    margin-top: 8px;
+  }
+  .source-notice--fold {
+    margin-top: 8px;
+    padding: 8px 12px;
+  }
+  .source-notice__fold summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    align-items: baseline;
+    list-style: none;
+    cursor: pointer;
+  }
+  .source-notice__fold summary::-webkit-details-marker {
+    display: none;
+  }
+  .source-notice__fold-time {
+    font-size: 1.0625rem;
+  }
+  .source-notice__fold-more {
+    margin-left: auto;
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .source-notice__fold-close,
+  .source-notice__fold[open] .source-notice__fold-open {
+    display: none;
+  }
+  .source-notice__fold[open] .source-notice__fold-close {
+    display: inline;
+  }
+  .source-notice__fold .source-notice__lead {
+    margin-top: 8px;
+  }
+}
+
+@media (max-width: 359px) {
+  /* A 320 px el idioma vuelve a su fila: al lado del nombre no cabe. */
+  .brand {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .lang-switch {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    justify-self: end;
+  }
+}

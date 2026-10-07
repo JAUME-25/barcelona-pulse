@@ -1113,6 +1113,41 @@ describe('App', () => {
     );
   });
 
+  it('en móvil la procedencia va plegada a una línea y «Más» la despliega entera', async () => {
+    mockApi((path, url) =>
+      path === '/api/sources'
+        ? json([observedSource])
+        : json({ ...observedResponse(stations), at: url.searchParams.get('at') ?? '' }),
+    );
+    // jsdom no trae matchMedia: aquí la ventana es «móvil».
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: query === '(max-width: 767px)',
+        media: query,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+      })),
+    );
+    const user = userEvent.setup();
+    window.history.replaceState(null, '', '/');
+    renderApp();
+
+    await screen.findByText('3 estaciones');
+    const fold = document.querySelector<HTMLDetailsElement>('.source-notice__fold');
+    if (fold === null) throw new Error('No hay aviso plegable.');
+    expect(fold.open).toBe(false);
+    expect(fold.querySelector('summary')?.textContent).toMatch(
+      /^Datos realesjue 20 de agosto, 08:30MásMenos$/,
+    );
+    // Plegado, lo de dentro no se ofrece; desplegado, sí.
+    expect(screen.getByRole('button', { name: 'Cambiar momento' })).toBeTruthy();
+    await user.click(fold.querySelector('summary') as HTMLElement);
+    expect(fold.open).toBe(true);
+    expect(screen.getByText(/Fuente de los datos: Ayuntamiento de Barcelona/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'A esta hora' })).toBeTruthy();
+  });
+
   it('«Cambiar momento» lleva a Reproducir en ese momento y, al volver, se queda el elegido', async () => {
     mockApi((path, url) => {
       if (path === '/api/sources') return json([observedSource]);

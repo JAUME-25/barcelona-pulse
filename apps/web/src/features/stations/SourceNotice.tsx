@@ -1,6 +1,8 @@
 import type { StationsResponse } from '../../api/client';
 import { t } from '../../i18n';
+import { formatDayMonth } from '../../i18n/intl';
 import { formatDayWithWeekday, formatTime } from '../../shared/format';
+import { formatShortWeekday, localParts } from '../history/time';
 import { ShareLink } from './ShareLink';
 import { sourceAttribution, sourceName } from './sources';
 import '../limits/limits.css';
@@ -53,6 +55,7 @@ export function SourceNotice({
   onChangeMoment,
   onThisHour,
   shareWithoutCamera = false,
+  fold = false,
 }: {
   response: StationsResponse;
   /** Sin el momento: al reproducir, lo enseña el control de tiempo. */
@@ -67,6 +70,11 @@ export function SourceNotice({
   onThisHour?: () => void;
   /** Con «Cerca de mí», el enlace va sin la cámara del mapa, que apunta a la persona. */
   shareWithoutCamera?: boolean;
+  /**
+   * En móvil: plegado a una línea («Datos reales · vie 28 de agosto, 08:30 · Más») que se
+   * despliega entera, para que el mapa empiece antes (elegido el 7-10-2026 entre tres).
+   */
+  fold?: boolean;
 }) {
   const m = t().source;
   const { source } = response;
@@ -93,6 +101,47 @@ export function SourceNotice({
     .filter((x): x is string => x !== null)
     .sort()
     .at(-1);
+
+  if (fold && historical) {
+    return (
+      <div className="source-notice source-notice--observed source-notice--fold">
+        <details className="source-notice__fold">
+          <summary>
+            <span className="source-notice__badge source-notice__badge--real">{m.realBadge}</span>
+            <time className="source-notice__fold-time" dateTime={response.at}>
+              {formatShortWeekday(localParts(Date.parse(response.at)).date)}{' '}
+              {formatDayMonth(response.at)}, <strong>{formatTime(response.at)}</strong>
+            </time>
+            <span className="source-notice__fold-more" aria-hidden="true">
+              <span className="source-notice__fold-open">{m.more}</span>
+              <span className="source-notice__fold-close">{m.less}</span>
+            </span>
+          </summary>
+          <p className="source-notice__lead">{months === null ? m.past : m.historical(months)}</p>
+          <Moment
+            label={m.shownMoment}
+            iso={response.at}
+            onChange={onChangeMoment}
+            onThisHour={onThisHour}
+          />
+          <p className="source-notice__credit">
+            {sourceAttribution(source)}
+            {source.license !== null && <> {m.license(source.license)}</>}
+          </p>
+          {onLimits !== undefined && (
+            <p className="source-notice__limits">
+              <button type="button" className="limits-link" onClick={onLimits}>
+                {m.limits}
+              </button>
+            </p>
+          )}
+          <p className="source-notice__share">
+            <ShareLink withoutCamera={shareWithoutCamera} />
+          </p>
+        </details>
+      </div>
+    );
+  }
 
   return (
     <div className="source-notice source-notice--observed">

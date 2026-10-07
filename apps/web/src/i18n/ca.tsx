@@ -178,6 +178,8 @@ export const ca: Messages = {
     shownMoment: 'Moment mostrat',
     changeMoment: 'Canviar el moment',
     thisHour: 'A aquesta hora',
+    more: 'Més',
+    less: 'Menys',
     realBadge: 'Dades reals',
     past: 'És un moment del passat, no l’estat actual.',
     historical: (months) => `Dades històriques · ${months}. No és l’estat actual.`,

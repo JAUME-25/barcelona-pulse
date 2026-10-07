@@ -169,6 +169,8 @@ export const es = {
     shownMoment: 'Momento mostrado',
     changeMoment: 'Cambiar momento',
     thisHour: 'A esta hora',
+    more: 'Más',
+    less: 'Menos',
     realBadge: 'Datos reales',
     past: 'Es un momento del pasado, no el estado actual.',
     historical: (months: string) => `Datos históricos · ${months}. No es el estado actual.`,

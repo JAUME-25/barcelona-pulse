@@ -161,6 +161,8 @@ export const en: Messages = {
     shownMoment: 'Moment shown',
     changeMoment: 'Change moment',
     thisHour: 'At this hour',
+    more: 'More',
+    less: 'Less',
     realBadge: 'Real data',
     past: 'This is a moment in the past, not the current state.',
     historical: (months) => `Historical data · ${months}. Not the current state.`,

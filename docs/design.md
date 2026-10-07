@@ -55,6 +55,24 @@ detalle. Desde el 7-10-2026, como retoque de la leyenda:
   exactamente con él; pulsado otra vez, vuelve a enseñarlo todo con las bicis. No añaden nada a
   la URL: son `ocultar=` y `numero=`, que ya iban.
 
+## Móvil: cabecera plegable
+
+En el teléfono el mapa empezaba a 555 px de 812: marca con lema, idioma, modos, fuente y el
+aviso de procedencia entero (ocho líneas). Elegida el 7-10-2026 entre tres direcciones con
+capturas reales (compacta, mapa primero y plegable), por encargo de Jaume («la que veas más
+cómoda para el usuario»): la **plegable**.
+
+- Sin lema, el nombre más pequeño y el idioma a la derecha del nombre (a 320 px vuelve a su
+  fila). Los modos siguen arriba.
+- El aviso de procedencia es una línea: «Datos reales · vie 28 de agosto, 08:30 · Más». «Más»
+  despliega lo de siempre: la frase del histórico, el momento con «Cambiar momento» y «A esta
+  hora», el crédito y los enlaces. Es un `details` sin estado propio: queda como lo deje la
+  persona.
+- Con eso el mapa empieza a unos 200 px (266 a 320 px). El sello sobre el mapa sigue: dice qué
+  es y de cuándo aunque la cabecera haya quedado arriba.
+- Descartadas: la compacta (302 px, lo mismo sin plegar) y «mapa primero» (51 px, pero mandaba
+  los modos debajo de un mapa de dos tercios de pantalla, un gesto más lejos).
+
 ## Cercanas y Cerca de mí
 
 Quien busca una bici está en un sitio concreto y, si la estación que tiene delante no sirve
