@@ -189,6 +189,18 @@ export const en: Messages = {
     transit: 'Metro, train and tram',
   },
 
+  districts: {
+    title: 'By district',
+    label: 'District',
+    all: 'All districts',
+    none: 'No district',
+    stations: 'Stations',
+    empty: 'No bikes',
+    full: 'Full',
+    unknown: 'No data',
+    note: 'No data is counted apart: it is neither no bikes nor full.',
+  },
+
   list: {
     staleSince: (label, iso, at) => `${label} since ${sinceWhen(iso, at)}`,
     never: 'No data up to this moment',
@@ -281,6 +293,19 @@ export const en: Messages = {
     noData: 'No data at this moment: no station had reported.',
     countEmpty: (n) => <>{n} with no bikes</>,
     countFull: (n) => <>{n} full</>,
+    countTotals: (bikes, docks) =>
+      bikes !== null && docks !== null ? (
+        <>
+          {bikes} bikes and {docks} free docks
+        </>
+      ) : bikes !== null ? (
+        <>{bikes} bikes</>
+      ) : (
+        <>{docks} free docks</>
+      ),
+    counted: (n) => `in ${String(n)} stations`,
+    countedNote: 'Those in service that publish bikes and docks. The rest are not added up.',
+    bikesScale: (max) => `bikes at the stations: 0 to ${max}`,
     withDataNote: (tolerance) =>
       `Those that reported in the previous ${tolerance} minutes. The rest count as neither empty nor full.`,
     withData: (withData, known) => `${String(withData)} of ${String(known)} with data`,
@@ -342,6 +367,52 @@ export const en: Messages = {
     expiryValue: (tolerance) =>
       `After ${String(tolerance)} minutes without reporting, a station’s state becomes unknown`,
     stations: 'Stations',
+    ingestionsLead: (n) => {
+      const text =
+        `${count(n.runs, 'import', 'imports')} over ${count(n.periods, 'day', 'days')}: ` +
+        `${n.accepted} new observations, ${n.duplicate} repeated, ${n.conflicting} conflicting and ${n.rejected} rejected.`;
+      const failed = n.failed === 0 ? '' : ` ${count(n.failed, 'day failed', 'days failed')}.`;
+      const purged = n.purged === 0 ? '' : ` ${count(n.purged, 'day', 'days')} deleted afterwards.`;
+      return text + failed + purged;
+    },
+    ingestionsTitle: 'What came in each day',
+    ingestionsLoading: 'Reading the imports…',
+    ingestionsError: 'The imports could not be read.',
+    ingestionsNone: 'No day has been imported yet.',
+    ingestionDay: 'Day',
+    ingestionNew: 'New',
+    ingestionDuplicate: 'Repeated',
+    ingestionConflicting: 'Conflicting',
+    ingestionRejected: 'Rejected',
+    ingestionTimes: (n) => `${String(n)} times`,
+    ingestionFailed: 'failed',
+    ingestionPurged: 'deleted',
+    ingestionsNote:
+      'Observations. Repeated: already stored, with the same values. Conflicting: already stored with other values; the first one was kept. Rejected: did not come in (stations included).',
+    rejectionsTitle: 'Rejections, by reason:',
+    noRejections: 'No record was rejected.',
+    rejectionLine: (n, kind, reason) => {
+      const kinds: Record<string, [string, string]> = {
+        station: ['station', 'stations'],
+        observation: ['observation', 'observations'],
+        input: ['input', 'inputs'],
+      };
+      const [one, many] = kinds[kind] ?? [kind, kind];
+      return `${count(n, one, many)}: ${reason}`;
+    },
+    rejectionReason: {
+      missing_field: 'missing field',
+      invalid_value: 'invalid value',
+      ambiguous_timestamp: 'time without a time zone',
+      timestamp_in_future: 'time in the future',
+      coordinates_out_of_range: 'impossible coordinates',
+      outside_service_area: 'outside the service area',
+      negative_count: 'negative count',
+      duplicate_in_batch: 'repeated in the same file',
+      unknown_station: 'unknown station',
+      metadata_older_than_current: 'attributes older than the current ones',
+      metadata_inside_known_period: 'attribute change inside a period already known',
+    },
     dataset: 'The Bicing dataset on Open Data BCN',
     code: 'Code, decisions and measurements:',
     silentNever: 'No data up to this moment',

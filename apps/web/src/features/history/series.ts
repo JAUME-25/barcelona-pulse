@@ -42,16 +42,34 @@ export function dataSegments(points: readonly TimelinePoint[]): [number, number]
     }, []);
 }
 
+/** Un número redondo igual o mayor que `max` (y al menos 5): la escala de una serie. */
+export function niceCeil(max: number): number {
+  for (const nice of [5, 10, 20, 25, 40, 50, 80, 100, 150, 200, 250, 400, 500, 1000]) {
+    if (max <= nice) return nice;
+  }
+  return Math.ceil(max / 1000) * 1000;
+}
+
 /** Escala común para vacías y llenas: un número redondo igual o mayor que el máximo. */
 export function niceMax(points: readonly TimelinePoint[]): number {
   let max = 1;
   for (const p of points) {
     if (p.stationsWithData > 0) max = Math.max(max, p.stationsEmpty, p.stationsFull);
   }
-  for (const nice of [5, 10, 20, 25, 40, 50, 80, 100, 150, 200, 250, 400, 500, 1000]) {
-    if (max <= nice) return nice;
+  return niceCeil(max);
+}
+
+/** Escala de una serie con huecos (valores nulos), que no cuentan. */
+export function niceMaxOf(
+  points: readonly TimelinePoint[],
+  value: (p: TimelinePoint) => number | null,
+): number {
+  let max = 1;
+  for (const p of points) {
+    const v = value(p);
+    if (v !== null) max = Math.max(max, v);
   }
-  return Math.ceil(max / 1000) * 1000;
+  return niceCeil(max);
 }
 
 export interface HourMark {
@@ -91,6 +109,33 @@ export function areaPath(
     const [ex, ey] = project(to, 0);
     d += `L${f(ex)} ${f(ey)}Z`;
   }
+  return d;
+}
+
+/**
+ * Línea de una serie con huecos: donde el valor es nulo no se dibuja nada (sin dato no es cero).
+ * Un paso suelto entre huecos queda como un punto.
+ */
+export function linePath(
+  points: readonly TimelinePoint[],
+  value: (p: TimelinePoint) => number | null,
+  project: (index: number, value: number) => [number, number],
+): string {
+  let d = '';
+  // Pasos seguidos con valor en el tramo abierto: 0 si no hay tramo, 1 si es un punto suelto.
+  let run = 0;
+  for (const [i, p] of points.entries()) {
+    const v = value(p);
+    if (v === null) {
+      if (run === 1) d += 'h0';
+      run = 0;
+      continue;
+    }
+    const [x, y] = project(i, v);
+    d += `${run === 0 ? 'M' : 'L'}${f(x)} ${f(y)}`;
+    run += 1;
+  }
+  if (run === 1) d += 'h0';
   return d;
 }
 

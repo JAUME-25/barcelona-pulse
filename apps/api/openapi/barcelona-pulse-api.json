@@ -30,6 +30,49 @@
         }
       }
     },
+    "/api/sources/{id}/ingestions": {
+      "get": {
+        "tags": [
+          "Sources"
+        ],
+        "summary": "Ingestas terminadas de una fuente: periodo cubierto, recuentos y rechazos por motivo",
+        "description": "Solo las que han terminado y dicen qué periodo cubren (un día del histórico), en orden de periodo. Las purgadas se conservan con la fecha de la purga. Repetir una importación no duplica: sale como repetidas.",
+        "operationId": "ListIngestions",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la fuente.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestionsResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/sources/{id}/timeline": {
       "get": {
         "tags": [
@@ -986,6 +1029,145 @@
         },
         "description": "Estación inventada para el escenario. No se guarda en ningún sitio."
       },
+      "IngestionItem": {
+        "required": [
+          "id",
+          "startedAt",
+          "finishedAt",
+          "status",
+          "coveredFrom",
+          "coveredTo",
+          "days",
+          "purgedAt",
+          "stationsReceived",
+          "stationsRejected",
+          "stationVersionsCreated",
+          "observationsReceived",
+          "observationsAccepted",
+          "observationsDuplicate",
+          "observationsConflicting",
+          "observationsRejected",
+          "rejections"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Identificador de la ejecución.",
+            "format": "int64"
+          },
+          "startedAt": {
+            "type": "string",
+            "description": "Cuándo empezó.",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Cuándo acabó.",
+            "format": "date-time"
+          },
+          "status": {
+            "description": "Cómo acabó: bien, con incidencias (rechazos o conflictos) o fallida.",
+            "$ref": "#/components/schemas/IngestionStatus"
+          },
+          "coveredFrom": {
+            "type": "string",
+            "description": "Inicio del periodo que cubre la entrada.",
+            "format": "date-time"
+          },
+          "coveredTo": {
+            "type": "string",
+            "description": "Fin (excluido) del periodo que cubre la entrada.",
+            "format": "date-time"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Días (hora de Barcelona) de ese periodo."
+          },
+          "purgedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Cuándo se quitaron sus días con `purge`; nulo si siguen.",
+            "format": "date-time"
+          },
+          "stationsReceived": {
+            "type": "integer",
+            "description": "Registros de estación leídos.",
+            "format": "int32"
+          },
+          "stationsRejected": {
+            "type": "integer",
+            "description": "Registros de estación rechazados.",
+            "format": "int32"
+          },
+          "stationVersionsCreated": {
+            "type": "integer",
+            "description": "Versiones de estación nuevas.",
+            "format": "int32"
+          },
+          "observationsReceived": {
+            "type": "integer",
+            "description": "Observaciones leídas.",
+            "format": "int32"
+          },
+          "observationsAccepted": {
+            "type": "integer",
+            "description": "Observaciones nuevas guardadas.",
+            "format": "int32"
+          },
+          "observationsDuplicate": {
+            "type": "integer",
+            "description": "Repetidas: ya estaban, con los mismos valores.",
+            "format": "int32"
+          },
+          "observationsConflicting": {
+            "type": "integer",
+            "description": "En conflicto: ya estaban, con otros valores; se conservó la primera.",
+            "format": "int32"
+          },
+          "observationsRejected": {
+            "type": "integer",
+            "description": "Observaciones rechazadas.",
+            "format": "int32"
+          },
+          "rejections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RejectionGroup"
+            },
+            "description": "Rechazos agrupados por tipo de registro y motivo. Se guardan como máximo 1000 por ingesta: los totales son los recuentos de arriba."
+          }
+        },
+        "description": "Una ingesta terminada con el periodo que decía cubrir (un día del histórico)."
+      },
+      "IngestionsResponse": {
+        "required": [
+          "source",
+          "ingestions"
+        ],
+        "type": "object",
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/SourceRef"
+          },
+          "ingestions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IngestionItem"
+            }
+          }
+        },
+        "description": "Las ingestas terminadas de una fuente: lo que entró, lo que se repitió y lo que no entró, y por qué."
+      },
       "IngestionStatus": {
         "enum": [
           "running",
@@ -1206,6 +1388,30 @@
             ]
           }
         }
+      },
+      "RejectionGroup": {
+        "required": [
+          "recordKind",
+          "reason",
+          "count"
+        ],
+        "type": "object",
+        "properties": {
+          "recordKind": {
+            "type": "string",
+            "description": "`station`, `observation` o `input`."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Motivo, tal como lo registra la ingesta (`outside_service_area`, `negative_count`…)."
+          },
+          "count": {
+            "type": "integer",
+            "description": "Registros rechazados por ese motivo.",
+            "format": "int32"
+          }
+        },
+        "description": "Cuántos registros de un tipo se rechazaron por un motivo."
       },
       "SourceKind": {
         "enum": [

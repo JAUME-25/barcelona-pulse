@@ -136,6 +136,85 @@
   }
 }
 
+/* Lo que entró cada día: el registro de las importaciones (ingestion_runs), plegado. */
+.ingestions {
+  margin-top: 14px;
+}
+
+.ingestions__days {
+  margin: 0 0 12px;
+}
+
+.ingestions__days summary {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ingestions__reasons-title {
+  margin-bottom: 4px;
+}
+
+.ingestion-table {
+  width: 100%;
+  margin-top: 8px;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ingestion-table th,
+.ingestion-table td {
+  padding: 4px;
+  text-align: right;
+  vertical-align: baseline;
+}
+
+.ingestion-table th:first-child,
+.ingestion-table td:first-child {
+  padding-left: 0;
+  font-weight: 400;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.ingestion-table thead th {
+  color: var(--ink-2);
+  font-size: 0.75rem;
+  font-weight: 600;
+  vertical-align: bottom;
+}
+
+.ingestion-table tbody tr {
+  border-top: 1px solid var(--line);
+}
+
+.ingestion-table__month th {
+  padding-top: 10px;
+  border-top: 0;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.ingestion-table__flag {
+  margin-left: 6px;
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+}
+
+/* Un día borrado con purge se conserva en el registro, pero ya no está. */
+.ingestion-table tr[data-purged] td {
+  color: var(--ink-2);
+  text-decoration: line-through;
+}
+
+@media (max-width: 359px) {
+  .ingestion-table {
+    font-size: 0.875rem;
+  }
+}
+
 /* Rejilla de huecos: un día por fila, una hora por casilla. Rayado y discontinuo, como en la
    franja de «Reproducir»: faltan datos. */
 .hole-grid {

@@ -6,6 +6,7 @@ import type {
   CoverageRequest,
   CoverageResponse,
   FramesResponse,
+  IngestionsResponse,
   StationItem,
   StudyAreaItem,
   TimelinePoint,
@@ -147,6 +148,47 @@ function timelineFor(url: URL): TimelineResponse {
 }
 
 const iso = (t: number) => new Date(t).toISOString().replace('.000Z', '+00:00');
+
+/** El 20 de agosto importado dos veces: la primera con todo nuevo y la segunda con todo repetido. */
+function ingestionsFor(): IngestionsResponse {
+  const base = {
+    startedAt: '2026-10-05T20:00:00+00:00',
+    finishedAt: '2026-10-05T20:00:30+00:00',
+    coveredFrom: '2026-08-19T22:00:00+00:00',
+    coveredTo: '2026-08-20T22:00:00+00:00',
+    days: ['2026-08-20'],
+    purgedAt: null,
+    stationsReceived: 549,
+    stationsRejected: 0,
+    stationVersionsCreated: 549,
+    observationsReceived: 155_364,
+  };
+  return {
+    source: stationsResponse([]).source,
+    ingestions: [
+      {
+        ...base,
+        id: 1,
+        status: 'succeeded_with_issues',
+        observationsAccepted: 154_389,
+        observationsDuplicate: 773,
+        observationsConflicting: 202,
+        observationsRejected: 2,
+        rejections: [{ recordKind: 'observation', reason: 'negative_count', count: 2 }],
+      },
+      {
+        ...base,
+        id: 2,
+        status: 'succeeded',
+        observationsAccepted: 0,
+        observationsDuplicate: 154_389,
+        observationsConflicting: 0,
+        observationsRejected: 0,
+        rejections: [],
+      },
+    ],
+  };
+}
 
 /** Fotogramas de una hora: Pl. de Catalunya tiene tantas bicis como el minuto del paso. */
 function framesFor(url: URL): FramesResponse {
@@ -409,6 +451,82 @@ describe('App', () => {
     expect(screen.getByText(/no permite coger bicis/)).toBeTruthy();
   });
 
+  it('la tabla por distrito resume el momento y su nombre filtra lista, mapa, recuento y leyenda', async () => {
+    const real = [
+      stationFixture({
+        id: 31,
+        sourceStationId: '1',
+        name: 'GRAN VIA CORTS CATALANES, 760',
+        district: 'Eixample',
+        state: { lastObservedAt: '2026-08-20T21:54:08+00:00', bikesAvailable: 0 },
+      }),
+      stationFixture({
+        id: 32,
+        sourceStationId: '2',
+        name: 'C/ ROGER DE FLOR, 126',
+        district: 'Eixample',
+        state: { lastObservedAt: '2026-08-20T21:54:08+00:00' },
+      }),
+      stationFixture({
+        id: 33,
+        sourceStationId: '3',
+        name: 'PL. DE LA VILA DE GRACIA',
+        district: 'Gràcia',
+        state: {
+          freshness: 'stale',
+          status: 'unknown',
+          lastObservedAt: '2026-08-17T10:00:00+00:00',
+          bikesAvailable: null,
+          docksAvailable: null,
+        },
+      }),
+    ];
+    mockApi((path) => json(path === '/api/sources' ? [observedSource] : observedResponse(real)));
+    const user = userEvent.setup();
+    renderApp();
+
+    // La suma arriba; en Gràcia nadie informó: de vacías y llenas no se dice ni cero.
+    const table = await screen.findByRole('table');
+    const rows = within(table)
+      .getAllByRole('row')
+      .slice(1)
+      .map((row) => [
+        within(row).getByRole('button').textContent,
+        ...within(row)
+          .getAllByRole('cell')
+          .map((c) => c.textContent),
+      ]);
+    expect(rows).toEqual([
+      ['Todos los distritos', '3', '1', '0', '1'],
+      ['Eixample', '2', '1', '0', '0'],
+      ['Gràcia', '1', '–', '–', '1'],
+    ]);
+    expect(
+      within(table)
+        .getByRole('button', { name: 'Todos los distritos' })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
+
+    // El Eixample: lista, marcadores, recuento y leyenda solo con sus dos estaciones.
+    const eixample = within(table).getByRole('button', { name: 'Eixample' });
+    await user.click(eixample);
+    expect(eixample.getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByText('2 estaciones')).toBeTruthy();
+    // En el orden de la lista: por el nombre que se ve («C/ Roger…» antes que «Gran Via…»).
+    expect(screen.getAllByRole('button', { name: /^Marcador/ }).map((b) => b.textContent)).toEqual([
+      'Marcador C/ ROGER DE FLOR, 126',
+      'Marcador GRAN VIA CORTS CATALANES, 760',
+    ]);
+    expect(screen.queryByRole('button', { name: /^Pl\. de la Vila de Gracia/ })).toBeNull();
+    expect(screen.getByRole('button', { name: /^Sin dato reciente/ }).textContent).toMatch(/0$/);
+
+    // Pulsado otra vez, deja de filtrar; la tabla sigue entera mientras tanto.
+    await user.click(eixample);
+    expect(eixample.getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByText('3 estaciones')).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: /^Marcador/ })).toHaveLength(3);
+  });
+
   it('«Qué muestra y qué no» explica los límites y lleva a las estaciones sin dato', async () => {
     const real = [
       stationFixture({
@@ -446,6 +564,7 @@ describe('App', () => {
       if (path === '/api/sources') return json([observedSource]);
       if (path === '/api/stations') return json(observedResponse(real));
       if (path === '/api/sources/bicing-bcn/timeline') return json(timelineFor(url));
+      if (path === '/api/sources/bicing-bcn/ingestions') return json(ingestionsFor());
       return json({ title: 'Petición inesperada' }, 500);
     });
     const user = userEvent.setup();
@@ -460,6 +579,23 @@ describe('App', () => {
     expect(
       within(sheet).getByText(/Cómo estaban las 3 estaciones de Bicing el 20 de agosto de 2026/),
     ).toBeTruthy();
+
+    // Lo que entró, según el registro de la ingesta: las cifras reales, día a día, y los rechazos.
+    expect(
+      await within(sheet).findByText(
+        '2 importaciones en 1 día: 154.389 observaciones nuevas, 155.162 repetidas, 202 en conflicto y 2 rechazadas.',
+      ),
+    ).toBeTruthy();
+    await user.click(within(sheet).getByText('Lo que entró cada día'));
+    const dayRow = within(sheet).getByText('155.162').closest('tr');
+    expect(dayRow?.querySelector('th')?.textContent).toBe('jue 20 2 veces');
+    expect(Array.from(dayRow?.querySelectorAll('td') ?? []).map((c) => c.textContent)).toEqual([
+      '154.389',
+      '155.162',
+      '202',
+      '2',
+    ]);
+    expect(within(sheet).getByText('2 observaciones: recuento negativo')).toBeTruthy();
     // Los huecos se miden con una petición por semana importada, cada 15 minutos.
     expect(await within(sheet).findByText(/pasos por debajo del 95/)).toBeTruthy();
     const weeks = requests.filter((u) => u.pathname.endsWith('/timeline'));
@@ -558,6 +694,15 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: '5 minutos después' }));
     expect(slider.getAttribute('aria-valuetext')).toMatch(/^08:35,/);
     expect(within(catalunya()).getByText('35')).toBeTruthy();
+
+    // Las bicis y los anclajes sumados del paso, con en cuántas estaciones; y su línea en la
+    // pista, que es un solo tramo (07:00 a 10:30) porque fuera no hay recuento.
+    expect(screen.getByText(/bicis y/).textContent).toBe(
+      '20 bicis y 30 anclajes libres en 2 estaciones',
+    );
+    const bikesLine = document.querySelector('.replay-deck__bikes')?.getAttribute('d') ?? '';
+    expect(bikesLine.match(/M/g)).toHaveLength(1);
+    expect(screen.getByText('bicis en las estaciones: de 0 a 20')).toBeTruthy();
 
     // Bajo la pista, a qué horas faltan datos; «con dato» explica quién cuenta.
     expect(

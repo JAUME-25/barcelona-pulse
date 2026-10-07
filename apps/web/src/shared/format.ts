@@ -1,4 +1,5 @@
 import { t } from '../i18n';
+import { numberFormat } from '../i18n/intl';
 
 // Fechas y cifras en el idioma de la interfaz (i18n/intl.ts) y siempre en hora de Barcelona, sea
 // cual sea la zona del navegador. Las frases alrededor son de cada idioma (i18n/es.tsx…).
@@ -9,6 +10,11 @@ export {
   formatDayMonth,
   formatTime,
 } from '../i18n/intl';
+
+/** «4958» en castellano y catalán, «12,345» en inglés: una cifra entera con el formato del idioma. */
+export function formatWhole(n: number): string {
+  return numberFormat({ maximumFractionDigits: 0 }).format(n);
+}
 
 /** «2 h 15 min», «40 min», «menos de 1 min», «9 días» */
 export function formatDuration(fromIso: string, toIso: string): string {

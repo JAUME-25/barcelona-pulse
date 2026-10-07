@@ -19,6 +19,7 @@ import type {
   ChangeKind,
   CoverageKey,
   GapInput,
+  IngestionTotalsInput,
   NoEffectInput,
   Origin,
   SilenceKey,
@@ -184,6 +185,18 @@ export const es = {
     transit: 'Metro, tren y tranvía',
   },
 
+  districts: {
+    title: 'Por distrito',
+    label: 'Distrito',
+    all: 'Todos los distritos',
+    none: 'Sin distrito',
+    stations: 'Estaciones',
+    empty: 'Sin bicis',
+    full: 'Llenas',
+    unknown: 'Sin dato',
+    note: 'Sin dato va aparte: no cuenta como sin bicis ni como llena.',
+  },
+
   list: {
     /** Con la fecha si no es del mismo día: «desde las 10:54» no puede querer decir junio de 2025. */
     staleSince: (label: string, iso: string, at: string) => `${label} desde ${sinceWhen(iso, at)}`,
@@ -287,6 +300,21 @@ export const es = {
     noData: 'Sin datos en este momento: ninguna estación había informado.',
     countEmpty: (n: ReactNode): ReactNode => <>{n} sin bicis</>,
     countFull: (n: ReactNode): ReactNode => <>{n} llenas</>,
+    /** Bicis y anclajes libres sumados; cada total puede faltar (ninguna estación lo publicaba). */
+    countTotals: (bikes: ReactNode | null, docks: ReactNode | null): ReactNode =>
+      bikes !== null && docks !== null ? (
+        <>
+          {bikes} bicis y {docks} anclajes libres
+        </>
+      ) : bikes !== null ? (
+        <>{bikes} bicis</>
+      ) : (
+        <>{docks} anclajes libres</>
+      ),
+    counted: (n: number) => `en ${String(n)} estaciones`,
+    countedNote: 'Las operativas que publican bicis y anclajes. Las demás no suman.',
+    /** Escala de la línea de bicis en la pista: «bicis en las estaciones: de 0 a 6000». */
+    bikesScale: (max: string) => `bicis en las estaciones: de 0 a ${max}`,
     withDataNote: (tolerance: string) =>
       `Las que informaron en los ${tolerance} minutos anteriores. Las demás no cuentan como vacías ni como llenas.`,
     withData: (withData: number, known: number) =>
@@ -354,6 +382,55 @@ export const es = {
     expiryValue: (tolerance: number) =>
       `A los ${String(tolerance)} minutos sin informar, el estado de una estación pasa a desconocido`,
     stations: 'Estaciones',
+    /** Lo que entró en cada importación, según el registro de la ingesta. */
+    ingestionsLead: (n: IngestionTotalsInput) => {
+      const text =
+        `${count(n.runs, 'importación', 'importaciones')} en ${count(n.periods, 'día', 'días')}: ` +
+        `${n.accepted} observaciones nuevas, ${n.duplicate} repetidas, ${n.conflicting} en conflicto y ${n.rejected} rechazadas.`;
+      const failed = n.failed === 0 ? '' : ` ${count(n.failed, 'día falló', 'días fallaron')}.`;
+      const purged =
+        n.purged === 0 ? '' : ` ${count(n.purged, 'día borrado', 'días borrados')} después.`;
+      return text + failed + purged;
+    },
+    ingestionsTitle: 'Lo que entró cada día',
+    ingestionsLoading: 'Leyendo las importaciones…',
+    ingestionsError: 'No se han podido leer las importaciones.',
+    ingestionsNone: 'Todavía no se ha importado ningún día.',
+    ingestionDay: 'Día',
+    ingestionNew: 'Nuevas',
+    ingestionDuplicate: 'Repetidas',
+    ingestionConflicting: 'En conflicto',
+    ingestionRejected: 'Rechazadas',
+    ingestionTimes: (n: number) => `${String(n)} veces`,
+    ingestionFailed: 'falló',
+    ingestionPurged: 'borrado',
+    ingestionsNote:
+      'Observaciones. Repetidas: ya estaban, con los mismos valores. En conflicto: ya estaban con otros valores y se conservó la primera. Rechazadas: no entraron (estaciones incluidas).',
+    rejectionsTitle: 'Rechazos, por motivo:',
+    noRejections: 'Ningún registro rechazado.',
+    /** «3 observaciones: recuento negativo» */
+    rejectionLine: (n: number, kind: string, reason: string) => {
+      const kinds: Record<string, [string, string]> = {
+        station: ['estación', 'estaciones'],
+        observation: ['observación', 'observaciones'],
+        input: ['entrada', 'entradas'],
+      };
+      const [one, many] = kinds[kind] ?? [kind, kind];
+      return `${count(n, one, many)}: ${reason}`;
+    },
+    rejectionReason: {
+      missing_field: 'falta un campo',
+      invalid_value: 'valor no válido',
+      ambiguous_timestamp: 'hora sin zona horaria',
+      timestamp_in_future: 'hora en el futuro',
+      coordinates_out_of_range: 'coordenadas imposibles',
+      outside_service_area: 'fuera del área de servicio',
+      negative_count: 'recuento negativo',
+      duplicate_in_batch: 'repetido en el mismo archivo',
+      unknown_station: 'estación desconocida',
+      metadata_older_than_current: 'atributos más antiguos que los vigentes',
+      metadata_inside_known_period: 'cambio de atributos dentro de un periodo ya conocido',
+    } as Record<string, string | undefined>,
     dataset: 'El conjunto de datos de Bicing en Open Data BCN',
     code: 'Código, decisiones y mediciones:',
     /** «Ningún dato hasta este momento», «Sin datos desde el 28 de mayo» o «16 min sin datos». */

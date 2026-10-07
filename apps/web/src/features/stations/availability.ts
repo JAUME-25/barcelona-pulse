@@ -85,15 +85,21 @@ export function normalizeForSearch(text: string): string {
     .toLowerCase();
 }
 
+/**
+ * Las estaciones que se ven en la lista y en el mapa: las de las categorías activas, las que
+ * casan con la búsqueda y, si se ha elegido uno, las del distrito (`''` son las que no tienen).
+ */
 export function filterStations(
   stations: readonly StationItem[],
   query: string,
   visible: ReadonlySet<Availability>,
+  district: string | null = null,
 ): StationItem[] {
   const q = normalizeForSearch(query.trim());
   return (
     stations
       .filter((s) => visible.has(availabilityOf(s.state)))
+      .filter((s) => district === null || (s.district ?? '') === district)
       .map((s) => ({ s, name: stationName(s) }))
       // Por el nombre que se ve y por el que publica la fuente, que puede traer palabras cortadas.
       .filter(

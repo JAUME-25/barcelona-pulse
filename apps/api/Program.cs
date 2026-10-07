@@ -80,6 +80,7 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = c => c
 
 var api = app.MapGroup("/api").RequireRateLimiting(ServiceRegistration.ApiRateLimitPolicy);
 api.MapSourcesEndpoints();
+api.MapIngestionsEndpoints();
 api.MapStationsEndpoints();
 api.MapTimelineEndpoints();
 api.MapFramesEndpoints();

@@ -26,6 +26,18 @@ export interface GapInput {
   ranges: { from: string; to: string | null }[];
 }
 
+/** Sumas de las importaciones de una fuente; las cifras grandes ya con el formato del idioma. */
+export interface IngestionTotalsInput {
+  periods: number;
+  runs: number;
+  accepted: string;
+  duplicate: string;
+  conflicting: string;
+  rejected: string;
+  failed: number;
+  purged: number;
+}
+
 /** Lo que hace falta para explicar por qué un escenario no mueve la superficie. */
 export interface NoEffectInput {
   added: number;

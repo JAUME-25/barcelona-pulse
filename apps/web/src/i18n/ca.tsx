@@ -206,6 +206,18 @@ export const ca: Messages = {
     transit: 'Metro, tren i tramvia',
   },
 
+  districts: {
+    title: 'Per districte',
+    label: 'Districte',
+    all: 'Tots els districtes',
+    none: 'Sense districte',
+    stations: 'Estacions',
+    empty: 'Sense bicis',
+    full: 'Plenes',
+    unknown: 'Sense dada',
+    note: 'Sense dada va a part: no compta com a sense bicis ni com a plena.',
+  },
+
   list: {
     staleSince: (label, iso, at) => `${label} des ${sinceWhen(iso, at)}`,
     never: 'Cap dada fins a aquest moment',
@@ -300,6 +312,19 @@ export const ca: Messages = {
     noData: 'Sense dades en aquest moment: cap estació no havia informat.',
     countEmpty: (n) => <>{n} sense bicis</>,
     countFull: (n) => <>{n} plenes</>,
+    countTotals: (bikes, docks) =>
+      bikes !== null && docks !== null ? (
+        <>
+          {bikes} bicis i {docks} ancoratges lliures
+        </>
+      ) : bikes !== null ? (
+        <>{bikes} bicis</>
+      ) : (
+        <>{docks} ancoratges lliures</>
+      ),
+    counted: (n) => `a ${String(n)} estacions`,
+    countedNote: 'Les operatives que publiquen bicis i ancoratges. Les altres no sumen.',
+    bikesScale: (max) => `bicis a les estacions: de 0 a ${max}`,
     withDataNote: (tolerance) =>
       `Les que han informat en els ${tolerance} minuts anteriors. Les altres no compten com a buides ni com a plenes.`,
     withData: (withData, known) => `${String(withData)} de ${String(known)} amb dada`,
@@ -362,6 +387,54 @@ export const ca: Messages = {
     expiryValue: (tolerance) =>
       `Als ${String(tolerance)} minuts sense informar, l’estat d’una estació passa a desconegut`,
     stations: 'Estacions',
+    ingestionsLead: (n) => {
+      const text =
+        `${count(n.runs, 'importació', 'importacions')} en ${count(n.periods, 'dia', 'dies')}: ` +
+        `${n.accepted} observacions noves, ${n.duplicate} repetides, ${n.conflicting} en conflicte i ${n.rejected} rebutjades.`;
+      const failed =
+        n.failed === 0 ? '' : ` ${count(n.failed, 'dia va fallar', 'dies van fallar')}.`;
+      const purged =
+        n.purged === 0 ? '' : ` ${count(n.purged, 'dia esborrat', 'dies esborrats')} després.`;
+      return text + failed + purged;
+    },
+    ingestionsTitle: 'El que va entrar cada dia',
+    ingestionsLoading: 'Llegint les importacions…',
+    ingestionsError: 'No s’han pogut llegir les importacions.',
+    ingestionsNone: 'Encara no s’ha importat cap dia.',
+    ingestionDay: 'Dia',
+    ingestionNew: 'Noves',
+    ingestionDuplicate: 'Repetides',
+    ingestionConflicting: 'En conflicte',
+    ingestionRejected: 'Rebutjades',
+    ingestionTimes: (n) => `${String(n)} vegades`,
+    ingestionFailed: 'va fallar',
+    ingestionPurged: 'esborrat',
+    ingestionsNote:
+      'Observacions. Repetides: ja hi eren, amb els mateixos valors. En conflicte: ja hi eren amb altres valors i es va conservar la primera. Rebutjades: no van entrar (estacions incloses).',
+    rejectionsTitle: 'Rebuigs, per motiu:',
+    noRejections: 'Cap registre rebutjat.',
+    rejectionLine: (n, kind, reason) => {
+      const kinds: Record<string, [string, string]> = {
+        station: ['estació', 'estacions'],
+        observation: ['observació', 'observacions'],
+        input: ['entrada', 'entrades'],
+      };
+      const [one, many] = kinds[kind] ?? [kind, kind];
+      return `${count(n, one, many)}: ${reason}`;
+    },
+    rejectionReason: {
+      missing_field: 'falta un camp',
+      invalid_value: 'valor no vàlid',
+      ambiguous_timestamp: 'hora sense zona horària',
+      timestamp_in_future: 'hora en el futur',
+      coordinates_out_of_range: 'coordenades impossibles',
+      outside_service_area: 'fora de l’àrea de servei',
+      negative_count: 'recompte negatiu',
+      duplicate_in_batch: 'repetit al mateix arxiu',
+      unknown_station: 'estació desconeguda',
+      metadata_older_than_current: 'atributs més antics que els vigents',
+      metadata_inside_known_period: 'canvi d’atributs dins d’un període ja conegut',
+    },
     dataset: 'El conjunt de dades de Bicing a Open Data BCN',
     code: 'Codi, decisions i mesures:',
     silentNever: 'Cap dada fins a aquest moment',

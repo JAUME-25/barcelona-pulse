@@ -1,10 +1,18 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { Fragment, useEffect, useMemo, useRef } from 'react';
 import type { SourceSummary, StationsResponse } from '../../api/client';
 import { t } from '../../i18n';
 import { numberFormat } from '../../i18n/intl';
-import { formatDateTime, formatMonths } from '../../shared/format';
+import { formatDateTime, formatMonths, formatWhole } from '../../shared/format';
 import { dayOfMonth, formatLocalDay, formatShortWeekday, weekStart } from '../history/time';
 import { stationName } from '../stations/names';
+import {
+  byDay,
+  ingestionTotals,
+  reasonLabel,
+  rejectionsByReason,
+  useIngestions,
+  type DayIngestion,
+} from './ingestions';
 import {
   CODE_URL,
   listDays,
@@ -69,6 +77,133 @@ function HoleGrid({
         );
       })}
     </div>
+  );
+}
+
+/** «jue 20» o, si una importación cubre varios días, «22–24». */
+function periodLabel(days: readonly string[]): string {
+  const [first, last] = [days[0], days.at(-1)];
+  if (first === undefined || last === undefined) return '';
+  if (first === last) return `${formatShortWeekday(first)} ${String(dayOfMonth(first))}`;
+  return `${String(dayOfMonth(first))}–${String(dayOfMonth(last))}`;
+}
+
+/** Una fila por día importado: lo que entró, lo repetido, lo que chocó y lo rechazado. */
+function IngestionTable({ rows }: { rows: readonly DayIngestion[] }) {
+  const m = t().limits;
+  return (
+    <table className="ingestion-table">
+      <thead>
+        <tr>
+          <th scope="col">{m.ingestionDay}</th>
+          <th scope="col">{m.ingestionNew}</th>
+          <th scope="col">{m.ingestionDuplicate}</th>
+          <th scope="col">{m.ingestionConflicting}</th>
+          <th scope="col">{m.ingestionRejected}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r, i) => {
+          const day = r.days[0] ?? '';
+          const newMonth = i === 0 || rows[i - 1]?.days[0]?.slice(0, 7) !== day.slice(0, 7);
+          // Importado más de una vez, fallido o borrado después: junto al día.
+          const flags = [
+            r.runs > 1 ? m.ingestionTimes(r.runs) : null,
+            r.failed ? m.ingestionFailed : null,
+            r.purged ? m.ingestionPurged : null,
+          ].filter((f): f is string => f !== null);
+          return (
+            <Fragment key={r.key}>
+              {newMonth && (
+                <tr className="ingestion-table__month">
+                  <th scope="rowgroup" colSpan={5}>
+                    {monthOf(day)}
+                  </th>
+                </tr>
+              )}
+              <tr data-purged={r.purged ? '' : undefined} data-failed={r.failed ? '' : undefined}>
+                <th scope="row">
+                  {periodLabel(r.days)}
+                  {flags.length > 0 && (
+                    <span className="ingestion-table__flag"> {flags.join(' · ')}</span>
+                  )}
+                </th>
+                <td>{formatWhole(r.accepted)}</td>
+                <td>{formatWhole(r.duplicate)}</td>
+                <td>{formatWhole(r.conflicting)}</td>
+                <td>{formatWhole(r.rejected)}</td>
+              </tr>
+            </Fragment>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+/** Lo que entró de verdad en cada importación, según el registro de la ingesta. */
+function Ingestions({ source }: { source: SourceSummary }) {
+  const m = t().limits;
+  const { state, retry } = useIngestions(source);
+  const items = state.status === 'ready' ? state.data : null;
+  const rows = useMemo(() => (items === null ? [] : byDay(items)), [items]);
+  const reasons = useMemo(() => (items === null ? [] : rejectionsByReason(items)), [items]);
+
+  if (state.status === 'loading') {
+    return (
+      <p className="limits-sheet__note" role="status">
+        {m.ingestionsLoading}
+      </p>
+    );
+  }
+  if (state.status === 'error') {
+    return (
+      <div className="limits-sheet__note" role="alert">
+        <p>
+          {m.ingestionsError} {state.error.message}
+        </p>
+        <button type="button" className="button" onClick={retry}>
+          {t().app.retry}
+        </button>
+      </div>
+    );
+  }
+  if (rows.length === 0) return <p className="limits-sheet__note">{m.ingestionsNone}</p>;
+  const totals = ingestionTotals(rows);
+  return (
+    <section className="ingestions" aria-label={m.ingestionsTitle}>
+      <p className="limits-sheet__text">
+        {m.ingestionsLead({
+          periods: totals.periods,
+          runs: totals.runs,
+          accepted: formatWhole(totals.accepted),
+          duplicate: formatWhole(totals.duplicate),
+          conflicting: formatWhole(totals.conflicting),
+          rejected: formatWhole(totals.rejected),
+          failed: totals.failed,
+          purged: totals.purged,
+        })}
+      </p>
+      <details className="ingestions__days">
+        <summary>{m.ingestionsTitle}</summary>
+        <IngestionTable rows={rows} />
+        <p className="limits-sheet__note">{m.ingestionsNote}</p>
+      </details>
+      {reasons.length === 0 ? (
+        <p className="limits-sheet__text">{m.noRejections}</p>
+      ) : (
+        <>
+          <p className="limits-sheet__text ingestions__reasons-title">{m.rejectionsTitle}</p>
+          <ul className="limits-sheet__list">
+            {reasons.map((r) => (
+              <li key={`${r.recordKind}:${r.reason}`}>
+                {m.rejectionLine(r.count, r.recordKind, reasonLabel(r.reason))}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
   );
 }
 
@@ -266,6 +401,7 @@ export function LimitsSheet({
         <dt>{m.stations}</dt>
         <dd>{source.stationCount}</dd>
       </dl>
+      <Ingestions source={source} />
 
       <h3 className="limits-sheet__heading">{m.holes}</h3>
       <Holes source={source} onPickDay={onPickDay} />

@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { TimelinePoint } from '../../api/client';
 import { dialPaths } from './dial';
-import { areaPath, coverageRuns, dataSegments, hourMarks, niceMax } from './series';
+import {
+  areaPath,
+  coverageRuns,
+  dataSegments,
+  hourMarks,
+  linePath,
+  niceMax,
+  niceMaxOf,
+} from './series';
 
 function point(at: string, withData: number, empty = 0, full = 0, known = 46): TimelinePoint {
   return {
@@ -49,6 +57,22 @@ describe('series de la línea temporal', () => {
   it('la escala es un número redondo, la misma para vacías y llenas', () => {
     expect(niceMax(points)).toBe(5);
     expect(niceMax([point('2026-08-20T07:00:00+00:00', 538, 79, 43, 540)])).toBe(80);
+  });
+
+  it('la línea de bicis se corta en los huecos y no baja a cero', () => {
+    const project = (i: number, v: number): [number, number] => [i, -v];
+    const bikes = [
+      { ...point('2026-03-10T06:00:00+00:00', 46), bikesAvailable: 4000 },
+      { ...point('2026-03-10T06:05:00+00:00', 46), bikesAvailable: 4200 },
+      point('2026-03-10T06:10:00+00:00', 0), // hueco: nulo, no cero
+      { ...point('2026-03-10T06:15:00+00:00', 46), bikesAvailable: 3900 },
+      point('2026-03-10T06:20:00+00:00', 0),
+    ];
+    // Dos tramos: el segundo, de un solo paso, queda como un punto («h0»).
+    expect(linePath(bikes, (p) => p.bikesAvailable, project)).toBe('M0 -4000L1 -4200M3 -3900h0');
+    expect(linePath(bikes, () => null, project)).toBe('');
+    expect(niceMaxOf(bikes, (p) => p.bikesAvailable)).toBe(5000);
+    expect(niceMaxOf(bikes, () => null)).toBe(5);
   });
 
   it('marca las horas en punto en hora de Barcelona', () => {

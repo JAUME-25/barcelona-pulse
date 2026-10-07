@@ -70,6 +70,13 @@ test('limites: la ficha lleva a una estación sin dato y a reproducir un día', 
     await openSheet(page);
     if (mobile) await noSideScroll(page, width);
     await shot(page, `${name}-ficha`);
+    // Lo que entró cada día, según el registro de la ingesta, con la tabla desplegada.
+    await expect(page.getByText('Leyendo las importaciones…')).toHaveCount(0, { timeout: 15_000 });
+    await page.getByText('Lo que entró cada día').click();
+    await expect(page.locator('.ingestion-table')).toBeVisible();
+    await scrollTo(page, '.ingestions', 'start');
+    if (mobile) await noSideScroll(page, width);
+    await shot(page, `${name}-ingestas`);
     await scrollTo(page, '.hole-grid', mobile ? 'start' : 'center');
     await shot(page, `${name}-huecos`);
     await scrollTo(page, '.silent-group', mobile ? 'start' : 'center');

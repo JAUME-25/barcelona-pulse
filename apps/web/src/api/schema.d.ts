@@ -21,6 +21,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/sources/{id}/ingestions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Ingestas terminadas de una fuente: periodo cubierto, recuentos y rechazos por motivo
+     * @description Solo las que han terminado y dicen qué periodo cubren (un día del histórico), en orden de periodo. Las purgadas se conservan con la fecha de la purga. Repetir una importación no duplica: sale como repetidas.
+     */
+    get: operations['ListIngestions'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/sources/{id}/timeline': {
     parameters: {
       query?: never;
@@ -389,6 +409,90 @@ export interface components {
        */
       latitude: number;
     };
+    /** @description Una ingesta terminada con el periodo que decía cubrir (un día del histórico). */
+    IngestionItem: {
+      /**
+       * Format: int64
+       * @description Identificador de la ejecución.
+       */
+      id: number;
+      /**
+       * Format: date-time
+       * @description Cuándo empezó.
+       */
+      startedAt: string;
+      /**
+       * Format: date-time
+       * @description Cuándo acabó.
+       */
+      finishedAt: null | string;
+      /** @description Cómo acabó: bien, con incidencias (rechazos o conflictos) o fallida. */
+      status: components['schemas']['IngestionStatus'];
+      /**
+       * Format: date-time
+       * @description Inicio del periodo que cubre la entrada.
+       */
+      coveredFrom: string;
+      /**
+       * Format: date-time
+       * @description Fin (excluido) del periodo que cubre la entrada.
+       */
+      coveredTo: string;
+      /** @description Días (hora de Barcelona) de ese periodo. */
+      days: string[];
+      /**
+       * Format: date-time
+       * @description Cuándo se quitaron sus días con `purge`; nulo si siguen.
+       */
+      purgedAt: null | string;
+      /**
+       * Format: int32
+       * @description Registros de estación leídos.
+       */
+      stationsReceived: number;
+      /**
+       * Format: int32
+       * @description Registros de estación rechazados.
+       */
+      stationsRejected: number;
+      /**
+       * Format: int32
+       * @description Versiones de estación nuevas.
+       */
+      stationVersionsCreated: number;
+      /**
+       * Format: int32
+       * @description Observaciones leídas.
+       */
+      observationsReceived: number;
+      /**
+       * Format: int32
+       * @description Observaciones nuevas guardadas.
+       */
+      observationsAccepted: number;
+      /**
+       * Format: int32
+       * @description Repetidas: ya estaban, con los mismos valores.
+       */
+      observationsDuplicate: number;
+      /**
+       * Format: int32
+       * @description En conflicto: ya estaban, con otros valores; se conservó la primera.
+       */
+      observationsConflicting: number;
+      /**
+       * Format: int32
+       * @description Observaciones rechazadas.
+       */
+      observationsRejected: number;
+      /** @description Rechazos agrupados por tipo de registro y motivo. Se guardan como máximo 1000 por ingesta: los totales son los recuentos de arriba. */
+      rejections: components['schemas']['RejectionGroup'][];
+    };
+    /** @description Las ingestas terminadas de una fuente: lo que entró, lo que se repitió y lo que no entró, y por qué. */
+    IngestionsResponse: {
+      source: components['schemas']['SourceRef'];
+      ingestions: components['schemas']['IngestionItem'][];
+    };
     /** @enum {unknown} */
     IngestionStatus: 'running' | 'succeeded' | 'succeeded_with_issues' | 'failed';
     /**
@@ -477,6 +581,18 @@ export interface components {
       status?: null | number;
       detail?: null | string;
       instance?: null | string;
+    };
+    /** @description Cuántos registros de un tipo se rechazaron por un motivo. */
+    RejectionGroup: {
+      /** @description `station`, `observation` o `input`. */
+      recordKind: string;
+      /** @description Motivo, tal como lo registra la ingesta (`outside_service_area`, `negative_count`…). */
+      reason: string;
+      /**
+       * Format: int32
+       * @description Registros rechazados por ese motivo.
+       */
+      count: number;
     };
     /** @enum {unknown} */
     SourceKind: 'observed' | 'synthetic';
@@ -754,6 +870,38 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['SourceSummary'][];
+        };
+      };
+    };
+  };
+  ListIngestions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Identificador de la fuente. */
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['IngestionsResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
         };
       };
     };

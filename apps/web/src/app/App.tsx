@@ -33,6 +33,8 @@ import {
   filterStations,
   type Availability,
 } from '../features/stations/availability';
+import { districtKey, summarizeByDistrict } from '../features/stations/districts';
+import { DistrictSummary } from '../features/stations/DistrictSummary';
 import { BrandMark } from '../features/stations/OctagonGlyph';
 import { SourceNotice } from '../features/stations/SourceNotice';
 import { StationDetail } from '../features/stations/StationDetail';
@@ -213,6 +215,8 @@ export function App() {
   const [visible, setVisible] = useState<ReadonlySet<Availability>>(
     () => new Set(AVAILABILITY_ORDER),
   );
+  // Distrito elegido (clave de la fuente) para la lista y el mapa; null, todos.
+  const [district, setDistrict] = useState<string | null>(null);
   // La selección se guarda por identificador de origen: es lo que va en la URL
   // (?estacion=demo-008) y no depende de los ids internos de cada base de datos.
   const [selectedKey, setSelectedKey] = useState<string | null>(readStationParam);
@@ -241,8 +245,19 @@ export function App() {
         : null;
   const notice = replaying && source !== undefined ? replayNotice(source) : response;
   const all = response?.stations ?? NO_STATIONS;
-  const counts = useMemo(() => countByAvailability(all), [all]);
-  const filtered = useMemo(() => filterStations(all, query, visible), [all, query, visible]);
+  // Sin distritos en la fuente (la demo) no hay resumen ni filtro.
+  const districtRows = useMemo(() => summarizeByDistrict(all), [all]);
+  const activeDistrict = districtRows.length === 0 ? null : district;
+  // Con un distrito elegido, el recuento, la leyenda y el encuadre del mapa son los de ese distrito.
+  const inDistrict = useMemo(
+    () => (activeDistrict === null ? all : all.filter((s) => districtKey(s) === activeDistrict)),
+    [all, activeDistrict],
+  );
+  const counts = useMemo(() => countByAvailability(inDistrict), [inDistrict]);
+  const filtered = useMemo(
+    () => filterStations(all, query, visible, activeDistrict),
+    [all, query, visible, activeDistrict],
+  );
   const selected =
     selectedKey === null ? undefined : all.find((s) => s.sourceStationId === selectedKey);
   const selectedId = selected?.id ?? null;
@@ -325,6 +340,14 @@ export function App() {
   const resetFilters = () => {
     setQuery('');
     setVisible(new Set(AVAILABILITY_ORDER));
+    setDistrict(null);
+  };
+
+  // Elegir un distrito cierra el detalle, como escribir en la búsqueda: se va a ver la lista.
+  // El ya elegido, pulsado otra vez, deja de filtrar.
+  const pickDistrict = (key: string | null) => {
+    setDistrict((current) => (current === key ? null : key));
+    if (selectedKey !== null) closeDetail();
   };
 
   const changeMode = (next: Mode) => {
@@ -449,7 +472,7 @@ export function App() {
           </div>
           {/* Al reproducir cambia en cada paso: anunciarlo no dejaría oír nada más. */}
           <p className="panel-tools__count" aria-live={replaying ? 'off' : 'polite'}>
-            {m.count(filtered.length, all.length)}
+            {m.count(filtered.length, inDistrict.length)}
           </p>
         </div>
         {selected !== undefined ? (
@@ -469,6 +492,9 @@ export function App() {
           </div>
         ) : (
           <>
+            {districtRows.length > 0 && (
+              <DistrictSummary rows={districtRows} active={activeDistrict} onPick={pickDistrict} />
+            )}
             <h2 className="list-title">{m.listTitle}</h2>
             <StationList
               stations={filtered}
@@ -509,6 +535,7 @@ export function App() {
                 setChosenSourceId(e.target.value);
                 writeParam(SOURCE_PARAM, e.target.value);
                 closeDetail();
+                setDistrict(null);
               }}
             >
               {sources.map((s) => (
@@ -534,9 +561,14 @@ export function App() {
           <Suspense fallback={<div className="station-map" aria-hidden="true" />}>
             <StationMap
               stations={experimenting ? scenarioStations : filtered}
-              frame={all}
+              frame={experimenting ? all : inDistrict}
               frameKey={sourceId ?? ''}
-              frameMode={shownMode}
+              // Con otro distrito se encuadra el distrito, solo si no se ha movido el mapa antes.
+              frameMode={
+                experimenting || activeDistrict === null
+                  ? shownMode
+                  : `${shownMode}:${activeDistrict}`
+              }
               framePadding={
                 replaying ? REPLAY_FRAME : experimenting ? EXPERIMENT_FRAME : EXPLORE_FRAME
               }

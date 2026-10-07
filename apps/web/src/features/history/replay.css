@@ -134,6 +134,15 @@
   font-size: 0.875rem;
 }
 
+/* Bicis y anclajes sumados: cifras de miles, algo más pequeñas que las de vacías y llenas. */
+.replay-counts__totals {
+  flex-wrap: wrap;
+}
+
+.replay-counts__totals strong {
+  font-size: 1.125rem;
+}
+
 .replay-counts--failed {
   gap: 8px 12px;
   align-items: center;
@@ -228,6 +237,16 @@
   stroke-width: 1.5;
 }
 
+/* Bicis en las estaciones: ámbar, el color de «con bicis»; se corta donde no hay recuento. */
+.replay-deck__bikes {
+  fill: none;
+  stroke: var(--cat-available);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
 .replay-deck__label,
 .replay-deck__scale {
   position: absolute;
@@ -260,6 +279,20 @@
   top: 6px;
   right: 0;
   color: var(--ink-2);
+}
+
+/* La escala de la línea de bicis, abajo a la derecha, con un trazo del mismo color delante. */
+.replay-deck__scale--bikes {
+  top: 66px;
+}
+
+.replay-deck__scale--bikes::before {
+  display: inline-block;
+  width: 14px;
+  margin-right: 5px;
+  border-top: 2px solid var(--cat-available);
+  content: '';
+  vertical-align: middle;
 }
 
 .replay-deck__coverage {

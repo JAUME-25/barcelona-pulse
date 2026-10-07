@@ -1,5 +1,6 @@
 import type { TimelinePoint } from '../../api/client';
 import { t } from '../../i18n';
+import { formatWhole } from '../../shared/format';
 import { Term, TermGroup } from '../limits/Notes';
 import { OctagonGlyph } from '../stations/OctagonGlyph';
 import { formatLocalDay, localClock } from './time';
@@ -108,8 +109,9 @@ export function Clock({ replay }: { replay: Replay }) {
 }
 
 /**
- * Recuentos del momento. «Con dato» lleva su nota: quién cuenta y quién no (las que no
- * informaron no son vacías ni llenas).
+ * Recuentos del momento: sin bicis, llenas, las bicis y los anclajes libres sumados (con la nota
+ * de en cuántas estaciones) y «con dato», con su nota: quién cuenta y quién no (las que no
+ * informaron no son vacías ni llenas). Un total nulo es un hueco: no se dice cero.
  */
 export function Counts({
   point,
@@ -148,6 +150,19 @@ export function Counts({
         <OctagonGlyph category="full" size={16} />
         {m.countFull(<strong>{point.stationsFull}</strong>)}
       </li>
+      {(point.bikesAvailable !== null || point.docksAvailable !== null) && (
+        <li className="replay-counts__totals">
+          {m.countTotals(
+            point.bikesAvailable === null ? null : (
+              <strong>{formatWhole(point.bikesAvailable)}</strong>
+            ),
+            point.docksAvailable === null ? null : (
+              <strong>{formatWhole(point.docksAvailable)}</strong>
+            ),
+          )}{' '}
+          <Term note={m.countedNote}>{m.counted(point.stationsCounted)}</Term>
+        </li>
+      )}
       <li className="replay-counts__coverage">
         <Term note={m.withDataNote(String(toleranceMinutes ?? ''))}>
           {m.withData(point.stationsWithData, point.stationsKnown)}

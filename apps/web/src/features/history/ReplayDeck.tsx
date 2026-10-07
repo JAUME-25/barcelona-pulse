@@ -2,8 +2,17 @@ import { useLayoutEffect, useMemo, useRef, type PointerEvent } from 'react';
 import { t } from '../../i18n';
 import { GapCaption } from '../limits/Notes';
 import { onTimeKey, sliderProps } from './controls';
+import { formatWhole } from '../../shared/format';
 import { Clock, Counts, PlayButton, SpeedSelect, StepButton } from './ReplayParts';
-import { areaPath, coverageRuns, dataSegments, hourMarks, niceMax } from './series';
+import {
+  areaPath,
+  coverageRuns,
+  dataSegments,
+  hourMarks,
+  linePath,
+  niceMax,
+  niceMaxOf,
+} from './series';
 import type { Replay } from './useReplay';
 import { WeekDials } from './WeekDials';
 
@@ -36,6 +45,18 @@ export function ReplayDeck({ replay }: { replay: Replay }) {
         (i, v) => [i, 50 + (v / scale) * 46],
       ),
     [points, scale],
+  );
+  // Las bicis que había en las estaciones, con su propia escala (miles, no decenas): una línea
+  // de arriba abajo de la pista que se corta donde no hay recuento.
+  const bikesScale = useMemo(() => niceMaxOf(points, (p) => p.bikesAvailable), [points]);
+  const bikes = useMemo(
+    () =>
+      linePath(
+        points,
+        (p) => p.bikesAvailable,
+        (i, v) => [i, 96 - (v / bikesScale) * 92],
+      ),
+    [points, bikesScale],
   );
   const runs = useMemo(() => coverageRuns(points), [points]);
   const segments = useMemo(() => dataSegments(points), [points]);
@@ -139,6 +160,11 @@ export function ReplayDeck({ replay }: { replay: Replay }) {
         <span className="replay-deck__scale" aria-hidden="true">
           {m.scale(scale)}
         </span>
+        {bikes !== '' && (
+          <span className="replay-deck__scale replay-deck__scale--bikes" aria-hidden="true">
+            {m.bikesScale(formatWhole(bikesScale))}
+          </span>
+        )}
         <svg
           className="replay-deck__wave"
           viewBox={`0 0 ${String(last)} 100`}
@@ -164,6 +190,7 @@ export function ReplayDeck({ replay }: { replay: Replay }) {
           {segments.map(([from, to]) => (
             <line key={from} x1={from} x2={to} y1={50} y2={50} className="replay-deck__axis" />
           ))}
+          <path d={bikes} className="replay-deck__bikes" />
         </svg>
         <div className="replay-deck__coverage" aria-hidden="true">
           {runs.map((r) => (
