@@ -141,6 +141,12 @@ internal sealed class StationObservationConfiguration : IEntityTypeConfiguration
         // Volver a descargar el mismo dato no crea otra fila.
         b.HasIndex(x => new { x.StationId, x.ObservedAt }).IsUnique()
             .HasDatabaseName("ux_station_observations_station_observed_at");
+        // Rangos de instantes (la línea temporal pide una semana de todas las estaciones): un BRIN
+        // de 120 kB para una tabla de 768 MB, porque las observaciones entran ordenadas por
+        // instante. Sin él, el planificador recorría la tabla entera por cada semana (650 MB
+        // leídos, medido el 7-10-2026 con 4 semanas); con él, solo las páginas de esa semana.
+        b.HasIndex(x => x.ObservedAt).HasMethod("brin").HasStorageParameter("pages_per_range", 32)
+            .HasDatabaseName("ix_station_observations_observed_at_brin");
         b.HasOne<Station>().WithMany().HasForeignKey(x => x.StationId).OnDelete(DeleteBehavior.Cascade);
         b.HasOne<IngestionRun>().WithMany().HasForeignKey(x => x.IngestionRunId).OnDelete(DeleteBehavior.Restrict);
         b.Property(x => x.QualityFlags).HasDefaultValueSql("'{}'::text[]");

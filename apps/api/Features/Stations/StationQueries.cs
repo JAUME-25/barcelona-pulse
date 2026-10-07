@@ -13,6 +13,12 @@ public static class StationQueries
     public const int MaxStations = 1000;
 
     /// <summary>
+    /// Tope de las consultas de estado y fotogramas (segundos). Tardan milisegundos; si un día
+    /// se atascan, mejor un fallo claro de la API a los 10 s que el corte de nginx a los 30.
+    /// </summary>
+    public const int QueryTimeoutSeconds = 10;
+
+    /// <summary>
     /// Instante por defecto: en una fuente sintética, el final de sus datos (la demo nunca se
     /// presenta como «ahora»); en una observada, el momento actual, para que un dato viejo
     /// aparezca como desconocido.
@@ -118,6 +124,7 @@ public static class StationQueries
         try
         {
             await using var command = new NpgsqlCommand(sql.ToString(), connection);
+            command.CommandTimeout = QueryTimeoutSeconds;
             command.Parameters.AddRange(parameters.ToArray());
             await using var reader = await command.ExecuteReaderAsync(ct);
 

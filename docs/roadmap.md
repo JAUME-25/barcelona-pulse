@@ -410,6 +410,31 @@ honesta de lo hecho.
     - Pruebas: una nueva contra PostGIS (la observación de 2025 repetida no cambia la versión
       del otro día; el periodo de cada ingesta; reimportar sin nada nuevo) y la compilación en
       la versión y en el ETag. `ingest` dice «sin observaciones nuevas» cuando no guarda nada.
+21. **Hecho** en local (7-10-2026, sin commit). Topes y observabilidad, el punto 16 de la
+    propuesta, lo que conviene tener firme antes del tiempo real:
+    - Tope de espera en los cálculos caros (`Infrastructure/ComputationGate.cs`): la línea
+      temporal esperaba un hueco sin límite y nginx cortaba a los 30 s; ahora 10 s (el patrón,
+      5 s) y después 503 en `problem+json` con `Retry-After`. El precalentamiento espera sin tope.
+    - El patrón de una estación pasa por el mismo paso (2 a la vez) y se guarda en la caché con
+      la versión de la fuente en la clave, prioridad baja. Antes se calculaba en cada petición.
+    - Consultas de estado y fotogramas con tope de 10 s; antes, los 30 s de Npgsql, los mismos
+      que nginx.
+    - Registro de peticiones lentas (más de 1 s), 429, 503 y 5xx, con método, ruta, estado y
+      duración; sin IP. Antes, en producción no se veía ninguna.
+    - Índice BRIN sobre `station_observations(observed_at)` (migración `ObservedAtBrin`): salió de
+      medir si `work_mem` explicaba los 3,5–4,2 s por semana de producción. No: con 4 MB el plan
+      recorre la tabla entera (650 MB por semana) en paralelo; con 64 o 256 MB cambia a un plan
+      sin paralelismo y tarda más; `random_page_cost = 1.1`, igual. El BRIN (120 kB) deja leer
+      solo las páginas de la semana: en local, de 820 a 725 ms; en producción, con el disco como
+      cuello de botella, debería notarse más (medir tras desplegar).
+    - Los dos endpoints declaran el 503 en OpenAPI; `schema.d.ts` regenerado.
+    - Pruebas: unitarias del paso (espera, rendición, doble liberación, `Retry-After`) y una
+      contra PostGIS con la API: el patrón responde 503 con `Retry-After` mientras los dos huecos
+      están ocupados y sirve la caché después aunque no haya hueco. Las que piden patrones van en
+      una colección para no pisarse el paso, que es global.
+    - Descartado por ahora: `healthcheck` de la API en Compose. Sin orquestador no reinicia nada
+      (Docker solo marca «unhealthy»), la imagen no tiene shell y arrancar `dotnet` cada 30 s
+      cuesta; UptimeRobot ya avisa por `/health/ready`.
 
 ## Siguiente
 

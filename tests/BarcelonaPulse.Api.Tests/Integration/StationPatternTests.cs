@@ -15,6 +15,7 @@ namespace BarcelonaPulse.Api.Tests.Integration;
 /// El patrón de una estación por hora: la regla del mapa en cada paso de 15 min (tolerancia de 30
 /// min en las fuentes de prueba) y la precedencia de la leyenda, contado sobre los días importados.
 /// </summary>
+[Collection("station-pattern")]
 public sealed class StationPatternTests(PostgisDatabase database) : IClassFixture<PostgisDatabase>
 {
     private static readonly DateTimeOffset Now = new(2026, 11, 1, 12, 0, 0, TimeSpan.Zero);

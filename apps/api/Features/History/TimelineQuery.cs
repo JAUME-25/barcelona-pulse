@@ -160,15 +160,19 @@ public static class TimelineQuery
     }
 
     /// <summary>
-    /// Cálculos sin caché a la vez. Uno tarda segundos con una semana y la base de producción
-    /// tiene 1,5 CPU: sin tope, una ráfaga de rangos distintos (cada uno, otra clave) la dejaba sin
-    /// sitio para nada más. Lo que ya está en la caché no espera.
+    /// Cálculos sin caché a la vez, y cuánto espera una petición por un hueco. Uno tarda segundos
+    /// con una semana y la base de producción tiene 1,5 CPU: sin tope, una ráfaga de rangos
+    /// distintos (cada uno, otra clave) la dejaba sin sitio para nada más. Lo que ya está en la
+    /// caché no espera. Pasados 10 s sin hueco (nginx corta a los 30), la petición responde 503
+    /// con Retry-After en vez de seguir en cola.
     /// </summary>
-    private static readonly SemaphoreSlim Computations = new(2);
+    internal static readonly ComputationGate Gate = new(2, TimeSpan.FromSeconds(10));
 
+    /// <exception cref="ComputationBusyException">Sin hueco para calcular en <paramref name="maxWait"/>.</exception>
     public static async Task<IReadOnlyList<TimelinePoint>> GetAsync(
         PulseDbContext db, IMemoryCache cache, DataSource source, DateTimeOffset from, DateTimeOffset to,
-        TimeSpan step, CancellationToken ct, CacheItemPriority priority = CacheItemPriority.Normal)
+        TimeSpan step, CancellationToken ct, CacheItemPriority priority = CacheItemPriority.Normal,
+        TimeSpan? maxWait = null)
     {
         var key = await KeyAsync(db, source, from, to, step, ct);
         if (cache.TryGetValue(key, out IReadOnlyList<TimelinePoint>? cached) && cached is not null)
@@ -176,27 +180,20 @@ public static class TimelineQuery
             return cached;
         }
 
-        await Computations.WaitAsync(ct);
-        try
+        using var lease = await Gate.EnterAsync(ct, maxWait);
+        // Mientras esperaba, otra petición puede haber calculado lo mismo.
+        if (cache.TryGetValue(key, out cached) && cached is not null)
         {
-            // Mientras esperaba, otra petición puede haber calculado lo mismo.
-            if (cache.TryGetValue(key, out cached) && cached is not null)
-            {
-                return cached;
-            }
+            return cached;
+        }
 
-            var points = await ComputeAsync(db, source, from, to, step, ct);
-            // Sin caducidad por tiempo: la clave cambia con cada ingesta o purga y el límite de la
-            // caché (200 entradas, Program.cs) acota la memoria. Así sigue ahí lo que deja calculado
-            // TimelineWarmUp, aunque nadie lo pida en horas; con prioridad alta, lo último que se
-            // desaloja si la caché se llena.
-            cache.Set(key, points, new MemoryCacheEntryOptions { Size = 1, Priority = priority });
-            return points;
-        }
-        finally
-        {
-            Computations.Release();
-        }
+        var points = await ComputeAsync(db, source, from, to, step, ct);
+        // Sin caducidad por tiempo: la clave cambia con cada ingesta o purga y el límite de la
+        // caché (200 entradas, Program.cs) acota la memoria. Así sigue ahí lo que deja calculado
+        // TimelineWarmUp, aunque nadie lo pida en horas; con prioridad alta, lo último que se
+        // desaloja si la caché se llena.
+        cache.Set(key, points, new MemoryCacheEntryOptions { Size = 1, Priority = priority });
+        return points;
     }
 
     private static async Task<IReadOnlyList<TimelinePoint>> ComputeAsync(

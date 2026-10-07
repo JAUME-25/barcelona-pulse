@@ -109,6 +109,23 @@ Puntos de entrada, por línea de comandos (no hay endpoint HTTP de importación)
   máxima de 1° y un máximo de 1 000 estaciones por respuesta (`truncated` lo indica).
 - La línea temporal calcula como mucho dos rangos a la vez; los demás esperan y, si mientras
   tanto otro ha calculado el mismo, lo toman de la caché. Lo que ya está en la caché no espera.
+  La espera tiene tope (`Infrastructure/ComputationGate.cs`): 10 s en la línea temporal y 5 s en
+  el patrón de una estación; pasado, la petición responde 503 en `problem+json` con
+  `Retry-After` en vez de seguir en cola hasta que nginx corte a los 30 s. El precalentamiento
+  espera sin tope. El patrón de una estación se guarda también en la caché, con la versión de
+  la fuente en la clave (la misma del ETag) y prioridad baja: si la caché se llena, se va antes
+  que las semanas de la rejilla de huecos. Las consultas de estado y fotogramas tienen un tope
+  de 10 s (`StationQueries.QueryTimeoutSeconds`).
+- Registro de peticiones (`Infrastructure/RequestLogging.cs`): solo las que merecen mirarse,
+  lentas (más de 1 s), rechazadas por el límite (429), sin hueco (503) y con fallo (5xx), con
+  método, ruta, estado y duración. Sin la IP ni nada de quién las hizo.
+- Índice BRIN sobre `station_observations(observed_at)` (migración `ObservedAtBrin`, 120 kB para
+  768 MB): la línea temporal de una semana leía la tabla entera (650 MB, medido el 7-10-2026 con
+  4 semanas en local) y ahora solo las páginas de esa semana; en local, el recorrido pasa de 130
+  a 55 ms por proceso y la semana de 820 a 725 ms. En producción, donde el disco manda, el ahorro
+  de lectura debería notarse más: pendiente de medir tras desplegar. Subir `work_mem` (4 → 64 o
+  256 MB) no ayuda: cambia el plan a uno sin paralelismo y tarda más; `random_page_cost = 1.1`
+  tampoco (plan por el índice único, 2,5 s).
   La clave de la caché lleva la versión de los datos del rango (ADR 0014): importar un día solo
   invalida las semanas que lo tocan; una purga, todas.
   Cada cálculo tiene 20 s de tope y va sin JIT, que con la estimación del `generate_series` se

@@ -154,6 +154,7 @@ public static class FramesQuery
         NpgsqlConnection connection, string sourceId, DateTimeOffset from, DateTimeOffset to, CancellationToken ct)
     {
         await using var command = new NpgsqlCommand(VersionsSql, connection);
+        command.CommandTimeout = StationQueries.QueryTimeoutSeconds;
         command.Parameters.Add(new NpgsqlParameter("source", NpgsqlDbType.Varchar) { Value = sourceId });
         command.Parameters.Add(new NpgsqlParameter("from", NpgsqlDbType.TimestampTz) { Value = from.ToUniversalTime() });
         command.Parameters.Add(new NpgsqlParameter("to", NpgsqlDbType.TimestampTz) { Value = to.ToUniversalTime() });
@@ -188,6 +189,7 @@ public static class FramesQuery
         NpgsqlConnection connection, string sourceId, DateTimeOffset from, DateTimeOffset to, CancellationToken ct)
     {
         await using var command = new NpgsqlCommand(ObservationsSql, connection);
+        command.CommandTimeout = StationQueries.QueryTimeoutSeconds;
         command.Parameters.Add(new NpgsqlParameter("source", NpgsqlDbType.Varchar) { Value = sourceId });
         command.Parameters.Add(new NpgsqlParameter("from", NpgsqlDbType.TimestampTz) { Value = from.ToUniversalTime() });
         command.Parameters.Add(new NpgsqlParameter("to", NpgsqlDbType.TimestampTz) { Value = to.ToUniversalTime() });

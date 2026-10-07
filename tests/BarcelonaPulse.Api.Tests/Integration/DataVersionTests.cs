@@ -11,6 +11,7 @@ namespace BarcelonaPulse.Api.Tests.Integration;
 /// <summary>
 /// La versión de los datos por rango (ADR 0014): clave de las cachés y ETag de las respuestas.
 /// </summary>
+[Collection("station-pattern")]
 public sealed class DataVersionTests(PostgisDatabase database) : IClassFixture<PostgisDatabase>
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 7, 12, 0, 0, TimeSpan.Zero);

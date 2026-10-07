@@ -68,6 +68,8 @@ if (CommandLine.IsCommand(args))
 
 // Primero: el resto (límite por IP incluido) ya ve la IP del cliente, no la del proxy.
 app.UseForwardedHeaders();
+// Antes del límite y del manejo de errores, para ver también los 429 y los 5xx.
+app.UsePulseRequestLogging();
 app.UseResponseCompression();
 app.UseExceptionHandler();
 app.UseStatusCodePages();

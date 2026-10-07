@@ -93,6 +93,10 @@ zona del navegador (la prueba de humo corre con el navegador en Nueva York).
 
 - `ux_station_observations_station_observed_at` (único): idempotencia y la búsqueda de la
   última observación ≤ T por estación, con un recorrido hacia atrás por estación (ADR 0008).
+- `ix_station_observations_observed_at_brin` (BRIN, 32 páginas por rango): los rangos de
+  instantes de la línea temporal sobre todas las estaciones. Las observaciones entran ordenadas
+  por instante, así que ocupa 120 kB con 768 MB de tabla y evita recorrerla entera por cada
+  semana.
 - `ix_station_versions_location` (GiST): filtro por caja.
 - `ix_station_versions_one_current_per_station` (único parcial, `valid_to IS NULL`).
 - `ix_stations_source_id_source_station_id` (único).

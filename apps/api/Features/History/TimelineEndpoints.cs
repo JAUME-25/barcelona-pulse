@@ -23,7 +23,8 @@ public static class TimelineEndpoints
                 "Máximo 7 días por petición. Lleva ETag: con If-None-Match responde 304 mientras no " +
                 "entren ni salgan datos del rango.")
             .Produces(StatusCodes.Status304NotModified)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
         return api;
     }
 
@@ -98,7 +99,17 @@ public static class TimelineEndpoints
             return HttpValidators.NotModified();
         }
 
-        var points = await TimelineQuery.GetAsync(db, cache, source, alignedFrom, alignedTo, stepSpan, ct);
+        IReadOnlyList<TimelinePoint> points;
+        try
+        {
+            points = await TimelineQuery.GetAsync(db, cache, source, alignedFrom, alignedTo, stepSpan, ct);
+        }
+        catch (ComputationBusyException busy)
+        {
+            // Demasiados cálculos a la vez y ninguno ha acabado a tiempo: mejor un 503 con cuándo
+            // volver que seguir en cola hasta que nginx corte la petición.
+            return busy.ToProblem(http);
+        }
 
         return TypedResults.Ok(new TimelineResponse(
             source.ToRef(), alignedFrom, alignedTo, stepMinutes, (int)source.StalenessTolerance.TotalMinutes, points));

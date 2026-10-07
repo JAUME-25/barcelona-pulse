@@ -3,6 +3,7 @@ using BarcelonaPulse.Api.Features.Sources;
 using BarcelonaPulse.Api.Infrastructure;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace BarcelonaPulse.Api.Features.Stations;
 
@@ -45,14 +46,15 @@ public static class StationsEndpoints
                 "previsión; los pasos sin dato van en `unknown`, no como cero. Lleva ETag: con If-None-Match " +
                 "responde 304 mientras la fuente no cambie.")
             .Produces(StatusCodes.Status304NotModified)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         return api;
     }
 
     private static async Task<Results<Ok<StationPatternResponse>, StatusCodeHttpResult, ProblemHttpResult>> GetStationPattern(
         [Description("Identificador interno de la estación.")] long id,
-        HttpContext http, PulseDbContext db, CancellationToken ct)
+        HttpContext http, PulseDbContext db, IMemoryCache cache, CancellationToken ct)
     {
         var station = await db.Stations.AsNoTracking()
             .Include(s => s.Source)
@@ -70,7 +72,14 @@ public static class StationsEndpoints
             return HttpValidators.NotModified();
         }
 
-        return TypedResults.Ok(await StationPattern.ComputeAsync(db, station, ct));
+        try
+        {
+            return TypedResults.Ok(await StationPattern.GetAsync(db, cache, station, version, ct));
+        }
+        catch (ComputationBusyException busy)
+        {
+            return busy.ToProblem(http);
+        }
     }
 
     /// <summary>

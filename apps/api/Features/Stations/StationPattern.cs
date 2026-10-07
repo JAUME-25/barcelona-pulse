@@ -1,6 +1,7 @@
 using BarcelonaPulse.Api.Features.Sources;
 using BarcelonaPulse.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -47,11 +48,42 @@ public sealed record StationPatternResponse(
 /// <summary>
 /// El patrón de una estación: su estado cada 15 minutos de cada día importado, contado por hora
 /// y tipo de día. Medido el 7-10-2026 con 42 días reales: 28 ms (4 032 pasos, cada uno con una
-/// búsqueda en el índice por estación e instante), así que no se guarda.
+/// búsqueda en el índice por estación e instante); en producción, 0,2 s la primera vez por el
+/// disco. Crece con los días importados, así que se guarda en la caché con la versión de la
+/// fuente en la clave (la misma del ETag) y como mucho dos se calculan a la vez.
 /// </summary>
 public static class StationPattern
 {
     public static readonly TimeSpan Step = TimeSpan.FromMinutes(15);
+
+    /// <summary>Patrones calculándose a la vez y cuánto espera una petición un hueco antes del 503.</summary>
+    internal static readonly ComputationGate Gate = new(2, TimeSpan.FromSeconds(5));
+
+    /// <summary>
+    /// El patrón, de la caché si ya está; si no, calculado y guardado hasta la siguiente ingesta o
+    /// purga de la fuente (la versión va en la clave). Prioridad baja: si la caché se llena, se van
+    /// antes que las semanas de la rejilla de huecos, que cuestan segundos.
+    /// </summary>
+    /// <exception cref="ComputationBusyException">Sin hueco para calcular a tiempo.</exception>
+    public static async Task<StationPatternResponse> GetAsync(
+        PulseDbContext db, IMemoryCache cache, Station station, string version, CancellationToken ct)
+    {
+        var key = $"pattern:{station.Id}:{version}";
+        if (cache.TryGetValue(key, out StationPatternResponse? cached) && cached is not null)
+        {
+            return cached;
+        }
+
+        using var lease = await Gate.EnterAsync(ct);
+        if (cache.TryGetValue(key, out cached) && cached is not null)
+        {
+            return cached;
+        }
+
+        var pattern = await ComputeAsync(db, station, ct);
+        cache.Set(key, pattern, new MemoryCacheEntryOptions { Size = 1, Priority = CacheItemPriority.Low });
+        return pattern;
+    }
 
     /// <summary>
     /// «Pocas bicis»: hasta 3, como en la leyenda (apps/web/src/features/stations/availability.ts,
