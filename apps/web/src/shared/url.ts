@@ -40,6 +40,11 @@ export function writeParam(name: string, value: string | null): void {
   replaceUrl(url);
 }
 
+/** Como writeParam, pero solo si el valor cambia: sin escrituras de más (Safari limita 100 seguidas). */
+export function syncParam(name: string, value: string | null): void {
+  if (readParam(name) !== value) writeParam(name, value);
+}
+
 /** Cambia la URL sin añadir entrada al historial. */
 export function replaceUrl(url: URL): void {
   try {

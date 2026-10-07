@@ -569,6 +569,74 @@ describe('App', () => {
     expect(new URLSearchParams(window.location.search).get('modo')).toBeNull();
   });
 
+  it('la vista de Explorar va en la URL: ocultas, distrito, búsqueda, orden y número', async () => {
+    const real = [
+      stationFixture({
+        id: 31,
+        sourceStationId: '31',
+        name: 'C/ GRAN DE GRÀCIA, 141',
+        district: 'Gràcia',
+        neighbourhood: 'la Vila de Gràcia',
+        state: { bikesAvailable: 2, ebikesAvailable: 2, docksAvailable: 20 },
+      }),
+      stationFixture({
+        id: 32,
+        sourceStationId: '32',
+        name: 'C/ PUJADES, 174',
+        district: 'Sant Martí',
+        neighbourhood: 'el Poblenou',
+        state: { bikesAvailable: 15, ebikesAvailable: 1, docksAvailable: 5 },
+      }),
+      stationFixture({
+        id: 33,
+        sourceStationId: '33',
+        name: 'C/ ARAGÓ, 288',
+        district: 'Eixample',
+        neighbourhood: null,
+        state: { freshness: 'none', status: 'unknown', bikesAvailable: null, docksAvailable: null },
+      }),
+    ];
+    mockApi((path) => json(path === '/api/sources' ? [observedSource] : observedResponse(real)));
+    const user = userEvent.setup();
+    window.history.replaceState(
+      null,
+      '',
+      '/?ocultar=sin-dato&distrito=Sant%20Mart%C3%AD&orden=bicis&numero=electricas',
+    );
+    renderApp();
+
+    // Lo que trae el enlace se aplica: solo Sant Martí, sin las desconocidas, por bicis y con
+    // el número de eléctricas.
+    await screen.findByText('1 estación');
+    expect(
+      screen.getByRole('button', { name: /^Sin dato reciente/ }).getAttribute('aria-pressed'),
+    ).toBe('false');
+    expect(screen.getByRole('button', { name: /Sant Martí/ }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(screen.getByLabelText<HTMLSelectElement>('Orden').value).toBe('bikes');
+    expect(screen.getByRole('button', { name: 'Eléctricas' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+
+    // Y lo que se cambia vuelve a la URL: el distrito se quita, la categoría se enseña, el orden,
+    // el número y, al dejar de escribir, la búsqueda.
+    await user.click(screen.getByRole('button', { name: /Sant Martí/ }));
+    await user.click(screen.getByRole('button', { name: /^Sin dato reciente/ }));
+    await user.selectOptions(screen.getByLabelText('Orden'), 'ebikes');
+    await user.click(screen.getByRole('button', { name: 'Bicis' }));
+    await user.type(screen.getByLabelText('Buscar estación'), 'poblenou');
+    await waitFor(() => {
+      const params = new URLSearchParams(window.location.search);
+      expect(params.get('buscar')).toBe('poblenou');
+      expect(params.get('distrito')).toBeNull();
+      expect(params.get('ocultar')).toBeNull();
+      expect(params.get('orden')).toBe('electricas');
+      expect(params.get('numero')).toBeNull();
+    });
+    expect(screen.getByText('1 de 3 estaciones')).toBeTruthy();
+  });
+
   it('«Copiar enlace» copia la URL de la vista y lo dice', async () => {
     mockApi((path) => json(path === '/api/sources' ? [demoSource] : stationsResponse(stations)));
     // user-event pone su propio portapapeles en navigator.clipboard: se lee de él.

@@ -55,8 +55,22 @@ import {
 import { sourceName } from '../features/stations/sources';
 import { t } from '../i18n';
 import { formatMonths } from '../shared/format';
-import { historyPushed, pushParams, readParam, writeParam } from '../shared/url';
+import { historyPushed, pushParams, readParam, syncParam, writeParam } from '../shared/url';
 import { stationName } from '../features/stations/names';
+import {
+  DISTRICT_PARAM,
+  HIDE_PARAM,
+  hiddenParam,
+  NUMBER_PARAM,
+  numberModeFromParam,
+  numberModeParam,
+  ORDER_PARAM,
+  orderFromParam,
+  orderParam,
+  SEARCH_PARAM,
+  searchParam,
+  visibleFromParam,
+} from '../features/stations/viewParams';
 import { LanguageSwitch } from './LanguageSwitch';
 import { MapBoundary } from './MapBoundary';
 import './App.css';
@@ -224,12 +238,14 @@ export function App() {
     stationsProgressRef.current = stationsState.status;
   });
 
-  const [query, setQuery] = useState('');
-  const [visible, setVisible] = useState<ReadonlySet<Availability>>(
-    () => new Set(AVAILABILITY_ORDER),
+  // La vista de Explorar (búsqueda, categorías ocultas, distrito, orden y número) empieza por la
+  // URL y vuelve a ella: así un enlace la lleva entera y el cambio de idioma no la pierde.
+  const [query, setQuery] = useState(() => readParam(SEARCH_PARAM) ?? '');
+  const [visible, setVisible] = useState<ReadonlySet<Availability>>(() =>
+    visibleFromParam(readParam(HIDE_PARAM)),
   );
   // Distrito elegido (clave de la fuente) para la lista y el mapa; null, todos.
-  const [district, setDistrict] = useState<string | null>(null);
+  const [district, setDistrict] = useState<string | null>(() => readParam(DISTRICT_PARAM));
   // La selección se guarda por identificador de origen: es lo que va en la URL
   // (?estacion=demo-008) y no depende de los ids internos de cada base de datos.
   const [selectedKey, setSelectedKey] = useState<string | null>(readStationParam);
@@ -269,13 +285,15 @@ export function App() {
   const counts = useMemo(() => countByAvailability(inDistrict), [inDistrict]);
   // Qué número llevan marcadores y lista: todas las bicis o las eléctricas, que mucha gente
   // prefiere. Las categorías no cambian.
-  const [numberMode, setNumberMode] = useState<NumberMode>('bikes');
+  const [numberMode, setNumberMode] = useState<NumberMode>(() =>
+    numberModeFromParam(readParam(NUMBER_PARAM)),
+  );
   const filtered = useMemo(
     () => filterStations(all, query, visible, activeDistrict),
     [all, query, visible, activeDistrict],
   );
   // Orden de la lista (el mapa no lo necesita): por nombre o por cifras, de más a menos.
-  const [order, setOrder] = useState<ListOrder>('name');
+  const [order, setOrder] = useState<ListOrder>(() => orderFromParam(readParam(ORDER_PARAM)));
   const listed = useMemo(() => sortStations(filtered, order), [filtered, order]);
   // Mientras se busca, el mapa encuadra los resultados, aunque se haya movido antes.
   const searching = normalizeForSearch(query.trim());
@@ -367,6 +385,40 @@ export function App() {
     });
   }, []);
 
+  // La vista, a la URL: cambia la entrada actual, sin apilar (son ajustes, no lugares). La
+  // búsqueda, al dejar de escribir; si la aplicación se vuelve a montar antes, no se pierde.
+  useEffect(() => {
+    syncParam(HIDE_PARAM, hiddenParam(visible));
+  }, [visible]);
+  useEffect(() => {
+    syncParam(DISTRICT_PARAM, district);
+  }, [district]);
+  useEffect(() => {
+    syncParam(ORDER_PARAM, orderParam(order));
+  }, [order]);
+  useEffect(() => {
+    syncParam(NUMBER_PARAM, numberModeParam(numberMode));
+  }, [numberMode]);
+  const pendingQueryRef = useRef<string | null>(null);
+  useEffect(() => {
+    pendingQueryRef.current = query;
+    const timer = window.setTimeout(() => {
+      syncParam(SEARCH_PARAM, searchParam(query));
+      pendingQueryRef.current = null;
+    }, 400);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [query]);
+  useEffect(
+    () => () => {
+      if (pendingQueryRef.current !== null) {
+        syncParam(SEARCH_PARAM, searchParam(pendingQueryRef.current));
+      }
+    },
+    [],
+  );
+
   const resetFilters = () => {
     setQuery('');
     setVisible(new Set(AVAILABILITY_ORDER));
@@ -412,6 +464,11 @@ export function App() {
       const time = readParam('hora');
       setMoment({ day, time });
       if (day !== null) replaySelectRef.current(day, time);
+      setQuery(readParam(SEARCH_PARAM) ?? '');
+      setVisible(visibleFromParam(readParam(HIDE_PARAM)));
+      setDistrict(readParam(DISTRICT_PARAM));
+      setOrder(orderFromParam(readParam(ORDER_PARAM)));
+      setNumberMode(numberModeFromParam(readParam(NUMBER_PARAM)));
     };
     window.addEventListener('popstate', onPopState);
     return () => {

@@ -339,7 +339,15 @@ honesta de lo hecho.
     - Pendiente del bloque: filtros, distrito, búsqueda y orden en la URL.
     - Pruebas: 177 de la web (Atrás cierra detalle, ficha y modo con el título; copiar) y una de
       humo nueva (Atrás y Adelante con el detalle). Usado en el navegador: abrir, Atrás, título
-      y el campo de la URL cuando el navegador integrado no deja copiar.
+      y el campo de la URL cuando el navegador integrado no deja copiar. En `1bf6062`.
+16. **Hecho** en local (7-10-2026, sin commit). La vista de Explorar en la URL, lo que faltaba
+    del bloque 10 (`features/stations/viewParams.ts`): `ocultar=sin-dato,fuera-de-servicio`
+    (categorías de la leyenda apagadas), `distrito=Eixample` (vacío, «Sin distrito»),
+    `buscar=…` (al dejar de escribir, 400 ms), `orden=bicis|libres|electricas` y
+    `numero=electricas`. Sin parámetro, lo de siempre. Cambian la entrada del historial sin
+    apilar (son ajustes, no lugares), Atrás y Adelante los devuelven con lo demás, y el cambio
+    de idioma ya no los pierde. Pruebas: 181 de la web (ida y vuelta de cada parámetro y una de
+    la app que llega con un enlace y lo cambia todo) y el humo comprueba `ocultar` y `buscar`.
 
 ## Siguiente
 

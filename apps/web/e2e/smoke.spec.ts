@@ -84,12 +84,17 @@ test('los filtros de la leyenda y la búsqueda acotan la lista', async ({ page }
     'false',
   );
   await expect(page.getByText('44 de 46 estaciones')).toBeVisible();
+  // La vista va en la URL, para compartirla y para que no se pierda al cambiar de idioma.
+  expect(new URL(page.url()).searchParams.get('ocultar')).toBe('sin-dato');
 
   await page.getByLabel('Buscar estación').fill('sants');
   await expect(page.getByText('2 de 46 estaciones')).toBeVisible();
+  await expect.poll(() => new URL(page.url()).searchParams.get('buscar')).toBe('sants');
   await page.getByLabel('Buscar estación').fill('zzz');
   await page.getByRole('button', { name: 'Mostrar todas' }).click();
   await expect(page.getByText('46 estaciones')).toBeVisible();
+  await expect.poll(() => new URL(page.url()).searchParams.get('buscar')).toBeNull();
+  expect(new URL(page.url()).searchParams.get('ocultar')).toBeNull();
 });
 
 test('con el detalle abierto, la búsqueda y la leyenda siguen visibles', async ({ page }) => {
