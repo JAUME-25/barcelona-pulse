@@ -270,6 +270,23 @@ honesta de lo hecho.
       escritorio, 375 y 320 px (`e2e/distritos.capture.ts`, que además filtra por el Eixample
       con el teclado y comprueba lista, leyenda y recuento, y `e2e/limites.capture.ts`). Sin
       comprobar: la tabla en catalán e inglés a 320 px y el móvil con un dedo real.
+12. **Hecho** en local (7-10-2026, sin commit). Un momento representativo al abrir, primero de
+    una revisión de backend y web de ese día con propuestas para hacer la aplicación más útil
+    (Jaume: «empieza por lo que creas más oportuno»):
+    - Explorar abría en el último dato, un domingo a las 23:55, y Reproducir en el último día a
+      las 00:00. Ahora los dos abren en el último laborable importado a las 08:30
+      (`features/history/moment.ts`), con el día de la semana a la vista («viernes, 29 de mayo
+      de 2026, 08:30»). Los festivos cuentan como laborables: no hay calendario.
+    - «Cambiar momento», junto al momento mostrado, lleva a Reproducir parado en ese instante con
+      el foco en la pista. Al volver a Explorar o Experimentar se queda el momento que se estaba
+      viendo, también si se salió con la reproducción en marcha, y va en la URL
+      (`?dia=…&hora=…`), que ahora Explorar también lee. Reproducir guarda el día en la URL
+      aunque sea el de por defecto: el enlace sigue valiendo cuando se importen más días.
+    - La demo sintética no cambia: sigue abriendo al final de sus datos (10:00) y sin el botón.
+    - Pruebas: 168 de la web (nuevas: el día representativo, la hora de reloj en los días de 23
+      y 25 h, el instante con y sin día pedido, y la ida y vuelta con «Cambiar momento»). Usado
+      en el navegador con la red real en escritorio, 375 y 320 px, en los tres idiomas y con la
+      demo, sin errores en la consola ni desbordes.
 
 ## Siguiente
 

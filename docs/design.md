@@ -12,6 +12,14 @@ claridad de la versión clara. Tokens en `apps/web/src/app/theme.ts`.
 - La procedencia y el momento del dato siempre a la vista.
 - Búsqueda, leyenda y filtros siempre a mano, también con el detalle abierto.
 
+## Momento mostrado
+
+Un histórico abre en el último laborable importado a las 08:30, con el día de la semana a la
+vista, en Explorar y en Reproducir (decidido el 7-10-2026). El final del periodo caía en domingo a
+las 23:55, el rato más tranquilo de la semana, y no decía nada de cómo se usa la red. «Cambiar
+momento», junto a la hora, lleva a Reproducir parado en ese instante; el momento que se deja allí
+sigue en Explorar y Experimentar y va en la URL. Los festivos cuentan como laborables.
+
 ## Estados de estación
 
 El marcador es una manzana del Eixample (cuadrado con chaflanes) y funciona como un depósito: la

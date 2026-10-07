@@ -8,6 +8,7 @@ export {
   formatDateTime,
   formatDay,
   formatDayMonth,
+  formatDayWithWeekday,
   formatTime,
 } from '../i18n/intl';
 

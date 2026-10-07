@@ -137,6 +137,7 @@ export const es = {
     demoBadge: 'Demo',
     demoLead: 'Datos inventados para probar la aplicación. No es la disponibilidad real de Bicing.',
     shownMoment: 'Momento mostrado',
+    changeMoment: 'Cambiar momento',
     realBadge: 'Datos reales',
     past: 'Es un momento del pasado, no el estado actual.',
     historical: (months: string) => `Datos históricos · ${months}. No es el estado actual.`,

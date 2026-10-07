@@ -10,8 +10,10 @@ import {
   type ReactNode,
 } from 'react';
 import type { SourceSummary, StationItem, StationsResponse } from '../api/client';
+import type { Moment } from '../features/history/moment';
 import { ReplayDeck } from '../features/history/ReplayDeck';
 import { ModeSwitch, type Mode } from '../features/history/ReplayParts';
+import { localClock } from '../features/history/time';
 import { useFrames } from '../features/history/useFrames';
 import { useReplay, type StationsProgress } from '../features/history/useReplay';
 import { LimitsSheet } from '../features/limits/LimitsSheet';
@@ -174,7 +176,12 @@ export function App() {
   const sourceId = source?.id ?? null;
 
   const [mode, setMode] = useState<Mode>(modeFromUrl);
-  const [initialMoment] = useState(() => ({ day: readParam('dia'), time: readParam('hora') }));
+  // El momento pedido (?dia=…&hora=…): lo que enseñan Explorar y Experimentar de un histórico y
+  // donde empieza Reproducir. Al salir de Reproducir se queda el momento que se estaba viendo.
+  const [moment, setMoment] = useState<Moment>(() => ({
+    day: readParam('dia'),
+    time: readParam('hora'),
+  }));
   // «Qué muestra y qué no»: ocupa el panel y va en la URL (?vista=limites). Al llegar con el
   // enlace no se mueve el foco, como con una estación.
   const [sheet, setSheet] = useState(() =>
@@ -194,13 +201,14 @@ export function App() {
   const stationsProgressRef = useRef<StationsProgress>('loading');
   const replay = useReplay(
     replaying ? source : undefined,
-    initialMoment.day,
-    initialMoment.time,
+    moment.day,
+    moment.time,
     stationsProgressRef,
   );
 
   // Al explorar, un instante con /api/stations; al reproducir, fotogramas de una hora.
-  const explored = useStations(replaying ? null : sourceId, instantFor(source, now));
+  const exploreAt = instantFor(source, now, moment);
+  const explored = useStations(replaying ? null : sourceId, exploreAt);
   const framed = useFrames(replaying ? sourceId : null, replay.point?.at);
   const {
     state: stationsState,
@@ -263,7 +271,7 @@ export function App() {
   const selectedId = selected?.id ?? null;
 
   // Experimentar: la red real del instante y los cambios del escenario sobre ella.
-  const scenario = useScenario(experimenting ? sourceId : null, instantFor(source, now), all);
+  const scenario = useScenario(experimenting ? sourceId : null, exploreAt, all);
   const { state: areasState } = useStudyAreas(experimenting);
   const areas = areasState.status === 'ready' ? areasState.data : [];
   const [map, setMap] = useState<MapLibreMap | null>(null);
@@ -351,9 +359,23 @@ export function App() {
   };
 
   const changeMode = (next: Mode) => {
+    // Al dejar de reproducir, el momento que se veía sigue en Explorar y Experimentar (y en la
+    // URL, aunque se saliera con la reproducción en marcha).
+    if (replaying && next !== 'replay' && replay.day !== null && replay.point !== undefined) {
+      const time = localClock(replay.point.at);
+      setMoment({ day: replay.day, time });
+      writeParam('dia', replay.day);
+      writeParam('hora', time);
+    }
     setMode(next);
     setTool(null);
     writeParam(MODE_PARAM, MODE_IN_URL[next]);
+  };
+
+  // «Cambiar momento»: a Reproducir, parado en el momento mostrado, con el foco en la pista.
+  const changeMoment = () => {
+    changeMode('replay');
+    focusReplayRef.current = true;
   };
 
   const openSheet = () => {
@@ -552,6 +574,7 @@ export function App() {
             compact={replaying || experimenting}
             months={source === undefined ? null : formatMonths(source.days)}
             onLimits={notice.source.kind === 'observed' ? openSheet : undefined}
+            onChangeMoment={source?.period == null ? undefined : changeMoment}
           />
         )}
       </header>

@@ -148,6 +148,7 @@ export const ca: Messages = {
     demoBadge: 'Demo',
     demoLead: 'Dades inventades per provar l’aplicació. No és la disponibilitat real de Bicing.',
     shownMoment: 'Moment mostrat',
+    changeMoment: 'Canviar el moment',
     realBadge: 'Dades reals',
     past: 'És un moment del passat, no l’estat actual.',
     historical: (months) => `Dades històriques · ${months}. No és l’estat actual.`,

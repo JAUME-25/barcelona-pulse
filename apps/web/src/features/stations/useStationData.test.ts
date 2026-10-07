@@ -5,8 +5,12 @@ import { instantFor, pickDefaultSource } from './useStationData';
 describe('instantFor', () => {
   const lastData = Date.parse('2026-08-20T21:55:02+00:00');
 
-  it('pide el último momento de un histórico observado', () => {
-    expect(instantFor(observedSource, lastData + 60 * 60_000)).toBe(observedSource.period?.to);
+  it('pide un laborable a las 08:30 de un histórico observado, o el momento pedido', () => {
+    // El 20-8-2026 es jueves: las 08:30 de Barcelona son las 06:30 UTC.
+    expect(instantFor(observedSource, lastData + 60 * 60_000)).toBe('2026-08-20T06:30:00.000Z');
+    expect(
+      instantFor(observedSource, lastData + 60 * 60_000, { day: '2026-08-20', time: '17:05' }),
+    ).toBe('2026-08-20T15:05:00.000Z');
   });
 
   it('deja que la API use «ahora» si los datos observados están dentro de la tolerancia', () => {

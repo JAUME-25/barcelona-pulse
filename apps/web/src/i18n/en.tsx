@@ -131,6 +131,7 @@ export const en: Messages = {
     demoBadge: 'Demo',
     demoLead: 'Made-up data for trying out the app. Not Bicing’s real availability.',
     shownMoment: 'Moment shown',
+    changeMoment: 'Change moment',
     realBadge: 'Real data',
     past: 'This is a moment in the past, not the current state.',
     historical: (months) => `Historical data · ${months}. Not the current state.`,

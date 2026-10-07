@@ -2,15 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { SourceSummary, TimelinePoint } from '../../api/client';
 import { writeParam } from '../../shared/url';
 import { useTimeline, type TimelineRange } from '../stations/useStationData';
+import { availableDays, DEFAULT_CLOCK, defaultDay } from './moment';
 import { byLocalDay } from './series';
-import { addDays, lastLocalDays, localClock, localMidnight, weekDates, weekStart } from './time';
+import { addDays, localClock, localMidnight, weekDates, weekStart } from './time';
 
 /** Paso de la reproducción de un día: 288 pasos en un día normal. */
 export const DAY_STEP_MINUTES = 5;
 export const STEPS_PER_HOUR = 60 / DAY_STEP_MINUTES;
 /** La semana se pide por horas: basta para el resumen de cada día. */
 const WEEK_STEP_MINUTES = 60;
-const MAX_DAYS = 7;
 
 export type Speed = 'lenta' | 'normal' | 'rapida';
 export const SPEEDS: readonly Speed[] = ['lenta', 'normal', 'rapida'];
@@ -33,27 +33,19 @@ function rangeOfDays(first: string, last: string, stepMinutes: number): Timeline
   };
 }
 
-/** Paso inicial: la hora pedida en la URL o, si no, el primer paso con datos. */
+/**
+ * Paso inicial: la hora pedida en la URL; si no la hay o ese día no la tiene, las 08:30 (el
+ * mismo momento que enseña Explorar); si tampoco, el primer paso con datos.
+ */
 function initialIndex(points: readonly TimelinePoint[], time: string | null): number {
-  if (time !== null) {
-    const exact = points.findIndex((p) => localClock(p.at) === time);
+  for (const clock of time === null ? [DEFAULT_CLOCK] : [time, DEFAULT_CLOCK]) {
+    const exact = points.findIndex((p) => localClock(p.at) === clock);
     if (exact >= 0) return exact;
   }
   return Math.max(
     0,
     points.findIndex((p) => p.stationsWithData > 0),
   );
-}
-
-/**
- * Días que se pueden reproducir: los que cubren las ingestas de la fuente. Una base anterior a
- * ese dato no los tiene: entonces, los últimos días de su periodo.
- */
-function availableDays(source: SourceSummary | undefined): string[] {
-  if (source === undefined) return [];
-  if (source.days.length > 0) return source.days;
-  const period = source.period;
-  return period === null ? [] : lastLocalDays(period.from, period.to, MAX_DAYS);
 }
 
 /** Cómo va el estado de las estaciones del paso actual. */
@@ -73,7 +65,8 @@ export function useReplay(
 ) {
   const days = useMemo(() => availableDays(source), [source]);
   const [chosenDay, setChosenDay] = useState(initialDay);
-  const day = chosenDay !== null && days.includes(chosenDay) ? chosenDay : (days.at(-1) ?? null);
+  // Sin día pedido, el último laborable importado: el mismo que enseña Explorar.
+  const day = chosenDay !== null && days.includes(chosenDay) ? chosenDay : defaultDay(days);
   const sourceId = source?.id ?? null;
 
   // La semana (de lunes a domingo) del día elegido, con los días sin datos a la vista.
@@ -132,20 +125,22 @@ export function useReplay(
   }, [playing, speed, count, stations]);
 
   // La URL guarda el día y la hora al parar, no en cada paso de la reproducción ni del arrastre
-  // por la pista (Safari no admite más de 100 cambios de URL seguidos).
+  // por la pista (Safari no admite más de 100 cambios de URL seguidos). También el día que no se
+  // eligió: así el enlace sigue valiendo cuando se importen más días.
   const pausedClock = !playing && point !== undefined ? localClock(point.at) : null;
   const pendingClockRef = useRef<string | null>(null);
   useEffect(() => {
     if (pausedClock === null) return;
     pendingClockRef.current = pausedClock;
     const timer = window.setTimeout(() => {
+      if (day !== null) writeParam('dia', day);
       writeParam('hora', pausedClock);
       pendingClockRef.current = null;
     }, URL_SETTLE_MS);
     return () => {
       window.clearTimeout(timer);
     };
-  }, [pausedClock]);
+  }, [day, pausedClock]);
   // Si se desmonta antes (al cambiar de idioma), la última hora no se pierde.
   useEffect(
     () => () => {

@@ -418,7 +418,7 @@ describe('App', () => {
     });
   });
 
-  it('el histórico real se muestra en su último momento y avisa de que no es el estado actual', async () => {
+  it('el histórico real abre en el último laborable a las 08:30 y avisa de que no es el estado actual', async () => {
     const real = [
       stationFixture({
         id: 21,
@@ -429,8 +429,11 @@ describe('App', () => {
         state: { lastObservedAt: '2026-08-20T21:54:08+00:00', isRenting: false },
       }),
     ];
-    mockApi((path) =>
-      json(path === '/api/sources' ? [demoSource, observedSource] : observedResponse(real)),
+    // Como la API, la respuesta lleva el instante pedido.
+    mockApi((path, url) =>
+      path === '/api/sources'
+        ? json([demoSource, observedSource])
+        : json({ ...observedResponse(real), at: url.searchParams.get('at') ?? '' }),
     );
     window.history.replaceState(null, '', '/?estacion=1');
     renderApp();
@@ -440,15 +443,60 @@ describe('App', () => {
     expect(
       screen.getByText(/Datos históricos · agosto de 2026\. No es el estado actual\./),
     ).toBeTruthy();
+    // No el domingo a las 23:55 con que acaba el periodo: un laborable (el 20-8-2026 es jueves) a
+    // primera hora, con el día de la semana a la vista.
     expect(document.querySelector('.source-notice__time')?.textContent).toMatch(
-      /20 de agosto de 2026.*23:55/,
+      /jueves, 20 de agosto de 2026.*08:30/,
     );
     const stationsRequest = requests.find((u) => u.pathname === '/api/stations');
     expect(stationsRequest?.searchParams.get('source')).toBe('bicing-bcn');
-    expect(stationsRequest?.searchParams.get('at')).toBe('2026-08-20T21:55:02+00:00');
+    expect(stationsRequest?.searchParams.get('at')).toBe('2026-08-20T06:30:00.000Z');
 
     expect(screen.getByText('el Fort Pienc, Eixample')).toBeTruthy();
     expect(screen.getByText(/no permite coger bicis/)).toBeTruthy();
+  });
+
+  it('«Cambiar momento» lleva a Reproducir en ese momento y, al volver, se queda el elegido', async () => {
+    mockApi((path, url) => {
+      if (path === '/api/sources') return json([observedSource]);
+      if (path === '/api/stations') {
+        return json({ ...observedResponse(stations), at: url.searchParams.get('at') ?? '' });
+      }
+      if (path.endsWith('/timeline')) return json(timelineFor(url));
+      if (path.endsWith('/frames')) return json(framesFor(url));
+      return json({ title: 'Petición inesperada' }, 500);
+    });
+    const user = userEvent.setup();
+    window.history.replaceState(null, '', '/');
+    renderApp();
+
+    expect(await screen.findByText('Datos reales')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Cambiar momento' }));
+
+    // Reproducir, parado en el mismo momento y con el foco en la pista.
+    const slider = await screen.findByRole('slider', { name: 'Momento del día' });
+    await waitFor(() => {
+      expect(slider.getAttribute('aria-valuetext')).toMatch(/^08:30, jueves, 20 de agosto de 2026/);
+    });
+    expect(document.activeElement).toBe(slider);
+    expect(new URLSearchParams(window.location.search).get('modo')).toBe('reproducir');
+
+    await user.click(screen.getByRole('button', { name: '5 minutos después' }));
+    expect(slider.getAttribute('aria-valuetext')).toMatch(/^08:35,/);
+
+    // De vuelta a Explorar: el momento elegido, en el aviso, en la petición y en la URL.
+    await user.click(screen.getByRole('button', { name: 'Explorar' }));
+    await waitFor(() => {
+      expect(document.querySelector('.source-notice__time')?.textContent).toMatch(
+        /jueves, 20 de agosto de 2026.*08:35/,
+      );
+    });
+    const last = requests.filter((u) => u.pathname === '/api/stations').at(-1);
+    expect(last?.searchParams.get('at')).toBe('2026-08-20T06:35:00.000Z');
+    const params = new URLSearchParams(window.location.search);
+    expect(params.get('modo')).toBeNull();
+    expect(params.get('dia')).toBe('2026-08-20');
+    expect(params.get('hora')).toBe('08:35');
   });
 
   it('la tabla por distrito resume el momento y su nombre filtra lista, mapa, recuento y leyenda', async () => {

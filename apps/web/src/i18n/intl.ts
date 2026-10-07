@@ -51,6 +51,17 @@ export function formatDay(iso: string): string {
   );
 }
 
+/** «martes, 10 de marzo de 2026»: con el día de la semana, para saber si es un laborable. */
+export function formatDayWithWeekday(iso: string): string {
+  return dateFormat({
+    ...BARCELONA,
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(iso));
+}
+
 /** «10 de marzo» */
 export function formatDayMonth(iso: string): string {
   return dateFormat({ ...BARCELONA, day: 'numeric', month: 'long' }).format(new Date(iso));

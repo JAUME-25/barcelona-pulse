@@ -8,6 +8,7 @@ import {
   type TimelineResponse,
 } from '../../api/client';
 import { t } from '../../i18n';
+import { historicalInstant, NO_MOMENT, type Moment } from '../history/moment';
 
 export type Remote<T> =
   { status: 'loading' } | { status: 'error'; error: ApiError } | { status: 'ready'; data: T };
@@ -83,13 +84,18 @@ export function useSources() {
 
 /**
  * Instante que se pide para una fuente. Una observada cuyo último dato es más viejo que su
- * tolerancia es un histórico: se muestra su último momento disponible (avisando de que no es
- * el estado actual) en vez de «ahora», donde todo saldría desconocido.
+ * tolerancia es un histórico: se muestra el momento pedido o, si no, un laborable a primera hora
+ * (`historicalInstant`), avisando de que no es el estado actual, en vez de «ahora», donde todo
+ * saldría desconocido. La demo sintética no fija instante: la API usa el final de sus datos.
  */
-export function instantFor(source: SourceSummary | undefined, now: number): string | undefined {
+export function instantFor(
+  source: SourceSummary | undefined,
+  now: number,
+  moment: Moment = NO_MOMENT,
+): string | undefined {
   if (source?.kind !== 'observed' || source.period === null) return undefined;
   const age = now - Date.parse(source.period.to);
-  return age > source.toleranceMinutes * 60_000 ? source.period.to : undefined;
+  return age > source.toleranceMinutes * 60_000 ? historicalInstant(source, moment) : undefined;
 }
 
 export interface TimelineRange {
