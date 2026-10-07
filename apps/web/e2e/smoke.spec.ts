@@ -217,3 +217,25 @@ test('balance entre dos horas con la demo: de 07:00 a 10:00, totales, clave y la
   await expect(page.locator('.balance-key__title')).toBeVisible();
   await expect(page.locator('.balance__totals')).toBeVisible();
 });
+
+test('el contrato de la API: la página lee el OpenAPI del servidor y enlaza los esquemas', async ({
+  page,
+}) => {
+  await page.goto('/contrato.html');
+
+  await expect(page.getByRole('heading', { level: 1, name: 'Contrato de la API' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 3, name: 'GET /api/stations', exact: true }),
+  ).toBeVisible();
+  // Las nueve rutas de hoy, y el documento responde bajo /api.
+  await expect(page.locator('.contract-endpoint')).toHaveCount(9);
+  const json = await page.request.get('/api/openapi/v1.json');
+  expect(json.status()).toBe(200);
+  expect(((await json.json()) as { info: { title: string } }).info.title).toBe(
+    'Barcelona Pulse API',
+  );
+  // Un tipo enlaza con su esquema. (El enlace desde «Qué muestra y qué no» se prueba en la app:
+  // la demo no tiene esa ficha.)
+  await page.getByRole('link', { name: 'StationsResponse' }).first().click();
+  await expect(page.locator('#schema-StationsResponse')).toBeInViewport();
+});

@@ -27,7 +27,8 @@ for (const width of [375, 320]) {
     await expect(page.getByRole('button', { name: 'Explorar' })).toBeVisible();
     const box = await page.locator('.station-map').boundingBox();
     expect(box).not.toBeNull();
-    expect(box?.y ?? 9999).toBeLessThan(300);
+    // A 320 px, el cuarto modo («Balance», 8-10-2026) pasa a una segunda fila: unos 36 px más.
+    expect(box?.y ?? 9999).toBeLessThan(width === 320 ? 340 : 300);
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth > window.innerWidth,
     );

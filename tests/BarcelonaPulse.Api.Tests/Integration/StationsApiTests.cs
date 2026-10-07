@@ -230,7 +230,7 @@ public sealed class StationsApiTests(DemoApiFixture fixture) : IClassFixture<Dem
     {
         var client = Client();
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/health/ready", TestContext.Current.CancellationToken)).StatusCode);
-        var openapi = await client.GetStringAsync("/openapi/v1.json", TestContext.Current.CancellationToken);
+        var openapi = await client.GetStringAsync("/api/openapi/v1.json", TestContext.Current.CancellationToken);
         Assert.Contains("\"/api/stations\"", openapi, StringComparison.Ordinal);
     }
 }

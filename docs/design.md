@@ -68,8 +68,9 @@ cómoda para el usuario»): la **plegable**.
   despliega lo de siempre: la frase del histórico, el momento con «Cambiar momento» y «A esta
   hora», el crédito y los enlaces. Es un `details` sin estado propio: queda como lo deje la
   persona.
-- Con eso el mapa empieza a unos 200 px (266 a 320 px; 154 en producción, sin selector de
-  fuente). El sello sobre el mapa sigue: dice qué es y de cuándo aunque la cabecera haya quedado
+- Con eso el mapa empieza a unos 200 px (154 en producción, sin selector de fuente; a 320 px,
+  302 desde que el cuarto modo, «Balance», pasa a una segunda fila, antes 266). El sello sobre
+  el mapa sigue: dice qué es y de cuándo aunque la cabecera haya quedado
   arriba. «Qué muestra y qué no» y «Copiar enlace» quedan detrás de «Más»: los guiones de
   captura que los pulsan en móvil abren antes el pliegue.
 - Descartadas: la compacta (302 px, lo mismo sin plegar) y «mapa primero» (51 px, pero mandaba
@@ -249,6 +250,22 @@ completa en un solo sitio y, junto a cada dato, lo justo para no malinterpretarl
 - Descartado: una lupa que apagaba en el mapa las estaciones con dato y rotulaba las que no.
   Competía con la leyenda, que ya filtra, y en móvil los rótulos se cortaban en los bordes. Su
   idea, el motivo de cada estación, está en la ficha.
+
+## Contrato de la API
+
+Una página de lectura aparte, `/contrato.html` (8-10-2026), con el tema, las fuentes y el
+selector de idioma de la aplicación y sin mapa: el documento OpenAPI que publica la API, legible.
+
+- Una columna de hasta 1040 px. Arriba, qué es y de dónde sale (el JSON del mismo servidor,
+  enlazado) y las reglas comunes; después el índice de rutas por etiqueta, las rutas en
+  tarjetas (método como sello, ruta en monoespaciada, resumen y descripción) y los esquemas.
+- Parámetros, respuestas y propiedades van en listas, no en tablas: una fila por elemento con el
+  nombre, dónde va, «obligatorio» si lo es, el tipo y la descripción. Así caben a 320 px sin
+  desbordes. Un tipo que es un esquema enlaza con su sección (subrayado de puntos).
+- Las descripciones del contrato están en castellano, como las escribe la API; la página lo
+  dice y traduce solo lo suyo (títulos, etiquetas, reglas).
+- Descartado Scalar: pide estilos y fuentes de fuera (la CSP solo admite lo propio), pesa más que
+  la aplicación y no se parece a ella.
 
 ## Cómo suele estar (patrón de la estación)
 

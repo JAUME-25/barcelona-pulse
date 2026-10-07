@@ -78,7 +78,9 @@ app.UseStatusCodePages();
 app.UseCors();
 app.UseRateLimiter();
 
-app.MapOpenApi();
+// El contrato, bajo /api: detrás de nginx solo pasa /api y /health/ready, y la página
+// «Contrato de la API» de la web (/contrato.html) lo lee de aquí, no de una copia.
+app.MapOpenApi("/api/openapi/{documentName}.json");
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = c => c.Tags.Contains("ready") });
 

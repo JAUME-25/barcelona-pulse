@@ -44,7 +44,8 @@ npm --prefix apps/web run dev
 ```
 
 La web queda en http://localhost:5173 y la API en http://127.0.0.1:5080 (documento OpenAPI en
-`/openapi/v1.json`, salud en `/health/live` y `/health/ready`).
+`/api/openapi/v1.json`, legible en http://localhost:5173/contrato.html; salud en `/health/live`
+y `/health/ready`).
 
 `docker compose up` arranca PostGIS, aplica las migraciones (servicio `migrate`) y después
 levanta la API. `ingest demo` se puede repetir: la segunda vez informa de 0 observaciones nuevas

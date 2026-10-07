@@ -676,6 +676,55 @@ export const es = {
     hypothetical: 'con cambios hipotéticos',
   },
 
+  contract: {
+    title: 'Contrato de la API',
+    tagline: 'Lo que la API publica, leído del documento OpenAPI que genera al compilar.',
+    intro: (json: ReactNode): ReactNode => (
+      <>
+        Rutas, parámetros, respuestas y esquemas tal como los declara el código: esta página lee{' '}
+        {json} del mismo servidor que la sirve, no una copia. Las descripciones están en castellano,
+        como las escribe la API.
+      </>
+    ),
+    jsonLink: 'el documento OpenAPI (JSON)',
+    version: (openapi: string, version: string) => `OpenAPI ${openapi} · versión ${version}.`,
+    rules: 'Reglas comunes',
+    ruleList: [
+      'Los instantes van en ISO 8601 con zona explícita; una hora sin zona se rechaza con 400. Las respuestas los devuelven en UTC.',
+      'Falta de dato no es cero: un recuento ausente es `null`, y una estación sin observación dentro de la tolerancia de su fuente tiene el estado `unknown`.',
+      'Lo observado y lo sintético no se mezclan: cada respuesta dice de qué fuente sale y de qué tipo es.',
+      'Límite de 120 peticiones por minuto e IP; por encima, 429 con `Retry-After`.',
+      'Estado, detalle, patrón, línea temporal y fotogramas llevan `ETag`: con `If-None-Match`, 304 mientras no cambien los datos de ese rango.',
+      'Los cálculos caros (línea temporal, patrón) esperan un hueco unos segundos; si no lo hay, 503 con `Retry-After`.',
+      'Los errores van en `application/problem+json`.',
+    ],
+    index: 'Rutas',
+    tags: {
+      Sources: 'Fuentes',
+      Stations: 'Estaciones',
+      History: 'Historia',
+      Scenarios: 'Escenarios',
+    } as Record<string, string>,
+    parameters: 'Parámetros',
+    noParameters: 'Sin parámetros.',
+    body: 'Cuerpo de la petición',
+    responses: 'Respuestas',
+    required: 'obligatorio',
+    in: { query: 'en la consulta', path: 'en la ruta', header: 'en la cabecera' } as Record<
+      string,
+      string
+    >,
+    schemas: 'Esquemas',
+    schemasNote:
+      'Los que nombra alguna ruta, con sus propiedades. Un tipo con «| null» admite nulo.',
+    values: 'Valores:',
+    loading: 'Leyendo el contrato…',
+    failed: 'No se ha podido leer el contrato de la API.',
+    retry: 'Reintentar',
+    backToApp: 'Volver al mapa',
+    code: 'Código, decisiones y mediciones:',
+  },
+
   scope: {
     straight: {
       term: 'En línea recta',

@@ -557,12 +557,33 @@ honesta de lo hecho.
       Formato de .NET y web, lint y tipos en verde.
     - Pendiente en producción: tras desplegar, reimportar un día de mayo para que las versiones
       tomen la altitud (hasta entonces, sin «Por altitud» ni altitud en la ficha).
+28. **Hecho** en local (8-10-2026). La página del contrato de la API, el tercer punto que
+    quedaba de la propuesta (`docs/design.md`, «Contrato de la API»):
+    - La API publica el OpenAPI bajo `/api/openapi/v1.json` (antes `/openapi/v1.json`, que nginx
+      no reenviaba): pasa por nginx tal cual está, sin tocar `pulse.conf` ni la CSP.
+    - La web tiene una segunda página, `/contrato.html` (`src/contract/`, entrada aparte en
+      Vite, sin mapa), con el tema, las fuentes y los idiomas de la aplicación: lee el documento
+      del mismo servidor que la sirve y lo enseña como rutas por etiqueta (parámetros con dónde
+      van, si son obligatorios y su tipo; cuerpo; respuestas enlazadas a su esquema) y los
+      esquemas que alguna ruta nombra, con sus propiedades. Nada se escribe a mano salvo las
+      «reglas comunes» (instantes con zona, nulos, observado y sintético, 120 por minuto, ETag,
+      503, `problem+json`). Las descripciones del contrato están en castellano, como las escribe
+      la API, y la página lo dice. Enlace desde «Qué muestra y qué no».
+    - Descartado Scalar: su visor pide estilos y fuentes de fuera (la CSP solo admite lo propio),
+      pesa más que la aplicación y no se parece a ella.
+    - La marca y el selector de idioma pasan a `app/brand.css`, que cargan las dos páginas.
+    - Pruebas: 212 de backend (la ruta nueva del documento), 223 de la web (nuevas: la lectura
+      del OpenAPI real, el texto de los tipos, los esquemas que se enseñan; la página con el
+      documento simulado, el fallo con reintento y el cambio de idioma; el enlace desde la ficha
+      de límites), humo 24 de 24 (la página contra la API real y el enlace a un esquema) y
+      `e2e/contrato.capture.ts` (página entera en escritorio; 375 y 320 px en los tres idiomas
+      sin desbordes). Tipos, lint y formato en verde. De paso, `movil.capture.ts` admite que a
+      320 px el mapa empiece a 302 px: con cuatro modos el selector pasa a dos filas.
 
 ## Siguiente
 
-- Lo que queda de la propuesta del 7-10-2026, en este orden (el balance entre dos horas y la
-  altitud se hicieron el 8-10-2026, B5.26 y B5.27):
-  - Página del contrato OpenAPI.
+- Lo que queda de la propuesta del 7-10-2026, en este orden (el balance entre dos horas, la
+  altitud y la página del contrato se hicieron el 8-10-2026, B5.26 a B5.28):
   - Nacimiento y retirada de estaciones.
   - Tabla de resumen por hora: lo que falta para que una semana de la línea temporal baje de
     los 2,8–3,0 s de producción.

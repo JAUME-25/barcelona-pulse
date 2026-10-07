@@ -462,6 +462,10 @@ export function LimitsSheet({
           github.com/JAUME-25/barcelona-pulse
         </a>
       </p>
+      {/* El contrato de la API, como página legible (/contrato.html), leído de la propia API. */}
+      <p className="limits-sheet__text">
+        <a href="/contrato.html">{t().contract.title}</a>
+      </p>
     </article>
   );
 }

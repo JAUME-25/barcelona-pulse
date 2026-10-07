@@ -36,6 +36,8 @@ navegador ─HTTPS─▶ nginx de Forge ─┬─ /          web estática (apps
   la cree si llega desde la red de Docker del proyecto (`172.30.30.0/24`), para el límite de
   120 peticiones por minuto e IP.
 - La web se compila en un contenedor `node:24-slim`: el servidor no necesita Node 24.
+- El contrato de la API es una página estática más (`/contrato.html`) que lee el documento
+  OpenAPI de `/api/openapi/v1.json`, por el mismo `location /api/`: nginx no cambia.
 
 ## Una sola vez
 

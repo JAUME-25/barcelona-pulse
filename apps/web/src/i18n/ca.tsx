@@ -648,6 +648,52 @@ export const ca: Messages = {
     hypothetical: 'amb canvis hipotètics',
   },
 
+  contract: {
+    title: 'Contracte de l’API',
+    tagline: 'El que l’API publica, llegit del document OpenAPI que genera en compilar.',
+    intro: (json: ReactNode): ReactNode => (
+      <>
+        Rutes, paràmetres, respostes i esquemes tal com els declara el codi: aquesta pàgina llegeix{' '}
+        {json} del mateix servidor que la serveix, no una còpia. Les descripcions són en castellà,
+        com les escriu l’API.
+      </>
+    ),
+    jsonLink: 'el document OpenAPI (JSON)',
+    version: (openapi: string, version: string) => `OpenAPI ${openapi} · versió ${version}.`,
+    rules: 'Regles comunes',
+    ruleList: [
+      'Els instants van en ISO 8601 amb zona explícita; una hora sense zona es rebutja amb 400. Les respostes els tornen en UTC.',
+      'Falta de dada no és zero: un recompte absent és `null`, i una estació sense observació dins la tolerància de la seva font té l’estat `unknown`.',
+      'L’observat i el sintètic no es barregen: cada resposta diu de quina font surt i de quin tipus és.',
+      'Límit de 120 peticions per minut i IP; per sobre, 429 amb `Retry-After`.',
+      'Estat, detall, patró, línia temporal i fotogrames porten `ETag`: amb `If-None-Match`, 304 mentre no canviïn les dades d’aquell rang.',
+      'Els càlculs cars (línia temporal, patró) esperen un forat uns segons; si no n’hi ha, 503 amb `Retry-After`.',
+      'Els errors van en `application/problem+json`.',
+    ],
+    index: 'Rutes',
+    tags: {
+      Sources: 'Fonts',
+      Stations: 'Estacions',
+      History: 'Història',
+      Scenarios: 'Escenaris',
+    },
+    parameters: 'Paràmetres',
+    noParameters: 'Sense paràmetres.',
+    body: 'Cos de la petició',
+    responses: 'Respostes',
+    required: 'obligatori',
+    in: { query: 'a la consulta', path: 'a la ruta', header: 'a la capçalera' },
+    schemas: 'Esquemes',
+    schemasNote:
+      'Els que anomena alguna ruta, amb les seves propietats. Un tipus amb «| null» admet nul.',
+    values: 'Valors:',
+    loading: 'Llegint el contracte…',
+    failed: 'No s’ha pogut llegir el contracte de l’API.',
+    retry: 'Torna-ho a provar',
+    backToApp: 'Tornar al mapa',
+    code: 'Codi, decisions i mesures:',
+  },
+
   scope: {
     straight: {
       term: 'En línia recta',

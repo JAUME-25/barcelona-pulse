@@ -1119,6 +1119,10 @@ describe('App', () => {
     await screen.findByText('Datos reales');
     await user.click(screen.getByRole('button', { name: 'Qué muestra y qué no' }));
     await screen.findByRole('heading', { level: 2, name: 'Qué muestra y qué no' });
+    // Desde la ficha se llega al contrato de la API, que es otra página.
+    expect(screen.getByRole('link', { name: 'Contrato de la API' }).getAttribute('href')).toBe(
+      '/contrato.html',
+    );
     expect(screen.getByText('Observaciones guardadas').nextElementSibling?.textContent).toBe('300');
     expect(screen.getByText('Última importación').nextElementSibling?.textContent).toMatch(
       // En castellano, cuatro cifras van sin separador de millares.

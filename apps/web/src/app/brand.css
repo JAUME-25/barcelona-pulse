@@ -1,0 +1,58 @@
+/* Cabecera común a la aplicación y a la página del contrato: la marca y el selector de idioma.
+   Los ajustes de móvil de la aplicación (cabecera plegable) siguen en App.css. */
+
+.brand {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+/* Idioma (opción A, 6-10-2026): ES · CA · EN a la derecha, en su fila bajo el nombre, en los
+   tres idiomas (con «al mapa», más corto que «en el mapa», cabría al lado y cambiaría de sitio).
+   En la misma línea apretaba el nombre: a 320 px partía «Barcelona Pulse». */
+.lang-switch {
+  display: inline-flex;
+  grid-column: 1 / -1;
+  justify-self: end;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-solid);
+}
+
+.lang-switch button {
+  min-width: 40px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.lang-switch button[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--panel-solid);
+}
+
+.brand-mark {
+  flex: none;
+}
+
+.brand__name {
+  margin: 0;
+  font-size: 1.625rem;
+  line-height: 1.05;
+}
+
+.brand__tagline {
+  margin: 3px 0 0;
+  color: var(--ink-2);
+  font-size: 1rem;
+}

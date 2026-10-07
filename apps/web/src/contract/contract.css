@@ -1,0 +1,246 @@
+/* «Contrato de la API» (/contrato.html): una página de lectura, en Fanals, sin mapa. Una columna
+   de hasta 1040 px; las rutas en tarjetas y los parámetros, respuestas y propiedades en listas
+   que caben a 320 px sin tablas. */
+
+.contract {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 16px 16px 48px;
+}
+
+@media (min-width: 768px) {
+  .contract {
+    padding: 28px 32px 64px;
+  }
+}
+
+.contract-head {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.contract-head .brand__name a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.contract-head .brand__name a:hover {
+  color: var(--accent);
+}
+
+.contract a {
+  color: var(--accent);
+}
+
+.contract-main h1 {
+  margin: 28px 0 8px;
+  font-size: 2rem;
+  line-height: 1.1;
+}
+
+.contract-lead {
+  margin: 0 0 12px;
+  font-size: 1.125rem;
+}
+
+.contract-muted {
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+}
+
+.contract-main h2 {
+  margin: 36px 0 10px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  font-size: 1.5rem;
+}
+
+.contract-main h3 {
+  margin: 22px 0 6px;
+  font-size: 1.125rem;
+}
+
+.contract-main h4 {
+  margin: 16px 0 6px;
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.contract code {
+  font-family: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+/* Reglas comunes */
+.contract-rules {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.contract-rules li {
+  margin: 6px 0;
+}
+
+/* Índice */
+.contract-index ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.contract-index li {
+  padding: 5px 0;
+}
+
+.contract-index a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.contract-index a:hover code {
+  color: var(--accent);
+}
+
+/* Rutas */
+.contract-endpoint {
+  margin: 14px 0 26px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+}
+
+.contract-endpoint__title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  align-items: center;
+  margin: 0;
+}
+
+.contract-method {
+  display: inline-block;
+  min-width: 46px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--ink);
+  color: var(--panel-solid);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.contract-method--post {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.contract-method--small {
+  min-width: 40px;
+  padding: 0 6px;
+  font-size: 0.6875rem;
+}
+
+.contract-path {
+  font-size: 1.0625rem;
+  overflow-wrap: anywhere;
+}
+
+.contract-endpoint__summary {
+  margin: 8px 0 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.contract-endpoint__description,
+.contract-schema__description {
+  margin: 6px 0 0;
+  color: var(--ink-2);
+}
+
+/* Parámetros, respuestas y propiedades: una fila por elemento, sin tablas. */
+.contract-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.contract-list li {
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+
+.contract-list li:first-child {
+  border-top: 0;
+  padding-top: 2px;
+}
+
+.contract-list__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: center;
+}
+
+.contract-list__name {
+  font-weight: 700;
+}
+
+.contract-list p {
+  margin: 4px 0 0;
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+}
+
+.contract-badge {
+  padding: 1px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-2);
+  font-size: 0.75rem;
+}
+
+.contract-badge--required {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.contract-type {
+  color: var(--ink-2);
+}
+
+a.contract-type {
+  color: var(--accent);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+/* Esquemas */
+.contract-schema {
+  margin: 0 0 22px;
+  padding: 0 0 6px;
+}
+
+.contract-schema h3 code {
+  font-size: 1em;
+}
+
+.contract-values code {
+  margin: 0 8px 4px 0;
+}
+
+.contract-foot {
+  margin-top: 40px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+}
+
+.contract-foot p {
+  margin: 6px 0;
+}

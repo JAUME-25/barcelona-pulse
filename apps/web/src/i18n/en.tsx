@@ -628,6 +628,52 @@ export const en: Messages = {
     hypothetical: 'with hypothetical changes',
   },
 
+  contract: {
+    title: 'API contract',
+    tagline: 'What the API publishes, read from the OpenAPI document it generates at build time.',
+    intro: (json: ReactNode): ReactNode => (
+      <>
+        Routes, parameters, responses and schemas as the code declares them: this page reads {json}{' '}
+        from the same server that serves it, not a copy. The descriptions are in Spanish, as the API
+        writes them.
+      </>
+    ),
+    jsonLink: 'the OpenAPI document (JSON)',
+    version: (openapi: string, version: string) => `OpenAPI ${openapi} · version ${version}.`,
+    rules: 'Common rules',
+    ruleList: [
+      'Instants are ISO 8601 with an explicit zone; a time without one is rejected with 400. Responses return them in UTC.',
+      'Missing data is not zero: an absent count is `null`, and a station with no observation within its source’s tolerance has the state `unknown`.',
+      'Observed and synthetic data never mix: every response says which source it comes from and what kind it is.',
+      'Limit of 120 requests per minute and IP; above it, 429 with `Retry-After`.',
+      'State, detail, pattern, timeline and frames carry an `ETag`: with `If-None-Match`, 304 while the data of that range does not change.',
+      'Expensive computations (timeline, pattern) wait a few seconds for a slot; if there is none, 503 with `Retry-After`.',
+      'Errors come as `application/problem+json`.',
+    ],
+    index: 'Routes',
+    tags: {
+      Sources: 'Sources',
+      Stations: 'Stations',
+      History: 'History',
+      Scenarios: 'Scenarios',
+    },
+    parameters: 'Parameters',
+    noParameters: 'No parameters.',
+    body: 'Request body',
+    responses: 'Responses',
+    required: 'required',
+    in: { query: 'in the query', path: 'in the path', header: 'in a header' },
+    schemas: 'Schemas',
+    schemasNote:
+      'Those named by some route, with their properties. A type with “| null” accepts null.',
+    values: 'Values:',
+    loading: 'Reading the contract…',
+    failed: 'The API contract could not be read.',
+    retry: 'Retry',
+    backToApp: 'Back to the map',
+    code: 'Code, decisions and measurements:',
+  },
+
   scope: {
     straight: {
       term: 'In a straight line',

@@ -93,6 +93,7 @@ import {
 } from '../features/stations/viewParams';
 import { LanguageSwitch } from './LanguageSwitch';
 import { MapBoundary } from './MapBoundary';
+import './brand.css';
 import './App.css';
 
 // MapLibre es casi todo el JavaScript: el mapa llega en su propio fragmento y el panel y la lista
