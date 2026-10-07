@@ -128,7 +128,7 @@ desplegar, la rejilla sale a la primera en 0,37 s (0,53 s en móvil).
 
 ## Mediciones
 
-Medido el 5 y el 6 de octubre de 2026. En local: Windows 11, API y PostGIS en Docker en el mismo
+Medido del 5 al 7 de octubre de 2026. En local: Windows 11, API y PostGIS en Docker en el mismo
 equipo, compilación de producción y Chromium con GPU; el móvil, emulado a 375 × 812 con la CPU
 cuatro veces más lenta (la GPU sigue siendo la del equipo). Dos trampas cambiaron el método: con
 la CPU ralentizada, el reloj de Playwright sumaba su propio retraso (la lista parecía tardar 1,7 s
@@ -146,7 +146,7 @@ software, así que la fluidez se mide con la GPU.
 | Carga en móvil con la red real: lista / mapa | 0,53 s / 2,06 s (la lista, 0,89 s antes de cargar el mapa aparte) |
 | Carga en escritorio: lista / mapa | 0,12 s / 0,85 s |
 | Arrastrar y acercar el mapa | 60 fps en escritorio; 48–49 en móvil (60 en Experimentar) |
-| Producción, mayo de 2026 | 28 días, 4 229 269 observaciones, 548 estaciones; con dato, el 98,3 % de las estaciones de media y ningún paso vacío |
+| Producción, mayo de 2026 | 28 días, 4 229 260 observaciones, 547 estaciones; con dato, el 98,5 % de las estaciones de media y ningún paso vacío |
 | Rejilla de huecos a la primera, tras desplegar (producción) | 0,37 s en escritorio y 0,53 s en móvil; antes, 12,5 s |
 | Despliegue completo | 43 s |
 
@@ -157,8 +157,8 @@ medición: [arquitectura](architecture.md#mediciones).
 
 ## Pruebas
 
-- 153 pruebas de backend, unitarias y de integración contra PostGIS real (no un proveedor en
-  memoria), y 104 de la web, unitarias y de componentes. La CI las pasa y comprueba además el
+- 197 pruebas de backend, unitarias y de integración contra PostGIS real (no un proveedor en
+  memoria), y 144 de la web, unitarias y de componentes. La CI las pasa y comprueba además el
   formato, el lint, los tipos, que el contrato OpenAPI esté al día y que no falte ninguna
   migración.
 - Pruebas de humo con Playwright en escritorio y móvil, también en la CI: levanta la API y

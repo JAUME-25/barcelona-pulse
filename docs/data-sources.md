@@ -101,7 +101,8 @@ Pendiente de comprobar con un token válido: formato real, versión GBFS, si tra
   (la 536 en mayo de 2026, capacidad 2, Rafael Barradas 5), con muy pocas observaciones. No es
   pública: desde el 7-10-2026 no se importa (`BicingArchiveAdapter.IsOperatorTestStation`, ni
   ella ni sus observaciones, sin contarlas como rechazos) y la migración
-  `RemoveOperatorTestStation` la quitó de lo ya importado (en local, 9 observaciones).
+  `RemoveOperatorTestStation` la quitó de lo ya importado (9 observaciones, en local y en
+  producción).
 
 ## GBFS del operador (candidato aparte)
 

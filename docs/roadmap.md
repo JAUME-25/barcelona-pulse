@@ -101,9 +101,10 @@ honesta de lo hecho.
    https://pulse.jaumeperez.com con las cuatro semanas del 4 al 31 de mayo de 2026 (decidido
    por Jaume ese día), en el VPS de Forge: un VPS aparte con memoria suficiente costaba el
    doble, y en el de Forge había 3 GB de memoria disponibles y 28 GB de disco. Medido en
-   producción: 28 días sin rechazos, 4 229 269 observaciones y 548 estaciones, con dato en el
-   98,3 % de los pasos de 5 min de media; 20 de 8 064 pasos por debajo del 90 % (miércoles 6,
-   13, 20 y 27, unos minutos) y ninguno vacío. La web dice «Datos históricos · mayo de 2026» y
+   producción (sin la estación de pruebas del operador desde el 7-10-2026): 28 días sin
+   rechazos, 4 229 260 observaciones y 547 estaciones; de media, el 98,5 % de las estaciones
+   con dato en cada paso de 5 min; 18 de 8 064 pasos por debajo del 90 % (de madrugada, los
+   miércoles 6, 13, 20 y 27) y ninguno vacío. La web dice «Datos históricos · mayo de 2026» y
    la fecha completa del instante. Comprobado desde fuera: cabeceras de seguridad, `/api` y
    `/health/ready` a través de nginx, certificado, y los tres modos sin errores en la consola
    en escritorio, 375 y 320 px (`e2e/despliegue.capture.ts`). El portal de Open Data BCN
@@ -126,7 +127,7 @@ honesta de lo hecho.
      escritorio, 375 y 320 px (`e2e/limites.capture.ts`).
    - Comprobado en producción desde fuera: los tres modos y la ficha en escritorio y móvil, sin
      errores en la consola (`e2e/despliegue.capture.ts`). Mayo, medido cada 15 min: dato en el
-     98,3 % de las estaciones de media y 12 de 2 688 pasos por debajo del 95 %, todos de
+     98,5 % de las estaciones de media y 12 de 2 688 pasos por debajo del 95 %, todos de
      madrugada (02:15 a 04:45) los miércoles 6, 13, 20 y 27.
    - La rejilla tardaba 12,5 s la primera vez que se abría después de arrancar la API (calcula
      las cuatro semanas) y 0,5 s después. Ahora `infra/deploy.sh` la deja calculada
@@ -199,8 +200,8 @@ honesta de lo hecho.
      con una hora lenta y con un error simulado, y la cámara al cambiar de idioma, sin errores
      en la consola.
 
-9. **Hecho** el 7-10-2026, en `main` sin publicar todavía. Segunda revisión de backend y web y
-   sus arreglos, y el mapa base más legible:
+9. **Hecho** y en producción desde el 7-10-2026 (`1755304` a `f497b2f`, CI verde). Segunda
+   revisión de backend y web y sus arreglos, y el mapa base más legible:
    - Web: el foco ya no salta al detalle al cambiar de día en Reproducir (en móvil la página
      bajaba 487 px); una sola escritura de URL al pararse, no una por paso; al cambiar de día,
      la misma hora de reloj (en un día de 25 h se iba una hora atrás); el paso anterior, bajo
@@ -224,8 +225,11 @@ honesta de lo hecho.
      tres idiomas a 1440, 375 y 320 px y la leyenda de 320 a 1440 px.
    - Descartado de la revisión: «si falla la cobertura se ve el cálculo anterior» no pasa
      (`useRemote` no guarda lo anterior tras un fallo); queda una prueba que lo vigila.
-10. **Hecho** el 7-10-2026, en `main` sin publicar todavía. El patrón de la estación y sin la
-    estación de pruebas del operador:
+   - Comprobado en producción desde fuera: `e2e/despliegue.capture.ts` 8 de 8 y el mapa nuevo
+     en cinco vistas, de barrio a calle, en escritorio y móvil, sin errores ni avisos en la
+     consola y sin peticiones fallidas.
+10. **Hecho** y en producción desde el 7-10-2026 (`e440c18` y `fca47f5`, CI verde). El patrón
+    de la estación y sin la estación de pruebas del operador:
     - «Cómo suele estar», en la ficha: una columna por hora, en laborables y en fin de semana,
       con las veces que estuvo sin bicis, con pocas, con bicis, llena, fuera de servicio o sin
       dato (los colores de la leyenda), y en frases («De 10 a 11 h estuvo sin bicis el 78 % del
@@ -234,12 +238,18 @@ honesta de lo hecho.
       de leer, en el mismo idioma visual que la leyenda.
     - API: `GET /api/stations/{id}/pattern`, el estado cada 15 min de cada día importado con la
       regla del mapa, por hora y tipo de día; 25–35 ms con 42 días (sin JIT; con él, 0,9 s). La
-      web lo pide una vez por estación y página, aunque el detalle se vuelva a montar.
+      web lo pide una vez por estación y página, aunque el detalle se vuelva a montar. En
+      producción, con 28 días, medido desde fuera y descontada la red: unos 30 ms si se repite
+      y 0,2 s la primera vez que se pide cada estación.
     - La «Estación de TESTING (no usuarios)» del operador ya no se importa y la migración
-      `RemoveOperatorTestStation` la quita de lo importado con su recuento (en local, 549 → 548).
+      `RemoveOperatorTestStation` la quita de lo importado con su recuento (en local, 549 → 548;
+      en producción, 548 → 547 y 9 observaciones menos, y la media de estaciones con dato pasa
+      del 98,3 al 98,5 %).
     - Pruebas: 197 de backend (con PostGIS: la regla, cerrada no es vacía, días de 23 y 25 h y
       la migración), 144 de la web y 18 de humo. Usado en el navegador en los tres idiomas a
       1440, 375 y 320 px, sin desbordes ni errores, y al reproducir, una sola petición.
+    - Comprobado en producción desde fuera: el patrón en los tres idiomas a 1440, 375 y 320 px,
+      sin desbordes ni errores en la consola, y una sola petición al reproducir.
 
 ## Siguiente
 
