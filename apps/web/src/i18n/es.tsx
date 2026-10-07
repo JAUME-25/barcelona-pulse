@@ -196,6 +196,28 @@ export const es = {
     unitDocks: 'libres',
   },
 
+  pattern: {
+    title: 'Cómo suele estar',
+    lead: (days: number, period: string) =>
+      `Cómo estuvo a cada hora en los ${String(days)} días importados (${period}), mirado cada 15 minutos. Es lo que pasó, no una previsión.`,
+    weekdays: 'Laborables',
+    weekend: 'Fin de semana',
+    days: (n: number) => (n === 1 ? '1 día' : `${String(n)} días`),
+    holidays: 'Los festivos cuentan como laborables.',
+    emptyMost: (hour: number, share: string) =>
+      `De ${String(hour)} a ${String(hour + 1)} h estuvo sin bicis el ${share} del tiempo.`,
+    emptyRare: 'Casi nunca se quedó sin bicis.',
+    fullMost: (hour: number, share: string) =>
+      `De ${String(hour)} a ${String(hour + 1)} h estuvo llena, sin sitio para dejar la bici, el ${share} del tiempo.`,
+    unknownShare: (share: string) => `Sin dato el ${share} del tiempo.`,
+    noDays: 'Aún no hay días importados de esta fuente.',
+    loading: 'Calculando cómo suele estar…',
+    failed: 'No se ha podido calcular cómo suele estar.',
+    demo: 'Con los datos inventados de la demo.',
+    now: 'Hora que se ve en el mapa',
+    unknown: 'Sin dato',
+  },
+
   detail: {
     back: 'Volver a la lista',
     neverReported: 'Esta estación no ha enviado ninguna observación hasta el momento mostrado.',

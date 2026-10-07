@@ -135,6 +135,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/stations/{id}/pattern': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Cómo estuvo una estación a cada hora en los días importados
+     * @description Su estado cada 15 minutos de cada día importado de su fuente, con la misma regla que el mapa, contado por hora (de Barcelona) en laborables y en fines de semana. Es lo que pasó, no una previsión; los pasos sin dato van en `unknown`, no como cero.
+     */
+    get: operations['GetStationPattern'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -420,6 +440,36 @@ export interface components {
     };
     /** @enum {unknown} */
     ObservationStatus: 'in_service' | 'maintenance' | 'closed' | 'planned' | 'unknown';
+    /**
+     * @description Laborable (de lunes a viernes; los festivos cuentan como laborables) o fin de semana.
+     * @enum {unknown}
+     */
+    PatternDayType: 'weekday' | 'weekend';
+    /**
+     * @description Una hora del día (hora de Barcelona) en un tipo de día: en cuántos pasos de los días
+     *     importados estuvo la estación en cada estado. Sin dato no es cero: va en `Unknown`.
+     */
+    PatternHour: {
+      dayType: components['schemas']['PatternDayType'];
+      /** Format: int32 */
+      hour: number;
+      /** Format: int32 */
+      steps: number;
+      /** Format: int32 */
+      unknown: number;
+      /** Format: int32 */
+      outOfService: number;
+      /** Format: int32 */
+      empty: number;
+      /** Format: int32 */
+      few: number;
+      /** Format: int32 */
+      available: number;
+      /** Format: int32 */
+      full: number;
+      /** Format: int32 */
+      medianBikes: null | number;
+    };
     ProblemDetails: {
       type?: null | string;
       title?: null | string;
@@ -516,6 +566,25 @@ export interface components {
       metadataAssumed: boolean;
       /** @description Estado en el instante consultado. */
       state: components['schemas']['StationState'];
+    };
+    /**
+     * @description Cómo estuvo una estación a cada hora en los días importados de su fuente. Es lo que pasó, no
+     *     una previsión: cada paso sigue la regla del mapa (ADR 0005) y la precedencia de la leyenda.
+     */
+    StationPatternResponse: {
+      source: components['schemas']['SourceRef'];
+      /** Format: int64 */
+      stationId: number;
+      sourceStationId: string;
+      /** Format: int32 */
+      stepMinutes: number;
+      /** Format: int32 */
+      toleranceMinutes: number;
+      /** Format: int32 */
+      fewBikesMax: number;
+      weekdays: string[];
+      weekendDays: string[];
+      hours: components['schemas']['PatternHour'][];
     };
     StationsResponse: {
       source: components['schemas']['SourceRef'];
@@ -921,6 +990,38 @@ export interface operations {
         };
         content: {
           'application/problem+json': components['schemas']['HttpValidationProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetStationPattern: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Identificador interno de la estación. */
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['StationPatternResponse'];
         };
       };
       /** @description Not Found */

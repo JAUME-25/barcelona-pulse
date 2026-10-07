@@ -78,7 +78,8 @@ Jaume ejecuta los comandos en Forge y pega la salida.
 - La línea temporal (`Features/History/TimelineQuery.cs`, ADR 0009) repite en SQL la regla del
   estado en un instante y la precedencia de la leyenda (`availability.ts`) para vacías y
   llenas. Si cambia una, cambian las otras; la prueba `Every_step_matches_the_map_at_that_instant`
-  lo vigila.
+  lo vigila. El patrón de la estación (`Features/Stations/StationPattern.cs`) las repite también,
+  con el umbral de «pocas» (`FEW_BIKES_MAX`, 3), y necesita el JIT apagado (0,9 s en vez de 28 ms).
 - Un `MAX(observed_at)` sobre el join de observaciones y estaciones recorre todo el histórico
   (~100 ms con una semana): usa `StationQueries.LatestObservationAsync`, que va por estación.
 - «Reproducir» pide fotogramas de una hora (`/api/sources/{id}/frames`, ADR 0010), no

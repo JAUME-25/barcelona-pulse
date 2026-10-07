@@ -15,6 +15,8 @@ export type FramesResponse = components['schemas']['FramesResponse'];
 export type StudyAreaItem = components['schemas']['StudyAreaItem'];
 export type CoverageRequest = components['schemas']['CoverageRequest'];
 export type CoverageResponse = components['schemas']['CoverageResponse'];
+export type StationPatternResponse = components['schemas']['StationPatternResponse'];
+export type PatternHour = components['schemas']['PatternHour'];
 
 // Vacío en desarrollo: Vite reenvía /api a la API local. En producción, la URL pública de la API.
 const baseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '';

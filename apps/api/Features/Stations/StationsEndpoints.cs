@@ -31,7 +31,32 @@ public static class StationsEndpoints
             .WithSummary("Una estación, su estado en un instante y sus versiones")
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        group.MapGet("/{id:long}/pattern", GetStationPattern)
+            .WithName("GetStationPattern")
+            .WithSummary("Cómo estuvo una estación a cada hora en los días importados")
+            .WithDescription(
+                "Su estado cada 15 minutos de cada día importado de su fuente, con la misma regla que el mapa, " +
+                "contado por hora (de Barcelona) en laborables y en fines de semana. Es lo que pasó, no una " +
+                "previsión; los pasos sin dato van en `unknown`, no como cero.")
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         return api;
+    }
+
+    private static async Task<Results<Ok<StationPatternResponse>, ProblemHttpResult>> GetStationPattern(
+        [Description("Identificador interno de la estación.")] long id,
+        PulseDbContext db, CancellationToken ct)
+    {
+        var station = await db.Stations.AsNoTracking()
+            .Include(s => s.Source)
+            .FirstOrDefaultAsync(s => s.Id == id, ct);
+        if (station is null)
+        {
+            return TypedResults.Problem(statusCode: StatusCodes.Status404NotFound,
+                title: "Estación no encontrada", detail: $"No existe la estación {id}.");
+        }
+
+        return TypedResults.Ok(await StationPattern.ComputeAsync(db, station, ct));
     }
 
     private static async Task<Results<Ok<StationsResponse>, ValidationProblem, ProblemHttpResult>> ListStations(

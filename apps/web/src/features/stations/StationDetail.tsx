@@ -6,6 +6,7 @@ import { availabilityLabel, availabilityOf, qualityFlagLabel, statusLabel } from
 import { districtName, stationName } from './names';
 import { OctagonGlyph } from './OctagonGlyph';
 import { sourceName } from './sources';
+import { StationPatternSection } from './StationPattern';
 
 interface StationDetailProps {
   station: StationItem;
@@ -173,6 +174,8 @@ export function StationDetail({
           {station.metadataAssumed && <li>{m.metadataAssumed}</li>}
         </ul>
       )}
+
+      <StationPatternSection stationId={station.id} at={response.at} />
     </article>
   );
 }

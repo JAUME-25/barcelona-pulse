@@ -217,6 +217,28 @@ export const ca: Messages = {
     unitDocks: 'lliures',
   },
 
+  pattern: {
+    title: 'Com sol estar',
+    lead: (days: number, period: string) =>
+      `Com va estar a cada hora en els ${String(days)} dies importats (${period}), mirat cada 15 minuts. És el que va passar, no una previsió.`,
+    weekdays: 'Feiners',
+    weekend: 'Cap de setmana',
+    days: (n: number) => (n === 1 ? '1 dia' : `${String(n)} dies`),
+    holidays: 'Els festius compten com a feiners.',
+    emptyMost: (hour: number, share: string) =>
+      `De ${String(hour)} a ${String(hour + 1)} h va estar sense bicis el ${share} del temps.`,
+    emptyRare: 'Gairebé mai no es va quedar sense bicis.',
+    fullMost: (hour: number, share: string) =>
+      `De ${String(hour)} a ${String(hour + 1)} h va estar plena, sense lloc per deixar la bici, el ${share} del temps.`,
+    unknownShare: (share: string) => `Sense dada el ${share} del temps.`,
+    noDays: 'Encara no hi ha dies importats d’aquesta font.',
+    loading: 'Calculant com sol estar…',
+    failed: 'No s’ha pogut calcular com sol estar.',
+    demo: 'Amb les dades inventades de la demo.',
+    now: 'Hora que es veu al mapa',
+    unknown: 'Sense dada',
+  },
+
   detail: {
     back: 'Tornar a la llista',
     neverReported: 'Aquesta estació no ha enviat cap observació fins al moment mostrat.',

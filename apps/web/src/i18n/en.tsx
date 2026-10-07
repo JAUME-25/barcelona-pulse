@@ -200,6 +200,28 @@ export const en: Messages = {
     unitDocks: 'free',
   },
 
+  pattern: {
+    title: 'How it usually is',
+    lead: (days: number, period: string) =>
+      `How it was at each hour over the ${String(days)} imported days (${period}), checked every 15 minutes. This is what happened, not a forecast.`,
+    weekdays: 'Weekdays',
+    weekend: 'Weekend',
+    days: (n: number) => (n === 1 ? '1 day' : `${String(n)} days`),
+    holidays: 'Public holidays count as weekdays.',
+    emptyMost: (hour: number, share: string) =>
+      `Between ${String(hour)}:00 and ${String(hour + 1)}:00 it had no bikes ${share} of the time.`,
+    emptyRare: 'It almost never ran out of bikes.',
+    fullMost: (hour: number, share: string) =>
+      `Between ${String(hour)}:00 and ${String(hour + 1)}:00 it was full, with no space to return a bike, ${share} of the time.`,
+    unknownShare: (share: string) => `No data ${share} of the time.`,
+    noDays: 'No days imported from this source yet.',
+    loading: 'Working out how it usually is…',
+    failed: 'Could not work out how it usually is.',
+    demo: 'With the made-up demo data.',
+    now: 'Hour shown on the map',
+    unknown: 'No data',
+  },
+
   detail: {
     back: 'Back to the list',
     neverReported: 'This station has not sent any observation up to the moment shown.',

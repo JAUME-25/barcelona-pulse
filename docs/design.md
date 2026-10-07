@@ -116,6 +116,22 @@ completa en un solo sitio y, junto a cada dato, lo justo para no malinterpretarl
   Competía con la leyenda, que ya filtra, y en móvil los rótulos se cortaban en los bordes. Su
   idea, el motivo de cada estación, está en la ficha.
 
+## Cómo suele estar (patrón de la estación)
+
+Elegido el 7-10-2026 entre tres formas (columnas, relojes y curva) por ser la más fácil de leer
+para cualquiera: usa los mismos estados y colores que la leyenda del mapa.
+
+- Al final de la ficha de la estación: una columna por hora, en laborables y en fin de semana,
+  partida en las veces que estuvo sin bicis (abajo, en rojo), con pocas, con bicis, llena, fuera
+  de servicio o sin dato (en discontinuo: sin dato no es cero). La hora del momento mostrado,
+  recuadrada.
+- Debajo de cada una, en frases: cuándo se quedó sin bicis («De 10 a 11 h estuvo sin bicis el
+  78 % del tiempo») o que casi nunca (por debajo del 10 %), cuándo se llenó y, si pasa del 10 %,
+  cuánto falta de dato. Es lo que oye un lector de pantalla.
+- Una clave con solo los estados que salen en esa estación.
+- Siempre dice de qué días sale («en los 42 días importados, del…») y que no es una previsión;
+  los festivos cuentan como laborables.
+
 ## Nombres de estación
 
 Elegido el 6 de octubre de 2026 entre tres formas (como en la placa, calle completa y solo

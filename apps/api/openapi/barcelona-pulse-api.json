@@ -382,6 +382,50 @@
           }
         }
       }
+    },
+    "/api/stations/{id}/pattern": {
+      "get": {
+        "tags": [
+          "Stations"
+        ],
+        "summary": "Cómo estuvo una estación a cada hora en los días importados",
+        "description": "Su estado cada 15 minutos de cada día importado de su fuente, con la misma regla que el mapa, contado por hora (de Barcelona) en laborables y en fines de semana. Es lo que pasó, no una previsión; los pasos sin dato van en `unknown`, no como cero.",
+        "operationId": "GetStationPattern",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador interno de la estación.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StationPatternResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1060,6 +1104,73 @@
           "unknown"
         ]
       },
+      "PatternDayType": {
+        "enum": [
+          "weekday",
+          "weekend"
+        ],
+        "description": "Laborable (de lunes a viernes; los festivos cuentan como laborables) o fin de semana."
+      },
+      "PatternHour": {
+        "required": [
+          "dayType",
+          "hour",
+          "steps",
+          "unknown",
+          "outOfService",
+          "empty",
+          "few",
+          "available",
+          "full",
+          "medianBikes"
+        ],
+        "type": "object",
+        "properties": {
+          "dayType": {
+            "$ref": "#/components/schemas/PatternDayType"
+          },
+          "hour": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "steps": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unknown": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "outOfService": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "empty": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "few": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "available": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "full": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "medianBikes": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          }
+        },
+        "description": "Una hora del día (hora de Barcelona) en un tipo de día: en cuántos pasos de los días\nimportados estuvo la estación en cada estado. Sin dato no es cero: va en `Unknown`."
+      },
       "ProblemDetails": {
         "type": "object",
         "properties": {
@@ -1342,6 +1453,65 @@
           }
         },
         "description": "Estación con sus atributos vigentes en el instante consultado."
+      },
+      "StationPatternResponse": {
+        "required": [
+          "source",
+          "stationId",
+          "sourceStationId",
+          "stepMinutes",
+          "toleranceMinutes",
+          "fewBikesMax",
+          "weekdays",
+          "weekendDays",
+          "hours"
+        ],
+        "type": "object",
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/SourceRef"
+          },
+          "stationId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "sourceStationId": {
+            "type": "string"
+          },
+          "stepMinutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "toleranceMinutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "fewBikesMax": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "weekdays": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          "weekendDays": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          "hours": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PatternHour"
+            }
+          }
+        },
+        "description": "Cómo estuvo una estación a cada hora en los días importados de su fuente. Es lo que pasó, no\nuna previsión: cada paso sigue la regla del mapa (ADR 0005) y la precedencia de la leyenda."
       },
       "StationsResponse": {
         "required": [

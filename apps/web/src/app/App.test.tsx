@@ -84,13 +84,33 @@ const stations = [
 
 const requests: URL[] = [];
 
-function mockApi(handler: (path: string, url: URL) => Response) {
+/** «Cómo suele estar» de una estación, sin días importados: la ficha lo dice y nada más. */
+function emptyPattern(url: URL): Response {
+  const id = Number(url.pathname.split('/')[3]);
+  return json({
+    source: stationsResponse([]).source,
+    stationId: id,
+    sourceStationId: `demo-${String(id)}`,
+    stepMinutes: 15,
+    toleranceMinutes: 30,
+    fewBikesMax: 3,
+    weekdays: [],
+    weekendDays: [],
+    hours: [],
+  });
+}
+
+function mockApi(
+  handler: (path: string, url: URL) => Response,
+  pattern: (url: URL) => Response = emptyPattern,
+) {
   requests.length = 0;
   vi.stubGlobal(
     'fetch',
     vi.fn((input: Request) => {
       const url = new URL(input.url);
       requests.push(url);
+      if (url.pathname.endsWith('/pattern')) return Promise.resolve(pattern(url));
       return Promise.resolve(handler(url.pathname, url));
     }),
   );
@@ -287,6 +307,53 @@ describe('App', () => {
     ).toBeTruthy();
     expect(screen.getByText('Fuera de servicio (cerrada)')).toBeTruthy();
     expect(screen.getByText(/La estación no está operativa/)).toBeTruthy();
+  });
+
+  it('la ficha dice cómo suele estar a cada hora, sin llamarlo previsión', async () => {
+    mockApi(
+      (path) => json(path === '/api/sources' ? [demoSource] : stationsResponse(stations)),
+      (url) =>
+        json({
+          source: stationsResponse([]).source,
+          stationId: Number(url.pathname.split('/')[3]),
+          sourceStationId: 'demo-001',
+          stepMinutes: 15,
+          toleranceMinutes: 30,
+          fewBikesMax: 3,
+          weekdays: ['2026-03-10'],
+          weekendDays: [],
+          // Sin dato de 0 a 6; de 8 a 9, vacía 3 de 4 veces.
+          hours: Array.from({ length: 24 }, (_, hour) => ({
+            dayType: 'weekday',
+            hour,
+            steps: 4,
+            unknown: hour < 6 ? 4 : 0,
+            outOfService: 0,
+            empty: hour === 8 ? 3 : 0,
+            few: hour === 8 ? 1 : 0,
+            available: hour < 6 || hour === 8 ? 0 : 4,
+            full: 0,
+            medianBikes: hour < 6 ? null : 8,
+          })),
+        }),
+    );
+    const user = userEvent.setup();
+    renderApp();
+
+    await user.click(await screen.findByRole('button', { name: /^Pl\. de Catalunya/ }));
+    const section = await screen.findByRole('region', { name: 'Cómo suele estar' });
+    expect(within(section).getByText(/Es lo que pasó, no una previsión/)).toBeTruthy();
+    expect(within(section).getByRole('heading', { name: 'Laborables 1 día' })).toBeTruthy();
+    expect(
+      within(section).getByText(/^De 8 a 9 h estuvo sin bicis el 75\s%\sdel tiempo\./),
+    ).toBeTruthy();
+    expect(within(section).getByText(/Sin dato el 25\s%\sdel tiempo\.$/)).toBeTruthy();
+    // La clave solo explica lo que sale en esta estación.
+    expect(
+      within(within(section).getByRole('list'))
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['Sin bicis', 'Pocas bicis', 'Con bicis', 'Sin dato', 'Hora que se ve en el mapa']);
   });
 
   it('si la API falla lo dice y permite reintentar', async () => {
