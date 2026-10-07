@@ -15,6 +15,9 @@ test('despliegue: «Qué muestra y qué no» con los huecos medidos', async ({ p
   await page.goto('/?fuente=bicing-bcn');
   await page.locator('[data-map-status="ready"]').waitFor({ timeout: 60_000 });
   const started = Date.now();
+  // En móvil la procedencia va plegada: «Qué muestra y qué no» está detrás de «Más».
+  const fold = page.locator('.source-notice__fold:not([open]) summary');
+  if ((await fold.count()) > 0) await fold.click();
   await page.getByRole('button', { name: 'Qué muestra y qué no' }).click();
   await expect(page.locator('.hole-grid')).toBeVisible({ timeout: 60_000 });
   testInfo.annotations.push({

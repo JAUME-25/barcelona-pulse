@@ -53,6 +53,9 @@ function sizes(mobile: boolean) {
 }
 
 async function openSheet(page: Page) {
+  // En móvil la procedencia va plegada: «Qué muestra y qué no» está detrás de «Más».
+  const fold = page.locator('.source-notice__fold:not([open]) summary');
+  if ((await fold.count()) > 0) await fold.click();
   await page.getByRole('button', { name: 'Qué muestra y qué no' }).click();
   await expect(page.getByRole('heading', { name: 'Qué muestra y qué no' })).toBeFocused();
   await expect(page.getByText('Midiendo los huecos…')).toHaveCount(0, { timeout: 30_000 });

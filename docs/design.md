@@ -68,8 +68,10 @@ cómoda para el usuario»): la **plegable**.
   despliega lo de siempre: la frase del histórico, el momento con «Cambiar momento» y «A esta
   hora», el crédito y los enlaces. Es un `details` sin estado propio: queda como lo deje la
   persona.
-- Con eso el mapa empieza a unos 200 px (266 a 320 px). El sello sobre el mapa sigue: dice qué
-  es y de cuándo aunque la cabecera haya quedado arriba.
+- Con eso el mapa empieza a unos 200 px (266 a 320 px; 154 en producción, sin selector de
+  fuente). El sello sobre el mapa sigue: dice qué es y de cuándo aunque la cabecera haya quedado
+  arriba. «Qué muestra y qué no» y «Copiar enlace» quedan detrás de «Más»: los guiones de
+  captura que los pulsan en móvil abren antes el pliegue.
 - Descartadas: la compacta (302 px, lo mismo sin plegar) y «mapa primero» (51 px, pero mandaba
   los modos debajo de un mapa de dos tercios de pantalla, un gesto más lejos).
 
