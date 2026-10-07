@@ -147,6 +147,10 @@ export const en: Messages = {
     license: (license) => `Licence ${license}.`,
     dataset: 'See the dataset',
     limits: 'What it shows and what it doesn’t',
+    share: 'Copy link',
+    shared: 'Link copied.',
+    shareFailed: 'The browser will not copy it. Copy it from here:',
+    shareUrl: 'Link to this view',
     texts: {
       'bicing-bcn': {
         name: 'Bicing, Barcelona City Council archive',

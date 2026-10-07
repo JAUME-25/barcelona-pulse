@@ -5,6 +5,31 @@
   margin-top: 8px !important;
 }
 
+/* «Copiar enlace» y su aviso, en la misma línea. */
+.source-notice__share {
+  margin-top: 6px !important;
+}
+.share-link {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+}
+.share-link__notice {
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+}
+.share-link__url {
+  flex: 1 0 100%;
+  min-width: 0;
+  min-height: 36px;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.9375rem;
+}
+
 .limits-link {
   display: inline;
   padding: 0;

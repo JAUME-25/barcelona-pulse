@@ -1,6 +1,7 @@
 import type { StationsResponse } from '../../api/client';
 import { t } from '../../i18n';
 import { formatDayWithWeekday, formatTime } from '../../shared/format';
+import { ShareLink } from './ShareLink';
 import { sourceAttribution, sourceName } from './sources';
 import '../limits/limits.css';
 
@@ -54,6 +55,9 @@ export function SourceNotice({
           {m.demoLead}
         </p>
         {!compact && <Moment label={m.shownMoment} iso={response.at} />}
+        <p className="source-notice__share">
+          <ShareLink />
+        </p>
       </div>
     );
   }
@@ -95,6 +99,9 @@ export function SourceNotice({
           </button>
         </p>
       )}
+      <p className="source-notice__share">
+        <ShareLink />
+      </p>
     </div>
   );
 }

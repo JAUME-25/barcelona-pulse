@@ -55,7 +55,8 @@ import {
 import { sourceName } from '../features/stations/sources';
 import { t } from '../i18n';
 import { formatMonths } from '../shared/format';
-import { readParam, writeParam } from '../shared/url';
+import { historyPushed, pushParams, readParam, writeParam } from '../shared/url';
+import { stationName } from '../features/stations/names';
 import { LanguageSwitch } from './LanguageSwitch';
 import { MapBoundary } from './MapBoundary';
 import './App.css';
@@ -322,12 +323,21 @@ export function App() {
       lastSelectedRef.current = id;
       setSelectedByUser(true);
       setSelectedKey(station.sourceStationId);
-      writeStationParam(station.sourceStationId);
+      // Abrir el detalle añade una entrada al historial, para que Atrás lo cierre; pasar a otra
+      // estación con el detalle abierto, no.
+      if (selectedKey === null) pushParams({ [STATION_PARAM]: station.sourceStationId }, 'detail');
+      else writeStationParam(station.sourceStationId);
     },
-    [all],
+    [all, selectedKey],
   );
 
+  // Si el detalle añadió su entrada, cerrarlo es volver atrás (lo cierra el historial, como
+  // Atrás); si se llegó con un enlace, se quita de la URL sin tocar el historial.
   const closeDetail = useCallback(() => {
+    if (historyPushed('detail')) {
+      window.history.back();
+      return;
+    }
     setSelectedKey(null);
     writeStationParam(null);
   }, []);
@@ -381,8 +391,33 @@ export function App() {
     }
     setMode(next);
     setTool(null);
-    writeParam(MODE_PARAM, MODE_IN_URL[next]);
+    // Cambiar de modo añade una entrada: Atrás vuelve al modo anterior tal como estaba.
+    pushParams({ [MODE_PARAM]: MODE_IN_URL[next] }, 'mode');
   };
+
+  // Atrás y Adelante: el estado vuelve a ser el de la URL de esa entrada (modo, estación, ficha y
+  // momento). Lo que cambia a cada paso (la hora al reproducir, el escenario) no añade entradas.
+  const replaySelectRef = useRef(replay.selectMoment);
+  useEffect(() => {
+    replaySelectRef.current = replay.selectMoment;
+  });
+  useEffect(() => {
+    const onPopState = () => {
+      setMode(modeFromUrl());
+      setTool(null);
+      setSelectedByUser(false);
+      setSelectedKey(readStationParam());
+      setSheet(readParam(VIEW_PARAM) === VIEW_LIMITS ? { byUser: false } : null);
+      const day = readParam('dia');
+      const time = readParam('hora');
+      setMoment({ day, time });
+      if (day !== null) replaySelectRef.current(day, time);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+    };
+  }, []);
 
   // «Cambiar momento»: a Reproducir, parado en el momento mostrado, con el foco en la pista.
   const changeMoment = () => {
@@ -392,10 +427,18 @@ export function App() {
 
   const openSheet = () => {
     setSheet({ byUser: true });
-    writeParam(VIEW_PARAM, VIEW_LIMITS);
+    pushParams({ [VIEW_PARAM]: VIEW_LIMITS }, 'sheet');
   };
-  const closeSheet = (restoreFocus: boolean) => {
+  /**
+   * Cerrar la ficha: con su botón, volviendo atrás si ella añadió la entrada; al elegir un día o
+   * una estación desde ella, en la misma entrada (`inPlace`), porque lo que sigue añade la suya.
+   */
+  const closeSheet = (restoreFocus: boolean, inPlace = false) => {
     restoreLimitsFocusRef.current = restoreFocus;
+    if (!inPlace && historyPushed('sheet')) {
+      window.history.back();
+      return;
+    }
     setSheet(null);
     writeParam(VIEW_PARAM, null);
   };
@@ -409,7 +452,7 @@ export function App() {
 
   // Desde la ficha: reproducir un día o abrir una estación sin dato (se marca en el mapa).
   const pickDay = (day: string) => {
-    closeSheet(false);
+    closeSheet(false, true);
     replay.selectDay(day);
     changeMode('replay');
     focusReplayRef.current = true;
@@ -421,9 +464,22 @@ export function App() {
     document.querySelector<HTMLElement>('.replay-deck__track')?.focus();
   });
   const selectFromSheet = (id: number) => {
-    closeSheet(false);
+    closeSheet(false, true);
     select(id);
   };
+
+  // Título de la pestaña: la estación, la ficha o el modo, y el nombre de la aplicación.
+  useEffect(() => {
+    const what =
+      selected !== undefined
+        ? stationName(selected)
+        : sheet !== null
+          ? t().source.limits
+          : shownMode === 'explore'
+            ? null
+            : t().modes[shownMode];
+    document.title = what === null ? 'Barcelona Pulse' : `${what} · Barcelona Pulse`;
+  }, [selected, sheet, shownMode]);
 
   const mapUnavailable = mapStatus.kind === 'failed' || mapStatus.kind === 'unsupported';
   const m = t().app;

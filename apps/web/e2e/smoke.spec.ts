@@ -45,6 +45,23 @@ test('seleccionar desde la lista abre el detalle, cambia la URL y volver devuelv
   expect(new URL(page.url()).searchParams.get('estacion')).toBeNull();
 });
 
+test('Atrás cierra el detalle en vez de salir de la aplicación', async ({ page }) => {
+  await openWithoutBasemap(page);
+
+  await page.getByRole('button', { name: /^Liceu/ }).click();
+  await expect(page.getByRole('heading', { level: 2, name: 'Liceu' })).toBeVisible();
+  await expect(page).toHaveTitle('Liceu · Barcelona Pulse');
+
+  await page.goBack();
+  await expect(page.getByRole('heading', { level: 2, name: 'Liceu' })).toHaveCount(0);
+  await expect(page.getByText('46 estaciones')).toBeVisible();
+  expect(new URL(page.url()).searchParams.get('estacion')).toBeNull();
+  await expect(page).toHaveTitle('Barcelona Pulse');
+
+  await page.goForward();
+  await expect(page.getByRole('heading', { level: 2, name: 'Liceu' })).toBeVisible();
+});
+
 test('un enlace directo a una estación sin dato reciente explica por qué es desconocida', async ({
   page,
 }) => {

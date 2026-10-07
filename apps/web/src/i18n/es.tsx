@@ -154,6 +154,10 @@ export const es = {
     license: (license: string) => `Licencia ${license}.`,
     dataset: 'Ver el conjunto de datos',
     limits: 'Qué muestra y qué no',
+    share: 'Copiar enlace',
+    shared: 'Enlace copiado.',
+    shareFailed: 'El navegador no deja copiarlo. Cópialo de aquí:',
+    shareUrl: 'Enlace de esta vista',
     /** En castellano manda la API: nombre y atribución tal como los guarda. */
     texts: {} as SourceTexts,
   },

@@ -514,6 +514,78 @@ describe('App', () => {
     expect(new URLSearchParams(window.location.search).get('estacion')).toBe('32');
   });
 
+  it('Atrás cierra el detalle y la ficha, y el título de la pestaña dice dónde se está', async () => {
+    // Otra fuente: la ficha guarda las líneas temporales por fuente y semana mientras la página
+    // siga abierta, y la prueba de la ficha cuenta sus peticiones.
+    const source = { ...observedSource, id: 'bicing-atras' };
+    mockApi((path, url) => {
+      if (path === '/api/sources') return json([source]);
+      if (path === '/api/stations') return json(observedResponse(stations));
+      if (path.endsWith('/timeline')) return json(timelineFor(url));
+      if (path.endsWith('/ingestions')) return json(ingestionsFor());
+      if (path === '/api/study-areas') return json([]);
+      return json({ title: 'Petición inesperada' }, 500);
+    });
+    const user = userEvent.setup();
+    window.history.replaceState(null, '', '/');
+    renderApp();
+
+    await screen.findByText('3 estaciones');
+    expect(document.title).toBe('Barcelona Pulse');
+
+    // Abrir el detalle añade una entrada; Atrás la deshace y cierra el detalle.
+    await user.click(screen.getByRole('button', { name: /^Pl\. de Catalunya/ }));
+    expect(await screen.findByRole('heading', { level: 2, name: 'Pl. de Catalunya' })).toBeTruthy();
+    expect(new URLSearchParams(window.location.search).get('estacion')).toBe('demo-001');
+    expect(document.title).toBe('Pl. de Catalunya · Barcelona Pulse');
+    window.history.back();
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { level: 2, name: 'Pl. de Catalunya' })).toBeNull();
+    });
+    expect(new URLSearchParams(window.location.search).get('estacion')).toBeNull();
+    expect(document.title).toBe('Barcelona Pulse');
+
+    // Lo mismo con «Qué muestra y qué no» y con el modo.
+    await user.click(screen.getByRole('button', { name: 'Qué muestra y qué no' }));
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'Qué muestra y qué no' }),
+    ).toBeTruthy();
+    expect(document.title).toBe('Qué muestra y qué no · Barcelona Pulse');
+    window.history.back();
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { level: 2, name: 'Qué muestra y qué no' })).toBeNull();
+    });
+    expect(new URLSearchParams(window.location.search).get('vista')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Experimentar' }));
+    expect(document.title).toBe('Experimentar · Barcelona Pulse');
+    expect(new URLSearchParams(window.location.search).get('modo')).toBe('experimentar');
+    window.history.back();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Explorar' }).getAttribute('aria-pressed')).toBe(
+        'true',
+      );
+    });
+    expect(new URLSearchParams(window.location.search).get('modo')).toBeNull();
+  });
+
+  it('«Copiar enlace» copia la URL de la vista y lo dice', async () => {
+    mockApi((path) => json(path === '/api/sources' ? [demoSource] : stationsResponse(stations)));
+    // user-event pone su propio portapapeles en navigator.clipboard: se lee de él.
+    const user = userEvent.setup();
+    window.history.replaceState(null, '', '/?fuente=demo&estacion=demo-001');
+    renderApp();
+
+    await screen.findByRole('heading', { level: 2, name: 'Pl. de Catalunya' });
+    await user.click(screen.getByRole('button', { name: 'Copiar enlace' }));
+    await waitFor(() => {
+      expect(screen.getByRole('status').textContent).toBe('Enlace copiado.');
+    });
+    const copied = await navigator.clipboard.readText();
+    expect(copied).toBe(window.location.href);
+    expect(copied).toContain('estacion=demo-001');
+  });
+
   it('con «Eléctricas», el número del mapa y la cifra de la lista pasan a eléctricas', async () => {
     mockApi((path) => json(path === '/api/sources' ? [demoSource] : stationsResponse(stations)));
     const user = userEvent.setup();

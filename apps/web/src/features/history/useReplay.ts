@@ -172,6 +172,13 @@ export function useReplay(
     writeParam('dia', next);
   }, []);
 
+  /** El día y la hora que trae una entrada del historial (Atrás o Adelante): sin escribir la URL. */
+  const selectMoment = useCallback((next: string, time: string | null) => {
+    setTime(time);
+    setChosenIndex(null);
+    setChosenDay(next);
+  }, []);
+
   return {
     days,
     day,
@@ -179,6 +186,7 @@ export function useReplay(
     previousWeekDay,
     nextWeekDay,
     selectDay,
+    selectMoment,
     dayState,
     retryDay,
     weekState,

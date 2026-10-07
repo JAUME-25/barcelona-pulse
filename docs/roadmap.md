@@ -320,7 +320,26 @@ honesta de lo hecho.
       categorías no cambian. No va en la URL (bloque de compartir).
     - Pruebas: 199 de backend (la regla contra el mapa comprueba también las eléctricas y una
       estación sin desglose) y 175 de la web (recuentos con y sin desglose completo, el
-      interruptor en la app). Formato de .NET y web, lint y tipos en verde.
+      interruptor en la app). Formato de .NET y web, lint y tipos en verde. En `376de78`.
+15. **Hecho** en local (7-10-2026, sin commit). Compartir y Atrás, primera parte del bloque 10
+    de la propuesta:
+    - Atrás ya no sale de la aplicación: abrir el detalle, abrir «Qué muestra y qué no» y
+      cambiar de modo añaden una entrada al historial (`pushParams`, con el motivo en
+      `history.state`); Atrás y Adelante vuelven al estado de esa URL (modo, estación, ficha y
+      momento), y el cierre con el botón vuelve atrás si la entrada era suya, para que los dos
+      caminos dejen el mismo historial. Lo que cambia a cada paso (la hora al reproducir, el
+      escenario, la cámara) sigue reemplazando la entrada.
+    - Título de la pestaña por vista: «Av. Can Marcet, 3 · Barcelona Pulse», «Qué muestra y qué
+      no · …», «Reproducir · …».
+    - «Copiar enlace» bajo el aviso de procedencia, en los tres modos y con la demo: en un
+      teléfono abre la hoja de compartir; si no, copia la URL (con la cámara) y lo dice; si el
+      navegador no deja copiar, enseña la URL en un campo para copiarla a mano.
+    - Vista previa al compartir: `og:title`, `og:description`, `og:image` (`public/og.jpg`,
+      1200 × 630, generada con `e2e/og.capture.ts` con la red real) y `theme-color`.
+    - Pendiente del bloque: filtros, distrito, búsqueda y orden en la URL.
+    - Pruebas: 177 de la web (Atrás cierra detalle, ficha y modo con el título; copiar) y una de
+      humo nueva (Atrás y Adelante con el detalle). Usado en el navegador: abrir, Atrás, título
+      y el campo de la URL cuando el navegador integrado no deja copiar.
 
 ## Siguiente
 

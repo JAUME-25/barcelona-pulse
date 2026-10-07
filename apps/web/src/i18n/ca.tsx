@@ -164,6 +164,10 @@ export const ca: Messages = {
     license: (license) => `Llicència ${license}.`,
     dataset: 'Veure el conjunt de dades',
     limits: 'Què mostra i què no',
+    share: 'Copiar l’enllaç',
+    shared: 'Enllaç copiat.',
+    shareFailed: 'El navegador no deixa copiar-lo. Copia’l d’aquí:',
+    shareUrl: 'Enllaç d’aquesta vista',
     texts: {
       'bicing-bcn': {
         name: 'Bicing, històric de l’Ajuntament de Barcelona',
