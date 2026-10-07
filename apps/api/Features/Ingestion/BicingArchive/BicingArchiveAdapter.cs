@@ -54,8 +54,9 @@ public static partial class BicingArchiveAdapter
     {
         var window = LocalDay.For(day);
         var rejected = new List<RejectedRecord>();
-        var stations = ReadStationChanges(infoArchive, window, rejected, limits, ct);
-        var observations = ReadObservations(statusArchive, window, rejected, limits, ct);
+        var notPublic = new HashSet<string>(StringComparer.Ordinal);
+        var stations = ReadStationChanges(infoArchive, window, rejected, limits, ct, notPublic);
+        var observations = ReadObservations(statusArchive, window, rejected, limits, ct, notPublic);
 
         var statusHash = Sha256(statusArchive);
         var infoHash = Sha256(infoArchive);
@@ -73,7 +74,8 @@ public static partial class BicingArchiveAdapter
     /// Aquí se reducen a los momentos en que cambian: cada cambio será una versión.
     /// </summary>
     internal static List<NormalizedStation> ReadStationChanges(
-        string archive, LocalDay window, List<RejectedRecord> rejected, ArchiveLimits limits, CancellationToken ct)
+        string archive, LocalDay window, List<RejectedRecord> rejected, ArchiveLimits limits, CancellationToken ct,
+        ISet<string>? notPublic = null)
     {
         var byStation = new Dictionary<string, List<NormalizedStation>>(StringComparer.Ordinal);
 
@@ -93,6 +95,13 @@ public static partial class BicingArchiveAdapter
             {
                 rejected.Add(new(RecordKinds.Station, id ?? $"línea {row.Line}", RejectionReasons.MissingField,
                     id is null ? "station_id" : name is null ? "name" : "lat/lon"));
+                continue;
+            }
+
+            // La estación de pruebas del operador no es pública: no se importa (ni sus observaciones).
+            if (IsOperatorTestStation(name))
+            {
+                notPublic?.Add(id);
                 continue;
             }
 
@@ -129,7 +138,8 @@ public static partial class BicingArchiveAdapter
     }
 
     internal static List<NormalizedObservation> ReadObservations(
-        string archive, LocalDay window, List<RejectedRecord> rejected, ArchiveLimits limits, CancellationToken ct)
+        string archive, LocalDay window, List<RejectedRecord> rejected, ArchiveLimits limits, CancellationToken ct,
+        IReadOnlySet<string>? notPublic = null)
     {
         var result = new List<NormalizedObservation>();
 
@@ -152,6 +162,8 @@ public static partial class BicingArchiveAdapter
                 rejected.Add(new(RecordKinds.Observation, $"línea {row.Line}", RejectionReasons.MissingField, "station_id"));
                 continue;
             }
+
+            if (notPublic?.Contains(id) == true) continue;
 
             if (!TryInstant(row["last_reported"], out var observedAt))
             {
@@ -204,6 +216,16 @@ public static partial class BicingArchiveAdapter
 
         return result;
     }
+
+    /// <summary>
+    /// La estación de pruebas que el operador publica con las demás («Estación de TESTING (no
+    /// usuarios)», en mayo de 2026 la 536): no está en la calle para el público, y en el mapa salía
+    /// siempre llena o sin dato. La migración RemoveOperatorTestStation la quitó de lo ya importado.
+    /// </summary>
+    internal static bool IsOperatorTestStation(string name) => OperatorTestStation().IsMatch(name);
+
+    [GeneratedRegex(@"\bTESTING\b", RegexOptions.IgnoreCase)]
+    private static partial Regex OperatorTestStation();
 
     /// <summary>«02-Eixample/05-el Fort Pienc» → («Eixample», «el Fort Pienc»).</summary>
     internal static (string? District, string? Neighbourhood) ParseArea(string? crossStreet)

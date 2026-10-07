@@ -95,6 +95,25 @@ public sealed class BicingArchiveAdapterTests
     }
 
     [Fact]
+    public void The_operator_test_station_is_left_out_with_its_observations()
+    {
+        var batch = BicingFixtures.Read();
+
+        Assert.DoesNotContain(batch.Stations, s => s.SourceStationId == "6");
+        Assert.DoesNotContain(batch.Observations, o => o.SourceStationId == "6");
+        // No es un rechazo: no se cuenta como fallo de la ingesta.
+        Assert.DoesNotContain(batch.Rejected, r => r.RecordRef == "6" || r.RecordRef.StartsWith("6@", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("Estación de TESTING (no usuarios)", true)]
+    [InlineData("estación de testing", true)]
+    [InlineData("C/ CONTESTING, 3", false)]
+    [InlineData("PG. DE GRÀCIA, 30", false)]
+    public void Only_the_operator_test_station_is_recognised(string name, bool isTest) =>
+        Assert.Equal(isTest, BicingArchiveAdapter.IsOperatorTestStation(name));
+
+    [Fact]
     public void Swapped_files_are_detected_by_their_columns()
     {
         var ex = Assert.Throws<InvalidDataException>(() => BicingArchiveAdapter.Read(

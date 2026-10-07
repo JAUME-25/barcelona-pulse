@@ -1,0 +1,59 @@
+using BarcelonaPulse.Api.Features.Ingestion;
+using BarcelonaPulse.Api.Features.Sources;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.Extensions.Logging.Abstractions;
+using static BarcelonaPulse.Api.Tests.TestData;
+
+namespace BarcelonaPulse.Api.Tests.Integration;
+
+/// <summary>
+/// La estación de pruebas del operador ya importada se quita con la migración
+/// RemoveOperatorTestStation, sin tocar las demás y descontando sus observaciones del recuento.
+/// </summary>
+public sealed class OperatorTestStationTests(PostgisDatabase database) : IClassFixture<PostgisDatabase>
+{
+    private const string MigrationBefore = "20261006082342_StudyAreas";
+
+    [Fact]
+    public async Task The_migration_removes_the_operator_test_station_and_its_observations()
+    {
+        database.RequireAvailable();
+        var ct = TestContext.Current.CancellationToken;
+        await using (var db = database.CreateContext())
+        {
+            await db.GetService<IMigrator>().MigrateAsync(MigrationBefore, ct);
+        }
+
+        // Como estaba en mayo de 2026: la 536 entre las demás, con sus observaciones.
+        var source = Source("bicing-bcn", SourceKind.Observed);
+        await using (var db = database.CreateContext())
+        {
+            var ingestor = new StationIngestor(db, new FixedClock(T0.AddDays(1)), NullLogger<StationIngestor>.Instance);
+            await ingestor.IngestAsync(Batch(
+                [Station("1"), Station("536", name: "Estación de TESTING (no usuarios)", capacity: 2)],
+                [
+                    Observation("1", T0), Observation("1", T0.AddMinutes(5)),
+                    Observation("536", T0, bikes: 2, docks: 0), Observation("536", T0.AddMinutes(5), bikes: 2, docks: 0),
+                    Observation("536", T0.AddMinutes(10), bikes: 2, docks: 0),
+                ],
+                source: source), "test", ct);
+            // Sin seguimiento: la ingesta lleva el recuento con ExecuteUpdate, que no pasa por el contexto.
+            Assert.Equal(5, (await db.DataSources.AsNoTracking().SingleAsync(s => s.Id == "bicing-bcn", ct)).ObservationCount);
+        }
+
+        await using (var db = database.CreateContext())
+        {
+            await db.Database.MigrateAsync(ct);
+        }
+
+        await using (var db = database.CreateContext())
+        {
+            Assert.Equal(["1"], await db.Stations.Where(s => s.SourceId == "bicing-bcn").Select(s => s.SourceStationId).ToListAsync(ct));
+            Assert.False(await db.StationVersions.AnyAsync(v => v.Name.Contains("TESTING"), ct));
+            Assert.Equal(2, await db.StationObservations.CountAsync(ct));
+            Assert.Equal(2, (await db.DataSources.SingleAsync(s => s.Id == "bicing-bcn", ct)).ObservationCount);
+        }
+    }
+}

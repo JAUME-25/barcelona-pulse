@@ -43,6 +43,7 @@ const statusRows = [
   status(2, 0, 0, 0, 0, S1 - 100, 'NOT_IN_SERVICE', 0, 0, S1),
   status(3, 5, 3, 2, 25, S1 - 20, 'IN_SERVICE', 1, 1, S1),
   status(999, 4, 4, 0, 10, S1 - 30, 'IN_SERVICE', 1, 1, S1), // estación desconocida
+  status(6, 2, 2, 0, 0, S1 - 40, 'IN_SERVICE', 1, 1, S1), // la de pruebas del operador: no se importa
   // S2: la 1 y la 2 repiten observación (duplicados); la 3 repite instante con otro valor (conflicto).
   status(1, 11, 11, 0, 28, S1 - 50, 'IN_SERVICE', 1, 1, S2),
   status(2, 0, 0, 0, 0, S1 - 100, 'NOT_IN_SERVICE', 0, 0, S2),
@@ -62,6 +63,8 @@ const infoRows = [S0, S1, S2, S3, S4].flatMap((snapshot) => [
   info(2, 'C/ ROGER DE FLOR, 126', 41.3954877, 2.1771985, '02-Eixample/05-el Fort Pienc', 28, snapshot),
   info(3, 'PG. DE GRÀCIA, 30', 41.3912, 2.165, '02-Eixample/07-la Dreta de l\'Eixample', snapshot >= S3 ? 33 : 30, snapshot),
   info(4, 'C/ SENSE BARRI, 1', 41.38, 2.17, 'NA', 'NA', snapshot),
+  // La estación de pruebas que el operador publica con las demás (en mayo de 2026, la 536).
+  info(6, 'Estación de TESTING (no usuarios)', 41.3476951, 2.11948, 'NA', 2, snapshot),
   ...(snapshot === S3 ? [info(5, 'SENSE COORDENADES', 'NA', 'NA', 'NA', 20, snapshot)] : []),
 ]);
 

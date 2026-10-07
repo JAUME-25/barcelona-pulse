@@ -97,6 +97,11 @@ Pendiente de comprobar con un token válido: formato real, versión GBFS, si tra
   instantáneas sucesivas. Se conserva la primera y se cuentan.
 - Los .7z son sólidos (LZMA); SharpCompress 1.0 los lee en streaming: los dos de agosto (256 y
   870 MB descomprimidos) en 1–2 s cada uno, con menos de 40 MB de memoria.
+- Entre las estaciones viene una de pruebas del operador: «Estación de TESTING (no usuarios)»
+  (la 536 en mayo de 2026, capacidad 2, Rafael Barradas 5), con muy pocas observaciones. No es
+  pública: desde el 7-10-2026 no se importa (`BicingArchiveAdapter.IsOperatorTestStation`, ni
+  ella ni sus observaciones, sin contarlas como rechazos) y la migración
+  `RemoveOperatorTestStation` la quitó de lo ya importado (en local, 9 observaciones).
 
 ## GBFS del operador (candidato aparte)
 
