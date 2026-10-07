@@ -16,6 +16,8 @@ import './balance.css';
 interface BarRow {
   key: string;
   name: string;
+  /** El idioma del nombre si no es el de la interfaz (los distritos van en catalán). */
+  lang?: string;
   stations: number;
   net: number;
   perStation: number;
@@ -32,7 +34,13 @@ function Bars({ rows }: { rows: readonly BarRow[] }) {
         const width = max === 0 ? 0 : (Math.abs(r.perStation) / max) * 50;
         return (
           <li key={r.key}>
-            <span className="balance-bars__name">{r.name}</span>
+            <span
+              className="balance-bars__name"
+              lang={r.lang}
+              translate={r.lang === undefined ? undefined : 'no'}
+            >
+              {r.name}
+            </span>
             <span className="balance-bars__track" aria-hidden="true">
               <span
                 className={`balance-bars__bar balance-bars__bar--${kind}`}
@@ -102,9 +110,15 @@ function Row({
         }}
       >
         <span className="station-list__text">
-          <span className="station-list__name">{stationName(station)}</span>
+          <span className="station-list__name" lang="ca" translate="no">
+            {stationName(station)}
+          </span>
           <span className="station-list__summary">
-            {place !== null && `${place} · `}
+            {place !== null && (
+              <span lang="ca" translate="no">
+                {place} ·{' '}
+              </span>
+            )}
             <span className="balance__arrow">
               {m.place(row.before ?? 0, row.after ?? 0, station.capacity)}
             </span>
@@ -247,7 +261,7 @@ export function BalancePanel({
           {balance.districts.length > 0 && (
             <>
               <h3 className="balance__h">{m.byDistrict}</h3>
-              <Bars rows={balance.districts} />
+              <Bars rows={balance.districts.map((d) => ({ ...d, lang: 'ca' }))} />
             </>
           )}
           {balance.altitudeBands.length > 0 && (

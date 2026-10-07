@@ -99,10 +99,19 @@ const StationRow = memo(function StationRow({
       >
         <OctagonGlyph category={category} size={22} />
         <span className="station-list__text">
-          <span className="station-list__name">{name}</span>
+          {/* Nombres propios en catalán, tal como los publica la fuente: no se traducen (y el
+              detector de idioma del navegador no debe tomarlos por el idioma de la página). */}
+          <span className="station-list__name" lang="ca" translate="no">
+            {name}
+          </span>
           <span className="station-list__summary">
             {summaryText}
-            {place !== null && <span className="station-list__place"> · {place}</span>}
+            {place !== null && (
+              <span className="station-list__place" lang="ca" translate="no">
+                {' '}
+                · {place}
+              </span>
+            )}
             {bikes !== null && (
               <span className="visually-hidden">
                 , {m.srBikes(bikes)}

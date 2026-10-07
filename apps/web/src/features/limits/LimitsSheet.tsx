@@ -306,7 +306,9 @@ function Silent({
             {g.items.map((s) => {
               const content = (
                 <>
-                  <span className="silent-group__name">{stationName(s.station)}</span>
+                  <span className="silent-group__name" lang="ca" translate="no">
+                    {stationName(s.station)}
+                  </span>
                   {/* Sin ningún dato, el título del grupo ya lo dice todo. */}
                   {s.silence !== 'never' && (
                     <span className="silent-group__why">{silenceLabel(s, response.at)}</span>

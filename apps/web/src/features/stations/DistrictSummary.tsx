@@ -81,6 +81,9 @@ export function DistrictTable({ rows, active, onPick }: DistrictProps) {
                   type="button"
                   className="district-table__pick"
                   aria-pressed={current}
+                  // Los distritos van en catalán, como los publica la fuente; «Toda la ciudad», no.
+                  lang={key === null ? undefined : 'ca'}
+                  translate={key === null ? undefined : 'no'}
                   onClick={() => {
                     onPick(key);
                   }}

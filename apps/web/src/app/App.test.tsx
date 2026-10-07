@@ -361,7 +361,11 @@ describe('App', () => {
     await user.click(await screen.findByRole('button', { name: 'Marcador Pl. de Lesseps' }));
 
     const detail = screen.getByRole('article');
-    expect(within(detail).getByRole('heading', { name: 'Pl. de Lesseps' })).toBeTruthy();
+    const heading = within(detail).getByRole('heading', { name: 'Pl. de Lesseps' });
+    expect(heading).toBeTruthy();
+    // Los nombres propios van en catalán y no se traducen (ni confunden al detector del navegador).
+    expect(heading.getAttribute('lang')).toBe('ca');
+    expect(heading.getAttribute('translate')).toBe('no');
     // La hora va en un <time> dentro de la frase: se comprueba el texto completo.
     expect(detail.textContent).toMatch(/La última observación es de las 07:45, 2 h 15 min antes/);
     expect(within(detail).queryByText('Bicis disponibles')).toBeNull();

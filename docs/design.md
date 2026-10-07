@@ -314,6 +314,11 @@ cabecera, una fila «Idioma» como la de la fuente o un botón sobre el mapa): *
 la cabecera**, a la derecha y en su fila bajo el nombre en los tres idiomas. En la misma línea
 que el título partía «Barcelona Pulse» a 320 px.
 
+Los nombres de estación, barrio y distrito van en catalán, como los publica la fuente, en los
+tres idiomas: llevan `lang="ca"` y `translate="no"` (8-10-2026) para que un traductor automático
+no los toque y para que el detector de idioma del navegador no tome la página por otra cosa
+(Chrome la daba por noruega: 548 nombres catalanes pesan más que el texto en castellano).
+
 - El idioma va en la URL (`?idioma=ca`) y en el `lang` de la página. Sin parámetro, el primero
   del navegador que tenga la aplicación; si no tiene ninguno, inglés.
 - Al cambiarlo, la aplicación se vuelve a montar: lo que va en la URL (modo, día, hora, estación,

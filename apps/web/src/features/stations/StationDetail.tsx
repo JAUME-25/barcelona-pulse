@@ -191,11 +191,19 @@ export function StationDetail({
         {m.back}
       </button>
 
-      <h2 id="station-detail-name" className="station-detail__name" tabIndex={-1} ref={headingRef}>
+      {/* Nombres propios en catalán: no se traducen. */}
+      <h2
+        id="station-detail-name"
+        className="station-detail__name"
+        tabIndex={-1}
+        ref={headingRef}
+        lang="ca"
+        translate="no"
+      >
         {stationName(station)}
       </h2>
       {station.neighbourhood !== null && (
-        <p className="station-detail__area">
+        <p className="station-detail__area" lang="ca" translate="no">
           {station.neighbourhood}
           {station.district !== null && `, ${districtName(station.district)}`}
         </p>

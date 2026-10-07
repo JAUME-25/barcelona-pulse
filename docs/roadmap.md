@@ -579,6 +579,13 @@ honesta de lo hecho.
       `e2e/contrato.capture.ts` (página entera en escritorio; 375 y 320 px en los tres idiomas
       sin desbordes). Tipos, lint y formato en verde. De paso, `movil.capture.ts` admite que a
       320 px el mapa empiece a 302 px: con cuatro modos el selector pasa a dos filas.
+29. **Hecho** en local (8-10-2026). Chrome ofrecía traducir la página «del noruego»: su detector
+    no se fía de `lang="es"` y los 548 nombres catalanes de estación y barrio pesan más que el
+    texto en castellano. Los nombres de estación, barrio y distrito (lista, ficha, balance,
+    límites y tabla de distritos) llevan `lang="ca"` y `translate="no"`: son nombres propios de
+    la fuente y no se traducen. Si Chrome sigue ofreciéndolo, queda `<meta name="google"
+    content="notranslate">` (lo decide Jaume en su Chrome con `chrome://translate-internals`).
+    Pruebas: 223 de la web (la ficha lleva `lang` y `translate`), humo 24 de 24.
 
 ## Siguiente
 
