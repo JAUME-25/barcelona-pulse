@@ -84,6 +84,9 @@ Jaume ejecuta los comandos en Forge y pega la salida.
   versión de los datos de su rango (`Infrastructure/DataVersion.cs`, ADR 0014), y la caché de
   la línea temporal usa la misma versión. Si una consulta nueva depende de datos de otros días,
   su versión tiene que cubrirlos, o servirá un 304 (o una caché) viejo. «Ahora» no se valida.
+  La versión lleva la compilación (`DataVersion.Build`) y el periodo de una ingesta es el de sus
+  filas nuevas: una observación de 2025 repetida en cada archivo no lo estira (si lo hiciera,
+  cada ingesta tocaría todos los rangos).
 - Un `MAX(observed_at)` sobre el join de observaciones y estaciones recorre todo el histórico
   (~100 ms con una semana): usa `StationQueries.LatestObservationAsync`, que va por estación.
 - «Reproducir» pide fotogramas de una hora (`/api/sources/{id}/frames`, ADR 0010), no

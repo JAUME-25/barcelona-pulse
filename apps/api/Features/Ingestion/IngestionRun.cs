@@ -22,7 +22,11 @@ public sealed class IngestionRun
     public DateTimeOffset? FinishedAt { get; set; }
     public IngestionStatus Status { get; set; }
 
-    /// <summary>Rango de instantes observados en la entrada aceptada.</summary>
+    /// <summary>
+    /// Rango de instantes de las observaciones nuevas que guardó esta ingesta. Las repetidas y
+    /// las que estaban en conflicto no cuentan: no cambian nada guardado, y una estación que
+    /// repite en cada archivo un dato de 2025 no lo estira (ADR 0014). Nulo si no guardó ninguna.
+    /// </summary>
     public DateTimeOffset? PeriodFrom { get; set; }
     public DateTimeOffset? PeriodTo { get; set; }
 

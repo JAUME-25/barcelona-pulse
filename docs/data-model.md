@@ -11,7 +11,7 @@ Esquema en `apps/api/Infrastructure/Migrations`.
 | `stations` | Identidad estable de una estación dentro de su fuente. | `(source_id, source_station_id)` |
 | `station_versions` | Nombre, dirección, distrito, barrio, ubicación (`geometry(Point,4326)`) y capacidad durante un intervalo. | una vigente por estación |
 | `station_observations` | Estado publicado en un instante: estado, bicis (total, mecánicas, eléctricas), anclajes libres, deshabilitados, si presta y si admite devoluciones, y marcas de calidad. | `(station_id, observed_at)` |
-| `ingestion_runs` | Cada ingesta: fuente, adaptador y versión, entrada y sha256, periodo observado y periodo que dice cubrir (`covered_from`, `covered_to`), recuentos (nuevas, duplicadas, en conflicto, rechazadas), resultado y, si sus días se quitaron, cuándo (`purged_at`). | |
+| `ingestion_runs` | Cada ingesta: fuente, adaptador y versión, entrada y sha256, periodo de las observaciones nuevas que guardó (`period_from`, `period_to`; nulo si no guardó ninguna: las repetidas no cuentan, ADR 0014) y periodo que dice cubrir (`covered_from`, `covered_to`), recuentos (nuevas, duplicadas, en conflicto, rechazadas), resultado y, si sus días se quitaron, cuándo (`purged_at`). | |
 | `ingestion_rejections` | Registros rechazados con su motivo (hasta 1 000 por ingesta; el total va en `ingestion_runs`). | |
 | `study_areas` | Áreas de estudio de la cobertura en EPSG:25831: los 10 distritos oficiales y Barcelona como su unión, con su superficie, procedencia y sha256 del archivo. | `id` (`barcelona`, `districte-01`…) |
 

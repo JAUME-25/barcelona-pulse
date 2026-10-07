@@ -12,6 +12,15 @@ namespace BarcelonaPulse.Api.Infrastructure;
 public static class DataVersion
 {
     /// <summary>
+    /// La compilación: los primeros caracteres del MVID del ensamblado, que con compilación
+    /// determinista cambia cuando cambia el código y no al reiniciar. Va en la versión para que,
+    /// tras un despliegue que cambie un campo o una regla, el navegador no reciba un 304 y siga
+    /// con el cuerpo que guardó.
+    /// </summary>
+    public static readonly string Build =
+        typeof(DataVersion).Assembly.ManifestModule.ModuleVersionId.ToString("N")[..8];
+
+    /// <summary>
     /// Versión del rango [from, to], los dos incluidos (el último paso, no el primero del
     /// siguiente). Cuentan las observaciones desde <c>from</c> menos la tolerancia de la fuente:
     /// son las que deciden el estado en <c>from</c>. Una ingesta toca el rango si lo hace el
@@ -36,7 +45,7 @@ public static class DataVersion
         }
 
         var lastRun = await runs.MaxAsync(r => (long?)r.Id, ct) ?? 0;
-        return $"{source.Id}:{lastRun}:{source.PurgeGeneration}";
+        return $"{source.Id}:{lastRun}:{source.PurgeGeneration}:{Build}";
     }
 
     /// <summary>Versión de todos los datos de la fuente (el patrón de una estación mira todos los días).</summary>

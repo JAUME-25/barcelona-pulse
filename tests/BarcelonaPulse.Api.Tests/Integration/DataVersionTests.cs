@@ -58,6 +58,9 @@ public sealed class DataVersionTests(PostgisDatabase database) : IClassFixture<P
         var day23 = await VersionAsync(source, 23);
         var all = await VersionAsync(source, null);
         Assert.NotEqual(day19, day21);
+        // La compilación va al final: un despliegue cambia todas las versiones.
+        Assert.EndsWith($":{DataVersion.Build}", day19);
+        Assert.Equal(8, DataVersion.Build.Length);
 
         // Entra el 20: cambian el 20 y «todo». El 19 y el 23 no. El 21 sí: sus primeros minutos
         // se deciden con las últimas observaciones del 20 (la tolerancia mira hacia atrás).
@@ -108,6 +111,65 @@ public sealed class DataVersionTests(PostgisDatabase database) : IClassFixture<P
     }
 
     [Fact]
+    public async Task A_repeated_old_observation_does_not_stretch_the_version_to_other_days()
+    {
+        database.RequireAvailable();
+        const string source = "version-old";
+        var ct = TestContext.Current.CancellationToken;
+        // Como la estación 366 del histórico: cada archivo repite un last_reported de junio de 2025.
+        var old = new DateTimeOffset(2025, 6, 12, 8, 54, 16, TimeSpan.Zero);
+        async Task IngestWithOldAsync(int day)
+        {
+            var window = LocalDay.For(Aug(day));
+            var batch = Batch(
+                [Station("s1"), Station("s2")],
+                [Observation("s1", window.StartUtc.AddHours(10)), Observation("s2", old)],
+                source: Source(source));
+            await using var db = database.CreateContext();
+            var ingestor = new StationIngestor(db, new FixedClock(Now), NullLogger<StationIngestor>.Instance);
+            await ingestor.IngestAsync(
+                batch with { Covers = new CoveredPeriod(window.StartUtc, window.EndUtc) }, "test", ct);
+        }
+
+        await IngestWithOldAsync(19);
+        var day19 = await VersionAsync(source, 19);
+
+        // El 21 trae la misma observación de 2025, ya guardada: no cambia nada del 19. Antes, el
+        // periodo de la ingesta empezaba en 2025 y cualquier rango posterior quedaba «tocado».
+        await IngestWithOldAsync(21);
+        Assert.Equal(day19, await VersionAsync(source, 19));
+        Assert.NotEqual(day19, await VersionAsync(source, 21));
+
+        // El periodo de cada ingesta es el de sus observaciones nuevas: la primera guardó la de
+        // 2025 (y sí cambia todo lo posterior); la segunda, solo la del 21.
+        await using (var db = database.CreateContext())
+        {
+            var runs = await db.IngestionRuns.AsNoTracking()
+                .Where(r => r.SourceId == source).OrderBy(r => r.Id).ToListAsync(ct);
+            Assert.Equal(2, runs.Count);
+            Assert.Equal(old, runs[0].PeriodFrom);
+            Assert.Equal(LocalDay.For(Aug(21)).StartUtc.AddHours(10), runs[1].PeriodFrom);
+            Assert.Equal(runs[1].PeriodFrom, runs[1].PeriodTo);
+        }
+
+        // Reimportar el 21 sin nada nuevo: la ingesta no tiene periodo, pero toca el 21 por lo que
+        // dice cubrir, y sigue sin tocar el 19.
+        var day21 = await VersionAsync(source, 21);
+        await IngestWithOldAsync(21);
+        Assert.NotEqual(day21, await VersionAsync(source, 21));
+        Assert.Equal(day19, await VersionAsync(source, 19));
+        await using (var db = database.CreateContext())
+        {
+            var last = await db.IngestionRuns.AsNoTracking()
+                .Where(r => r.SourceId == source).OrderByDescending(r => r.Id).FirstAsync(ct);
+            Assert.Null(last.PeriodFrom);
+            Assert.Null(last.PeriodTo);
+            Assert.Equal(0, last.ObservationsAccepted);
+            Assert.Equal(2, last.ObservationsDuplicate);
+        }
+    }
+
+    [Fact]
     public async Task Responses_carry_an_etag_and_answer_304_while_the_version_holds()
     {
         database.RequireAvailable();
@@ -133,6 +195,7 @@ public sealed class DataVersionTests(PostgisDatabase database) : IClassFixture<P
             var etag = first.Headers.ETag;
             Assert.NotNull(etag);
             Assert.True(etag.IsWeak);
+            Assert.Contains(DataVersion.Build, etag.Tag);
             Assert.True(first.Headers.CacheControl is { Private: true, NoCache: true });
 
             using var again = new HttpRequestMessage(HttpMethod.Get, url);

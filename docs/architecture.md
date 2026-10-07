@@ -93,7 +93,8 @@ Puntos de entrada, por línea de comandos (no hay endpoint HTTP de importación)
 - Validadores (ADR 0014): el estado en un instante pedido, el detalle y el patrón de una
   estación, la línea temporal y los fotogramas llevan un ETag débil con la versión de los datos
   de su rango y `Cache-Control: private, no-cache`; con `If-None-Match` responden 304 sin
-  calcular nada. «Ahora» de una fuente observada no se valida.
+  calcular nada. «Ahora» de una fuente observada no se valida. La versión lleva también la
+  compilación (`DataVersion.Build`): un despliegue invalida lo que guardó el navegador.
 
 ## Seguridad y operación
 

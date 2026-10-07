@@ -397,6 +397,19 @@ honesta de lo hecho.
       clave; `shared/url.test.ts`), humo 20/20 y `e2e/cerca.capture.ts` con el mapa real
       (ubicación concedida y denegada) en escritorio y 375 px. Usado en el navegador en los tres
       idiomas a 1440, 375 y 320 px.
+20. **Hecho** en local (7-10-2026, sin commit). La versión por rango, que no acotaba, y la
+    compilación en el ETag (ADR 0014, «Corrección»):
+    - Las 28 ingestas de mayo tenían `period_from` el 12-6-2025 (la estación 366 repite ese
+      `last_reported` en cada archivo y el periodo se calculaba con todo el lote): cualquier
+      rango quedaba «tocado» por la última ingesta y cada importación seguía invalidando todas
+      las semanas y todos los ETag. Ahora el periodo es el de las filas que la sentencia insertó;
+      sin filas nuevas, nulo. Reimportar los días ya importados (idempotente) deja sus periodos
+      en nulo y desde entonces acotan.
+    - La versión acaba en la compilación (`DataVersion.Build`, MVID del ensamblado): tras un
+      despliegue, el navegador no recibe un 304 con un cuerpo viejo.
+    - Pruebas: una nueva contra PostGIS (la observación de 2025 repetida no cambia la versión
+      del otro día; el periodo de cada ingesta; reimportar sin nada nuevo) y la compilación en
+      la versión y en el ETag. `ingest` dice «sin observaciones nuevas» cuando no guarda nada.
 
 ## Siguiente
 

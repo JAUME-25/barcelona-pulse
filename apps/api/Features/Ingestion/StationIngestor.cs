@@ -467,6 +467,8 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
 
         var inserted = 0;
         var conflictsWithStored = 0;
+        DateTimeOffset? periodFrom = null;
+        DateTimeOffset? periodTo = null;
         var connection = (NpgsqlConnection)db.Database.GetDbConnection();
         foreach (var chunk in rows.Values.Chunk(InsertChunkSize))
         {
@@ -476,16 +478,24 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
             await reader.ReadAsync(ct);
             inserted += (int)reader.GetInt64(0);
             conflictsWithStored += (int)reader.GetInt64(1);
+            if (!reader.IsDBNull(2))
+            {
+                var from = reader.GetFieldValue<DateTimeOffset>(2);
+                var to = reader.GetFieldValue<DateTimeOffset>(3);
+                if (periodFrom is null || from < periodFrom) periodFrom = from;
+                if (periodTo is null || to > periodTo) periodTo = to;
+            }
         }
 
         run.ObservationsAccepted = inserted;
         run.ObservationsConflicting = conflictsInBatch + conflictsWithStored;
         run.ObservationsDuplicate = duplicatesInBatch + (rows.Count - inserted - conflictsWithStored);
-        if (rows.Count > 0)
-        {
-            run.PeriodFrom = rows.Values.Min(r => r.Observation.ObservedAt);
-            run.PeriodTo = rows.Values.Max(r => r.Observation.ObservedAt);
-        }
+        // El periodo es el de las observaciones nuevas, no el de todo el lote: el histórico repite
+        // en cada archivo el `last_reported` de una estación que no informa desde 2025, y con él
+        // todas las ingestas «tocaban» cualquier rango y la versión de los datos (ADR 0014) no
+        // acotaba nada. Lo repetido o en conflicto no cambia nada guardado.
+        run.PeriodFrom = periodFrom;
+        run.PeriodTo = periodTo;
     }
 
     // ON CONFLICT DO NOTHING: si la clave ya existe se conserva la fila guardada. La segunda
@@ -509,7 +519,7 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
                    coalesce(string_to_array(nullif(i.flags, ''), ','), ARRAY[]::text[])
             FROM input i
             ON CONFLICT (station_id, observed_at) DO NOTHING
-            RETURNING 1
+            RETURNING observed_at
         )
         SELECT
             (SELECT count(*) FROM inserted),
@@ -524,7 +534,9 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
                 OR o.bikes_disabled IS DISTINCT FROM i.bikes_disabled
                 OR o.docks_disabled IS DISTINCT FROM i.docks_disabled
                 OR o.is_renting IS DISTINCT FROM i.can_rent
-                OR o.is_returning IS DISTINCT FROM i.can_return)
+                OR o.is_returning IS DISTINCT FROM i.can_return),
+            (SELECT min(observed_at) FROM inserted),
+            (SELECT max(observed_at) FROM inserted)
         """;
 
     private static NpgsqlParameter[] BuildParameters(ObservationRow[] chunk, IngestionRun run, DateTimeOffset now)

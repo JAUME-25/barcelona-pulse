@@ -50,3 +50,22 @@ de fotogramas, comprimidos) y la API los volvía a calcular.
 - Si una fuente de tiempo real importa cada pocos minutos, la versión del día en curso cambia a
   ese ritmo y la de los días anteriores no: es lo que hace falta para que la caché y los ETag
   sigan sirviendo.
+
+## Corrección del 7 de octubre de 2026
+
+- **El periodo de una ingesta es el de sus observaciones nuevas.** Se calculaba con todas las
+  filas del lote, repetidas incluidas, y el histórico repite en cada archivo el `last_reported`
+  de una estación que no informa desde junio de 2025: las 28 ingestas de mayo tenían el mismo
+  `period_from` (12-6-2025, comprobado en la base local), cualquier rango quedaba «tocado» por la
+  última ingesta y la versión por rango no acotaba nada. Ahora `period_from` y `period_to` son el
+  mínimo y el máximo de las filas que la sentencia insertó (`RETURNING observed_at`); una ingesta
+  sin filas nuevas no tiene periodo y toca solo lo que dice cubrir. La primera ingesta que guardó
+  el dato de 2025 sí cambia todo lo posterior a él, que es lo que pasó. Las ingestas anteriores a
+  la corrección conservan su periodo: reimportar los días (idempotente) lo deja en nulo, porque
+  no guardan nada nuevo, y desde entonces acotan.
+- **La versión lleva la compilación.** Tras un despliegue que cambie un campo o una regla, el
+  navegador revalidaba, recibía 304 y seguía con el cuerpo viejo. La versión acaba en los ocho
+  primeros caracteres del MVID del ensamblado (`DataVersion.Build`): con compilación determinista
+  cambia cuando cambia el código, no al reiniciar. El ETag queda
+  `W/"stations:<instante>:<fuente>:<ingesta>:<purgas>:<compilación>"`, y la caché de la línea
+  temporal (en memoria, del proceso) lo lleva sin que importe.

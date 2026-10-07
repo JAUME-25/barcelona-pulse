@@ -294,10 +294,15 @@ public static class CommandLine
         return result;
     }
 
+    private static string FormatPeriod(IngestionRun run) =>
+        run.PeriodFrom is { } from && run.PeriodTo is { } to
+            ? $"{from:O} → {to:O} (observaciones nuevas)"
+            : "sin observaciones nuevas";
+
     private static void PrintSummary(IngestionRun run) => Console.WriteLine($"""
         Ingesta {run.Id} ({run.Adapter} v{run.AdapterVersion}) de '{run.SourceId}': {SnakeCaseEnum<IngestionStatus>.Name(run.Status)}
           Entrada:       {run.InputRef}
-          Periodo:       {run.PeriodFrom:O} → {run.PeriodTo:O}
+          Periodo:       {FormatPeriod(run)}
           Estaciones:    {run.StationsReceived} recibidas, {run.StationsRejected} rechazadas, {run.StationVersionsCreated} versiones nuevas
           Observaciones: {run.ObservationsReceived} recibidas, {run.ObservationsAccepted} nuevas, {run.ObservationsDuplicate} ya existentes, {run.ObservationsConflicting} en conflicto, {run.ObservationsRejected} rechazadas
         """);
