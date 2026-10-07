@@ -425,8 +425,9 @@ honesta de lo hecho.
       medir si `work_mem` explicaba los 3,5–4,2 s por semana de producción. No: con 4 MB el plan
       recorre la tabla entera (650 MB por semana) en paralelo; con 64 o 256 MB cambia a un plan
       sin paralelismo y tarda más; `random_page_cost = 1.1`, igual. El BRIN (120 kB) deja leer
-      solo las páginas de la semana: en local, de 820 a 725 ms; en producción, con el disco como
-      cuello de botella, debería notarse más (medir tras desplegar).
+      solo las páginas de la semana: en local, de 820 a 725 ms; en producción, medido tras el
+      despliegue del 7-10-2026 con el precalentamiento, de 3 500–4 200 ms por semana a
+      2 805–2 955 (un 20–30 % menos; el disco del VPS sigue mandando).
     - Los dos endpoints declaran el 503 en OpenAPI; `schema.d.ts` regenerado.
     - Pruebas: unitarias del paso (espera, rendición, doble liberación, `Retry-After`) y una
       contra PostGIS con la API: el patrón responde 503 con `Retry-After` mientras los dos huecos

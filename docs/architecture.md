@@ -128,10 +128,12 @@ Puntos de entrada, por línea de comandos (no hay endpoint HTTP de importación)
 - Índice BRIN sobre `station_observations(observed_at)` (migración `ObservedAtBrin`, 120 kB para
   768 MB): la línea temporal de una semana leía la tabla entera (650 MB, medido el 7-10-2026 con
   4 semanas en local) y ahora solo las páginas de esa semana; en local, el recorrido pasa de 130
-  a 55 ms por proceso y la semana de 820 a 725 ms. En producción, donde el disco manda, el ahorro
-  de lectura debería notarse más: pendiente de medir tras desplegar. Subir `work_mem` (4 → 64 o
-  256 MB) no ayuda: cambia el plan a uno sin paralelismo y tarda más; `random_page_cost = 1.1`
-  tampoco (plan por el índice único, 2,5 s).
+  a 55 ms por proceso y la semana de 820 a 725 ms. En producción, medido con el precalentamiento
+  tras el despliegue del 7-10-2026: las cuatro semanas de mayo en 2 955, 2 911, 2 805 y 2 815 ms,
+  frente a los 3 500–4 200 de antes (un 20–30 % menos; el disco del VPS sigue mandando). Subir
+  `work_mem` (4 → 64 o 256 MB) no ayuda: cambia el plan a uno sin paralelismo y tarda más;
+  `random_page_cost = 1.1` tampoco (plan por el índice único, 2,5 s). Para bajar de ahí hace
+  falta la tabla de resumen por hora, no otro índice.
   La clave de la caché lleva la versión de los datos del rango (ADR 0014): importar un día solo
   invalida las semanas que lo tocan; una purga, todas.
   Cada cálculo tiene 20 s de tope y va sin JIT, que con la estimación del `generate_series` se
