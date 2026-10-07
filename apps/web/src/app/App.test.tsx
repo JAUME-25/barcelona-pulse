@@ -8,10 +8,12 @@ import type {
   FramesResponse,
   IngestionsResponse,
   StationItem,
+  StationVersionItem,
   StudyAreaItem,
   TimelinePoint,
   TimelineResponse,
 } from '../api/client';
+import { forgetStationDetails } from '../features/stations/stationDetails';
 import {
   demoSource,
   frameStation,
@@ -105,9 +107,44 @@ function emptyPattern(url: URL): Response {
   });
 }
 
+/** Una versión de atributos tal como la devuelve el detalle de la estación. */
+function versionOf(
+  station: StationItem,
+  extra: Partial<StationVersionItem> = {},
+): StationVersionItem {
+  return {
+    name: station.name,
+    address: station.address,
+    district: station.district,
+    neighbourhood: station.neighbourhood,
+    longitude: station.longitude,
+    latitude: station.latitude,
+    capacity: station.capacity,
+    validFrom: null,
+    validTo: null,
+    firstSeenAt: '2026-03-10T06:00:00+00:00',
+    ...extra,
+  };
+}
+
+/** El detalle de una estación con una sola versión: sin cambios en los días importados. */
+function singleVersionDetail(url: URL): Response {
+  const id = Number(url.pathname.split('/')[3]);
+  const station = stationFixture({ id });
+  return json({
+    source: stationsResponse([]).source,
+    at: url.searchParams.get('at') ?? '',
+    atBasis: 'requested',
+    toleranceMinutes: 30,
+    station,
+    versions: [versionOf(station)],
+  });
+}
+
 function mockApi(
   handler: (path: string, url: URL) => Response,
   pattern: (url: URL) => Response = emptyPattern,
+  detail: (url: URL) => Response = singleVersionDetail,
 ) {
   requests.length = 0;
   vi.stubGlobal(
@@ -116,6 +153,7 @@ function mockApi(
       const url = new URL(input.url);
       requests.push(url);
       if (url.pathname.endsWith('/pattern')) return Promise.resolve(pattern(url));
+      if (/^\/api\/stations\/\d+$/.test(url.pathname)) return Promise.resolve(detail(url));
       return Promise.resolve(handler(url.pathname, url));
     }),
   );
@@ -282,6 +320,7 @@ function renderApp() {
 
 beforeEach(() => {
   window.history.replaceState(null, '', '/');
+  forgetStationDetails();
 });
 
 afterEach(() => {
@@ -958,6 +997,120 @@ describe('App', () => {
     expect(params.get('dia')).toBe('2026-08-20');
     expect(params.get('hora')).toBe('18:05');
     now.mockRestore();
+  });
+
+  it('la ficha dice desde cuándo se conoce la estación y qué cambió en los días importados', async () => {
+    const catalunya = stationFixture({
+      id: 11,
+      sourceStationId: 'demo-001',
+      name: 'Pl. de Catalunya',
+    });
+    mockApi(
+      (path) => json(path === '/api/sources' ? [demoSource] : stationsResponse(stations)),
+      emptyPattern,
+      (url) => {
+        if (!url.pathname.endsWith('/11')) return singleVersionDetail(url);
+        // Cambió de capacidad y se movió unos 33 m el 10 de marzo a las 09:00 de Barcelona.
+        return json({
+          source: stationsResponse([]).source,
+          at: url.searchParams.get('at') ?? '',
+          atBasis: 'requested',
+          toleranceMinutes: 30,
+          station: catalunya,
+          versions: [
+            versionOf(catalunya, { capacity: 24, validTo: '2026-03-10T08:00:00+00:00' }),
+            versionOf(catalunya, {
+              capacity: 27,
+              longitude: catalunya.longitude + 0.0004,
+              validFrom: '2026-03-10T08:00:00+00:00',
+              firstSeenAt: '2026-03-10T08:00:00+00:00',
+            }),
+          ],
+        });
+      },
+    );
+    const user = userEvent.setup();
+    renderApp();
+
+    await user.click(await screen.findByRole('button', { name: /^Pl\. de Catalunya/ }));
+    await user.click(await screen.findByText('Cambios de esta estación (1)'));
+    expect(screen.getByText('Vista por primera vez el 10 de marzo de 2026.')).toBeTruthy();
+    expect(document.querySelector('.station-detail__change-list li')?.textContent).toMatch(
+      /^10 de marzo de 2026 a las 09:00: capacidad de 24 a 27 anclajes · se movió 3\d m$/,
+    );
+
+    // Otra estación sin cambios: lo dice, con la fecha en que se vio por primera vez.
+    await user.click(screen.getByRole('button', { name: 'Volver a la lista' }));
+    await user.click(await screen.findByRole('button', { name: /^Pl\. de Lesseps/ }));
+    expect(
+      await screen.findByText(
+        'Sin cambios de nombre, sitio ni capacidad en los días importados; vista por primera vez el 10 de marzo de 2026.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('un enlace con una estación o un día que no existen lo dice, y una respuesta recortada también', async () => {
+    mockApi((path) =>
+      json(
+        path === '/api/sources' ? [demoSource] : { ...stationsResponse(stations), truncated: true },
+      ),
+    );
+    const user = userEvent.setup();
+    window.history.replaceState(null, '', '/?fuente=demo&estacion=demo-999&dia=2026-03-11');
+    renderApp();
+
+    await screen.findByText('3 estaciones');
+    const notice = () => document.querySelector('.link-notice')?.textContent ?? '';
+    expect(notice()).toContain(
+      'El enlace pedía la estación «demo-999», que no está en esta fuente',
+    );
+    expect(notice()).toContain(
+      'El enlace pedía el miércoles, 11 de marzo de 2026, que no está importado',
+    );
+    expect(notice()).toContain('solo una parte de las estaciones de esta zona');
+
+    // Al elegir una estación de verdad, el aviso de la estación se va; los otros dos siguen.
+    await user.click(screen.getByRole('button', { name: /^Pl\. de Catalunya/ }));
+    await screen.findByRole('heading', { level: 2, name: 'Pl. de Catalunya' });
+    expect(notice()).not.toContain('demo-999');
+    expect(notice()).toContain('11 de marzo de 2026');
+  });
+
+  it('«Qué muestra y qué no» dice cuántas observaciones hay y cómo acabó la última importación', async () => {
+    // Otro id de fuente: la rejilla de huecos se guarda en la página por fuente y, con el mismo
+    // id, la prueba siguiente no vería su petición de línea temporal.
+    const source = {
+      ...observedSource,
+      id: 'bicing-bcn-ultima',
+      lastIngestion: {
+        startedAt: '2026-10-06T16:48:46+00:00',
+        finishedAt: '2026-10-06T16:48:50+00:00',
+        status: 'succeeded_with_issues' as const,
+        observationsAccepted: 135545,
+        observationsDuplicate: 15936,
+        observationsConflicting: 2626,
+        observationsRejected: 0,
+      },
+    };
+    mockApi((path, url) => {
+      if (path === '/api/sources') return json([source]);
+      if (path === '/api/stations') return json(observedResponse(stations));
+      if (path.endsWith('/timeline')) return json(timelineFor(url));
+      if (path.endsWith('/ingestions')) return json(ingestionsFor());
+      return json({ title: 'Petición inesperada' }, 500);
+    });
+    const user = userEvent.setup();
+    window.history.replaceState(null, '', '/');
+    renderApp();
+
+    await screen.findByText('Datos reales');
+    await user.click(screen.getByRole('button', { name: 'Qué muestra y qué no' }));
+    await screen.findByRole('heading', { level: 2, name: 'Qué muestra y qué no' });
+    expect(screen.getByText('Observaciones guardadas').nextElementSibling?.textContent).toBe('300');
+    expect(screen.getByText('Última importación').nextElementSibling?.textContent).toMatch(
+      // En castellano, cuatro cifras van sin separador de millares.
+      /^6 de octubre de 2026 a las 18:48, terminada con avisos: 135.545 nuevas, 15.936 repetidas, 2626 en conflicto, 0 rechazadas\.$/,
+    );
   });
 
   it('«Cambiar momento» lleva a Reproducir en ese momento y, al volver, se queda el elegido', async () => {

@@ -3,12 +3,14 @@ import type { StationItem, StationsResponse } from '../../api/client';
 import { t } from '../../i18n';
 import { formatDateTime, formatDay, formatDuration, formatTime } from '../../shared/format';
 import { availabilityLabel, availabilityOf, qualityFlagLabel, statusLabel } from './availability';
-import { distanceMeters } from './distance';
+import { distanceLabel, distanceMeters } from './distance';
 import { districtName, stationName } from './names';
 import { OctagonGlyph } from './OctagonGlyph';
 import { sourceName } from './sources';
 import { StationList, type ListFigures } from './StationList';
+import { useStationDetail } from './stationDetails';
 import { StationPatternSection } from './StationPattern';
+import { sortVersions, versionSteps, type VersionChange } from './versions';
 
 /** Cuántas cercanas se enseñan: las justas para tener alternativa sin alargar la ficha. */
 const NEARBY_COUNT = 5;
@@ -66,6 +68,58 @@ function NearbyStations({
         distanceFrom={station}
       />
     </section>
+  );
+}
+
+function changeText(change: VersionChange): string {
+  const m = t().detail;
+  switch (change.kind) {
+    case 'capacity':
+      return m.changeCapacity(change.from, change.to);
+    case 'name':
+      return m.changeName(
+        stationName({ name: change.from, address: null }),
+        stationName({ name: change.to, address: null }),
+      );
+    case 'address':
+      return m.changeAddress(change.from, change.to);
+    case 'moved':
+      return m.changeMoved(distanceLabel(change.meters));
+  }
+}
+
+/**
+ * Los cambios de atributos de la estación en los días importados (nombre, dirección, sitio,
+ * capacidad), con su fecha: la API los guarda por versiones y la ficha los enseña plegados.
+ */
+function StationChanges({ station, at }: { station: StationItem; at: string }) {
+  const m = t().detail;
+  const state = useStationDetail(station.id, at);
+  if (state.status === 'loading') {
+    return <p className="station-detail__note">{m.changesLoading}</p>;
+  }
+  if (state.status === 'error') {
+    return <p className="station-detail__note">{m.changesFailed}</p>;
+  }
+  const versions = sortVersions(state.data.versions);
+  const first = versions[0];
+  if (first === undefined) return null;
+  const since = formatDay(first.firstSeenAt);
+  const steps = versionSteps(versions);
+  if (steps.length === 0) return <p className="station-detail__note">{m.noChanges(since)}</p>;
+  return (
+    <details className="station-detail__changes">
+      <summary>{m.changes(steps.length)}</summary>
+      <p className="station-detail__note">{m.knownSince(since)}</p>
+      <ol className="station-detail__change-list">
+        {steps.map((step) => (
+          <li key={step.at}>
+            <time dateTime={step.at}>{formatDateTime(step.at)}</time>:{' '}
+            {step.changes.map(changeText).join(' · ')}
+          </li>
+        ))}
+      </ol>
+    </details>
   );
 }
 
@@ -228,6 +282,8 @@ export function StationDetail({
           {station.metadataAssumed && <li>{m.metadataAssumed}</li>}
         </ul>
       )}
+
+      <StationChanges station={station} at={response.at} />
 
       {/* Después de los datos de esta estación y antes del patrón: la alternativa, a un toque. */}
       {onSelect !== undefined && (

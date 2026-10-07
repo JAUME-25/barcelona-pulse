@@ -400,6 +400,27 @@ export function LimitsSheet({
         <dd>{m.expiryValue(source.toleranceMinutes)}</dd>
         <dt>{m.stations}</dt>
         <dd>{source.stationCount}</dd>
+        {source.period !== null && (
+          <>
+            <dt>{m.observations}</dt>
+            <dd>{formatWhole(source.period.observationCount)}</dd>
+          </>
+        )}
+        {source.lastIngestion !== null && (
+          <>
+            <dt>{m.lastIngestion}</dt>
+            <dd>
+              {m.lastIngestionValue(
+                formatDateTime(source.lastIngestion.finishedAt ?? source.lastIngestion.startedAt),
+                m.ingestionStatus[source.lastIngestion.status],
+                formatWhole(source.lastIngestion.observationsAccepted),
+                formatWhole(source.lastIngestion.observationsDuplicate),
+                formatWhole(source.lastIngestion.observationsConflicting),
+                formatWhole(source.lastIngestion.observationsRejected),
+              )}
+            </dd>
+          </>
+        )}
       </dl>
       <Ingestions source={source} />
 

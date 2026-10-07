@@ -170,6 +170,12 @@ completa en un solo sitio y, junto a cada dato, lo justo para no malinterpretarl
 - Estaciones sin dato, agrupadas: ningún dato hasta ese momento, días, horas o minutos sin
   informar. Cada una abre su detalle y se marca en el mapa (al experimentar no, porque allí
   tocar una estación la quita).
+- Desde el 7-10-2026, en «Los datos»: cuántas observaciones hay guardadas y la última
+  importación (cuándo, cómo acabó y sus recuentos). Y fuera de la ficha, tres avisos que antes
+  se callaban: un enlace con una estación que no está en la fuente, un enlace con un día no
+  importado (se enseña otro) y una respuesta recortada por la API. En la ficha de la estación,
+  desde cuándo se conoce y, plegados, sus cambios de nombre, sitio o capacidad con fecha: la API
+  los guardaba por versiones y la web no los enseñaba.
 - Junto al dato:
   - bajo la pista de Reproducir, a qué horas faltan datos;
   - «N de M con dato» y, en Experimentar, «En línea recta · Superficie, no población · No mide

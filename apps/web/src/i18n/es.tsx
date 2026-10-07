@@ -142,6 +142,11 @@ export const es = {
     onlyOnMap: 'Solo las del mapa',
     noneOnMap: 'Ninguna estación en la parte del mapa que se ve. Mueve el mapa o acércate menos.',
     wholeList: 'Ver toda la lista',
+    linkStationMissing: (id: string) =>
+      `El enlace pedía la estación «${id}», que no está en esta fuente: se enseña la lista.`,
+    linkDayMissing: (day: string) =>
+      `El enlace pedía el ${day}, que no está importado: se enseña otro día.`,
+    truncated: 'La API ha devuelto solo una parte de las estaciones de esta zona: faltan algunas.',
     source: 'Fuente',
     demoSuffix: '(demo)',
     crashed: 'Algo ha fallado al pintar la aplicación.',
@@ -328,6 +333,19 @@ export const es = {
     source: 'Fuente',
     demoSource: 'Demo con datos inventados',
     id: (id: string) => ` (identificador ${id})`,
+    /** Los cambios de atributos en los días importados, que la API guarda por versiones. */
+    changes: (n: number) => `Cambios de esta estación (${String(n)})`,
+    knownSince: (since: string) => `Vista por primera vez el ${since}.`,
+    noChanges: (since: string) =>
+      `Sin cambios de nombre, sitio ni capacidad en los días importados; vista por primera vez el ${since}.`,
+    changesLoading: 'Buscando cambios de la estación…',
+    changesFailed: 'No se han podido cargar los cambios de la estación.',
+    changeCapacity: (from: number | null, to: number | null) =>
+      `capacidad de ${from === null ? 'no publicada' : String(from)} a ${to === null ? 'no publicada' : String(to)} anclajes`,
+    changeName: (from: string, to: string) => `de «${from}» a «${to}»`,
+    changeAddress: (from: string | null, to: string | null) =>
+      `dirección de «${from ?? '—'}» a «${to ?? '—'}»`,
+    changeMoved: (distance: string) => `se movió ${distance}`,
     metadataAssumed:
       'El nombre, la ubicación y la capacidad son de una publicación posterior a este momento.',
   },
@@ -447,6 +465,23 @@ export const es = {
     expiryValue: (tolerance: number) =>
       `A los ${String(tolerance)} minutos sin informar, el estado de una estación pasa a desconocido`,
     stations: 'Estaciones',
+    observations: 'Observaciones guardadas',
+    lastIngestion: 'Última importación',
+    ingestionStatus: {
+      running: 'en marcha',
+      succeeded: 'terminada',
+      succeeded_with_issues: 'terminada con avisos',
+      failed: 'fallida',
+    },
+    lastIngestionValue: (
+      when: string,
+      status: string,
+      accepted: string,
+      duplicate: string,
+      conflicting: string,
+      rejected: string,
+    ) =>
+      `${when}, ${status}: ${accepted} nuevas, ${duplicate} repetidas, ${conflicting} en conflicto, ${rejected} rechazadas.`,
     /** Lo que entró en cada importación, según el registro de la ingesta. */
     ingestionsLead: (n: IngestionTotalsInput) => {
       const text =

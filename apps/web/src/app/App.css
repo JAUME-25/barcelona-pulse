@@ -331,6 +331,40 @@
   font-size: 0.9375rem;
 }
 
+/* Lo que el enlace pedía y no se puede enseñar, o lo que la API recortó: se dice, no se calla. */
+.link-notice {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--accent);
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+}
+.link-notice p {
+  margin: 0;
+}
+.link-notice p + p {
+  margin-top: 4px;
+}
+
+/* Los cambios de atributos de la estación, plegados: una línea si no interesan. */
+.station-detail__changes {
+  margin-top: 14px;
+  font-size: 0.9375rem;
+}
+.station-detail__changes summary {
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+.station-detail__change-list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: var(--ink-2);
+}
+.station-detail__change-list li + li {
+  margin-top: 4px;
+}
+
 .search__input::placeholder {
   color: var(--ink-2);
 }

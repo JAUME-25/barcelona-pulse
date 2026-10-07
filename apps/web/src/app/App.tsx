@@ -13,7 +13,7 @@ import type { SourceSummary, StationItem, StationsResponse } from '../api/client
 import { availableDays, momentLikeNow, type Moment } from '../features/history/moment';
 import { ReplayDeck } from '../features/history/ReplayDeck';
 import { ModeSwitch, type Mode } from '../features/history/ReplayParts';
-import { localClock } from '../features/history/time';
+import { formatLocalDay, localClock } from '../features/history/time';
 import { useFrames } from '../features/history/useFrames';
 import { useReplay, type StationsProgress } from '../features/history/useReplay';
 import { LimitsSheet } from '../features/limits/LimitsSheet';
@@ -347,6 +347,17 @@ export function App() {
   const selected =
     selectedKey === null ? undefined : all.find((s) => s.sourceStationId === selectedKey);
   const selectedId = selected?.id ?? null;
+  // Lo que el enlace pedía y no se puede enseñar, y lo que la API recortó: se dice, no se calla.
+  // Los avisos desaparecen cuando cambia lo que los provocó (otra estación, otro momento).
+  const linkStationMissing =
+    !replaying && stationsState.status === 'ready' && selectedKey !== null && selected === undefined
+      ? selectedKey
+      : null;
+  const linkDayMissing =
+    source !== undefined && moment.day !== null && !availableDays(source).includes(moment.day)
+      ? moment.day
+      : null;
+  const truncated = response?.truncated === true;
 
   // Experimentar: la red real del instante y los cambios del escenario sobre ella.
   const scenario = useScenario(experimenting ? sourceId : null, exploreAt, all);
@@ -676,6 +687,13 @@ export function App() {
   } else {
     body = (
       <>
+        {(linkStationMissing !== null || linkDayMissing !== null || truncated) && (
+          <div className="link-notice" role="status">
+            {linkStationMissing !== null && <p>{m.linkStationMissing(linkStationMissing)}</p>}
+            {linkDayMissing !== null && <p>{m.linkDayMissing(formatLocalDay(linkDayMissing))}</p>}
+            {truncated && <p>{m.truncated}</p>}
+          </div>
+        )}
         {/* Búsqueda siempre a mano, también con el detalle abierto. */}
         <div className="panel-tools">
           <div className="search">

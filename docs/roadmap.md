@@ -452,7 +452,21 @@ honesta de lo hecho.
       y en la app: Anclajes y atajos, «A esta hora» con el reloj fijado, la frase del patrón),
       humo 20/20 y `e2e/atajos.capture.ts` con el mapa real en escritorio y 375 px (aparcar,
       anclajes delante en la lista, «A esta hora» y la frase). Usado en el navegador en
-      castellano, catalán e inglés a 320 px, sin desbordes.
+      castellano, catalán e inglés a 320 px, sin desbordes. En `dce1de9`.
+23. **Hecho** en local (7-10-2026, sin commit). Rigor visible, el punto 12 de la propuesta: lo
+    que la API ya daba y la web callaba, solo web.
+    - La ficha de la estación dice desde cuándo se conoce («Vista por primera vez el 4 de mayo
+      de 2026») y, plegados, los cambios de nombre, dirección, sitio (metros, EPSG:25831) y
+      capacidad en los días importados, con su fecha (`GET /api/stations/{id}`, que nadie
+      llamaba; `features/stations/versions.ts`, caché por página en `stationDetails.ts`).
+    - «Qué muestra y qué no» dice cuántas observaciones hay guardadas y cómo acabó la última
+      importación (cuándo, estado y recuentos).
+    - Un enlace que pide una estación que no está en la fuente o un día no importado lo dice,
+      en vez de callarse y enseñar otra cosa; y si la API recorta la respuesta (`truncated`, que
+      se forzaba a falso), también.
+    - Pruebas: 204 de la web (los pasos de versión: orden, qué cambió, bajo el metro no es
+      traslado; en la app: la ficha con cambios y sin ellos, los tres avisos y que el de la
+      estación se va al elegir otra, la última importación en la ficha de límites).
 
 ## Siguiente
 

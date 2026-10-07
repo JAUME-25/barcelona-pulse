@@ -153,6 +153,11 @@ export const ca: Messages = {
     onlyOnMap: 'Només les del mapa',
     noneOnMap: 'Cap estació a la part del mapa que es veu. Mou el mapa o allunya’l.',
     wholeList: 'Veure tota la llista',
+    linkStationMissing: (id) =>
+      `L’enllaç demanava l’estació «${id}», que no és en aquesta font: es mostra la llista.`,
+    linkDayMissing: (day) =>
+      `L’enllaç demanava el ${day}, que no està importat: es mostra un altre dia.`,
+    truncated: 'L’API només ha tornat una part de les estacions d’aquesta zona: en falten algunes.',
     source: 'Font',
     demoSuffix: '(demo)',
     crashed: 'Alguna cosa ha fallat en pintar l’aplicació.',
@@ -337,6 +342,17 @@ export const ca: Messages = {
     source: 'Font',
     demoSource: 'Demo amb dades inventades',
     id: (id) => ` (identificador ${id})`,
+    changes: (n) => `Canvis d’aquesta estació (${String(n)})`,
+    knownSince: (since) => `Vista per primer cop el ${since}.`,
+    noChanges: (since) =>
+      `Sense canvis de nom, lloc ni capacitat als dies importats; vista per primer cop el ${since}.`,
+    changesLoading: 'Buscant canvis de l’estació…',
+    changesFailed: 'No s’han pogut carregar els canvis de l’estació.',
+    changeCapacity: (from, to) =>
+      `capacitat de ${from === null ? 'no publicada' : String(from)} a ${to === null ? 'no publicada' : String(to)} ancoratges`,
+    changeName: (from, to) => `de «${from}» a «${to}»`,
+    changeAddress: (from, to) => `adreça de «${from ?? '—'}» a «${to ?? '—'}»`,
+    changeMoved: (distance) => `es va moure ${distance}`,
     metadataAssumed:
       'El nom, la ubicació i la capacitat són d’una publicació posterior a aquest moment.',
   },
@@ -442,6 +458,16 @@ export const ca: Messages = {
     expiryValue: (tolerance) =>
       `Als ${String(tolerance)} minuts sense informar, l’estat d’una estació passa a desconegut`,
     stations: 'Estacions',
+    observations: 'Observacions guardades',
+    lastIngestion: 'Última importació',
+    ingestionStatus: {
+      running: 'en marxa',
+      succeeded: 'acabada',
+      succeeded_with_issues: 'acabada amb avisos',
+      failed: 'fallida',
+    },
+    lastIngestionValue: (when, status, accepted, duplicate, conflicting, rejected) =>
+      `${when}, ${status}: ${accepted} noves, ${duplicate} repetides, ${conflicting} en conflicte, ${rejected} rebutjades.`,
     ingestionsLead: (n) => {
       const text =
         `${count(n.runs, 'importació', 'importacions')} en ${count(n.periods, 'dia', 'dies')}: ` +

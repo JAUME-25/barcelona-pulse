@@ -136,6 +136,11 @@ export const en: Messages = {
     onlyOnMap: 'Only those on the map',
     noneOnMap: 'No stations in the visible part of the map. Move the map or zoom out.',
     wholeList: 'Show the whole list',
+    linkStationMissing: (id) =>
+      `The link asked for station “${id}”, which is not in this source: showing the list.`,
+    linkDayMissing: (day) =>
+      `The link asked for ${day}, which is not imported: showing another day.`,
+    truncated: 'The API returned only part of the stations in this area: some are missing.',
     source: 'Source',
     demoSuffix: '(demo)',
     crashed: 'Something went wrong while drawing the app.',
@@ -319,6 +324,17 @@ export const en: Messages = {
     source: 'Source',
     demoSource: 'Demo with made-up data',
     id: (id) => ` (ID ${id})`,
+    changes: (n) => `Changes to this station (${String(n)})`,
+    knownSince: (since) => `First seen on ${since}.`,
+    noChanges: (since) =>
+      `No changes of name, location or capacity in the imported days; first seen on ${since}.`,
+    changesLoading: 'Looking for changes to the station…',
+    changesFailed: 'The station’s changes could not be loaded.',
+    changeCapacity: (from, to) =>
+      `capacity from ${from === null ? 'not published' : String(from)} to ${to === null ? 'not published' : String(to)} docks`,
+    changeName: (from, to) => `from “${from}” to “${to}”`,
+    changeAddress: (from, to) => `address from “${from ?? '—'}” to “${to ?? '—'}”`,
+    changeMoved: (distance) => `moved ${distance}`,
     metadataAssumed:
       'The name, location and capacity come from a publication later than this moment.',
   },
@@ -423,6 +439,16 @@ export const en: Messages = {
     expiryValue: (tolerance) =>
       `After ${String(tolerance)} minutes without reporting, a station’s state becomes unknown`,
     stations: 'Stations',
+    observations: 'Stored observations',
+    lastIngestion: 'Latest import',
+    ingestionStatus: {
+      running: 'running',
+      succeeded: 'finished',
+      succeeded_with_issues: 'finished with warnings',
+      failed: 'failed',
+    },
+    lastIngestionValue: (when, status, accepted, duplicate, conflicting, rejected) =>
+      `${when}, ${status}: ${accepted} new, ${duplicate} repeated, ${conflicting} conflicting, ${rejected} rejected.`,
     ingestionsLead: (n) => {
       const text =
         `${count(n.runs, 'import', 'imports')} over ${count(n.periods, 'day', 'days')}: ` +
