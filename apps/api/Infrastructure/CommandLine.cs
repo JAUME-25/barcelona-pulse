@@ -187,9 +187,25 @@ public static class CommandLine
                 var month = new DateOnly(day.Year, day.Month, 1);
                 if (!months.TryGetValue(month, out var files))
                 {
-                    files = statusFile is not null && infoFile is not null
-                        ? new MonthFiles(statusFile, infoFile, null, null)
-                        : await DownloadMonthAsync(sp, month, limits, downloaded, timeout.Token);
+                    if (statusFile is not null && infoFile is not null)
+                    {
+                        files = new MonthFiles(statusFile, infoFile, null, null);
+                    }
+                    else
+                    {
+                        try
+                        {
+                            files = await DownloadMonthAsync(sp, month, limits, downloaded, timeout.Token);
+                        }
+                        catch (Exception ex) when (ex is not OperationCanceledException)
+                        {
+                            // Un 403 o un 503 del portal también queda en el registro de ingestas,
+                            // como fallida: antes no dejaba rastro.
+                            await RecordFailedDownloadAsync(sp, month, ex, ct);
+                            throw;
+                        }
+                    }
+
                     months[month] = files;
                 }
 
@@ -211,6 +227,17 @@ public static class CommandLine
         {
             foreach (var path in downloaded) File.Delete(path);
         }
+    }
+
+    private static async Task RecordFailedDownloadAsync(
+        IServiceProvider sp, DateOnly month, Exception error, CancellationToken ct)
+    {
+        await using var scope = sp.GetRequiredService<IServiceScopeFactory>().CreateAsyncScope();
+        var ingestor = scope.ServiceProvider.GetRequiredService<StationIngestor>();
+        var url = BicingArchiveDownloader.UrlFor(month, BicingArchiveKind.Status).ToString();
+        await ingestor.RecordFailureAsync(
+            BicingArchiveAdapter.Source, BicingArchiveAdapter.AdapterName, BicingArchiveAdapter.AdapterVersion,
+            url, trigger: "cli", $"Descarga: {error.GetType().Name}: {error.Message}", ct);
     }
 
     private static async Task<MonthFiles> DownloadMonthAsync(

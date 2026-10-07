@@ -474,7 +474,19 @@ honesta de lo hecho.
     línea que «Más» despliega; el mapa pasa de empezar a 555 px a unos 200 (266 a 320 px). Se
     decide por el ancho de la ventana (`shared/useMediaQuery.ts`); en escritorio no cambia nada.
     Pruebas: 205 de la web (en «móvil», plegado y desplegado) y `e2e/movil.capture.ts` con el
-    mapa real a 375 y 320 px, plegada y abierta. Usado en el navegador en los tres idiomas.
+    mapa real a 375 y 320 px, plegada y abierta. Usado en el navegador en los tres idiomas. En
+    `89d7d30`.
+25. **Hecho** en local (7-10-2026). Deuda del backlog, el punto 17 de la propuesta:
+    - `station_versions` no admite dos versiones vigentes a la vez (`EXCLUDE` con `btree_gist`,
+      diferida al commit; migración `VersionsNoOverlap`). En local no había ningún solape.
+    - Las ingestas que se quedaron «en marcha» por un proceso que murió se cierran como
+      fallidas al arrancar la API, pasada una hora (`IngestionJanitor`).
+    - Una descarga del histórico que falla (el 403 del portal, un 503) queda registrada como
+      ingesta fallida con su error.
+    - CORS admite el `POST` de la cobertura para los orígenes configurados.
+    - Pendiente del backlog: `purge` sigue borrando por instante, no por ingesta.
+    - Pruebas contra PostGIS: el solape se rechaza y dos versiones seguidas pasan en la misma
+      transacción; el cierre de ingestas viejas y no de las recientes.
 
 ## Siguiente
 

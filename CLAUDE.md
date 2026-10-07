@@ -91,6 +91,9 @@ Jaume ejecuta los comandos en Forge y pega la salida.
   La versión lleva la compilación (`DataVersion.Build`) y el periodo de una ingesta es el de sus
   filas nuevas: una observación de 2025 repetida en cada archivo no lo estira (si lo hiciera,
   cada ingesta tocaría todos los rangos).
+- `station_versions` tiene una restricción `EXCLUDE` (no hay dos versiones de una estación
+  vigentes a la vez) diferida al commit: dentro de la transacción de la ingesta se puede cerrar
+  y abrir en cualquier orden; si al confirmar quedan dos vigentes, la ingesta entera falla.
 - Un `MAX(observed_at)` sobre el join de observaciones y estaciones recorre todo el histórico
   (~100 ms con una semana): usa `StationQueries.LatestObservationAsync`, que va por estación.
 - «Reproducir» pide fotogramas de una hora (`/api/sources/{id}/frames`, ADR 0010), no

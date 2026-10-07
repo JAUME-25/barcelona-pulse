@@ -73,6 +73,12 @@ Puntos de entrada, por línea de comandos (no hay endpoint HTTP de importación)
 - Cada ejecución queda en `ingestion_runs` con fuente, adaptador y versión, entrada y su
   sha256, periodo, recuentos y resultado; los rechazos, en `ingestion_rejections` con su motivo.
 - Un bloqueo consultivo por fuente evita dos ingestas simultáneas.
+- Una descarga que falla (el portal contesta 403 al servidor, o 503) también queda en
+  `ingestion_runs`, como fallida y con su error: el registro cuenta los intentos, no solo lo que
+  entró. Y una ejecución que se quedó «en marcha» porque el proceso murió (memoria agotada,
+  `docker stop`) la cierra como fallida la API al arrancar, pasada una hora
+  (`Features/Ingestion/IngestionJanitor.cs`); sin eso, `/api/sources` la daba por última ingesta
+  para siempre.
 - Las observaciones entran por lotes de 5 000 con `INSERT … SELECT unnest(…) ON CONFLICT DO
   NOTHING`. Repetir una ingesta no duplica nada.
 - Si falla, la transacción se deshace y la ejecución queda como `failed` con el error.
@@ -103,8 +109,8 @@ Puntos de entrada, por línea de comandos (no hay endpoint HTTP de importación)
 - Repositorio público en GitHub: escaneo de secretos con bloqueo en el push (activo por defecto)
   y Dependabot con alertas y actualizaciones de seguridad (activado el 5-10-2026). La CI usa
   permisos de solo lectura y ningún secreto.
-- CORS solo para `GET` y para los orígenes de `Cors:AllowedOrigins`. En local no hace falta:
-  Vite reenvía `/api`.
+- CORS solo para los orígenes de `Cors:AllowedOrigins`: `GET` y el `POST` de la cobertura, un
+  cálculo sin estado. En local y en producción no hace falta: Vite y nginx reenvían `/api`.
 - Límite de 120 peticiones por minuto e IP en `/api` (configurable). Consultas acotadas: caja
   máxima de 1° y un máximo de 1 000 estaciones por respuesta (`truncated` lo indica).
 - La línea temporal calcula como mucho dos rangos a la vez; los demás esperan y, si mientras

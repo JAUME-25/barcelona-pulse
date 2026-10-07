@@ -38,7 +38,10 @@ public static class ServiceRegistration
         options.RespectRequiredConstructorParameters = true;
     }
 
-    /// <summary>CORS solo para lectura y solo para los orígenes configurados.</summary>
+    /// <summary>
+    /// CORS solo para los orígenes configurados: las lecturas y el POST de la cobertura, que es
+    /// un cálculo sin estado (con solo GET, Experimentar fallaría desde otro origen).
+    /// </summary>
     public static IServiceCollection AddPulseCors(this IServiceCollection services, IConfiguration configuration)
     {
         var origins = (configuration["Cors:AllowedOrigins"] ?? string.Empty)
@@ -48,7 +51,7 @@ public static class ServiceRegistration
         {
             if (origins.Length > 0)
             {
-                policy.WithOrigins(origins).WithMethods("GET").WithHeaders("Content-Type");
+                policy.WithOrigins(origins).WithMethods("GET", "POST").WithHeaders("Content-Type");
             }
         }));
     }

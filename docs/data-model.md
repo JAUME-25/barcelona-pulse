@@ -99,6 +99,11 @@ zona del navegador (la prueba de humo corre con el navegador en Nueva York).
   semana.
 - `ix_station_versions_location` (GiST): filtro por caja.
 - `ix_station_versions_one_current_per_station` (único parcial, `valid_to IS NULL`).
+- `ex_station_versions_no_overlap` (EXCLUDE con `btree_gist`, migración `VersionsNoOverlap`): dos
+  versiones de una estación no pueden estar vigentes a la vez (`valid_from` nulo cuenta como
+  siempre hacia atrás; `valid_to` nulo, hacia delante; el fin va excluido). Diferida al commit:
+  la ingesta cierra y abre versiones en varios pasos dentro de su transacción. Si un caso no
+  previsto dejara dos vigentes, la ingesta falla y se deshace en vez de duplicar la estación.
 - `ix_stations_source_id_source_station_id` (único).
 
 **Retención** (ADR 0012). Se guardan los periodos que se importan a propósito, sin borrado

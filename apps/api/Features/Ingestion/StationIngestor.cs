@@ -93,6 +93,34 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
         return run;
     }
 
+    /// <summary>
+    /// Deja constancia de una ingesta que no llegó a empezar (la descarga falló): una ejecución
+    /// fallida con su error, para que el registro de ingestas cuente también los intentos.
+    /// </summary>
+    public async Task<IngestionRun> RecordFailureAsync(
+        SourceDescriptor source, string adapter, string adapterVersion, string inputRef, string trigger,
+        string error, CancellationToken ct)
+    {
+        await UpsertSourceAsync(source, ct);
+        var now = clock.GetUtcNow();
+        var run = new IngestionRun
+        {
+            SourceId = source.Id,
+            Adapter = adapter,
+            AdapterVersion = adapterVersion,
+            InputRef = Truncate(inputRef, 500),
+            Trigger = trigger,
+            StartedAt = now,
+            FinishedAt = now,
+            Status = IngestionStatus.Failed,
+            Error = Truncate(error, 2000),
+        };
+        db.IngestionRuns.Add(run);
+        await db.SaveChangesAsync(ct);
+        logger.LogWarning("Ingesta de {SourceId} fallida antes de empezar: {Error}", source.Id, run.Error);
+        return run;
+    }
+
     private async Task UpsertSourceAsync(SourceDescriptor d, CancellationToken ct)
     {
         var source = await db.DataSources.FindAsync([d.Id], ct);

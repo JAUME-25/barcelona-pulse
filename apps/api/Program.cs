@@ -28,6 +28,8 @@ builder.Services.AddMemoryCache(o => o.SizeLimit = 200);
 // Las pruebas la apagan (Timeline:WarmUp) y la llaman cuando la necesitan.
 builder.Services.AddSingleton<TimelineWarmUp>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<TimelineWarmUp>());
+// Y las ingestas que se quedaron «en marcha» por un proceso que murió, cerradas como fallidas.
+builder.Services.AddHostedService<IngestionJanitor>();
 builder.Services.AddHttpClient<BicingArchiveDownloader>(http =>
 {
     http.Timeout = TimeSpan.FromMinutes(5);
