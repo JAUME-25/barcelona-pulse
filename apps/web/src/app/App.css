@@ -331,11 +331,14 @@
   font-size: 0.9375rem;
 }
 
-/* Lo que el enlace pedía y no se puede enseñar, o lo que la API recortó: se dice, no se calla. */
+/* Lo que el enlace pedía y no se puede enseñar, o lo que la API recortó: se dice, no se calla.
+   En la misma caja que el aviso de procedencia. */
 .link-notice {
   margin: 0 0 12px;
   padding: 8px 12px;
-  border-left: 3px solid var(--accent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-2);
   color: var(--ink-2);
   font-size: 0.9375rem;
 }
