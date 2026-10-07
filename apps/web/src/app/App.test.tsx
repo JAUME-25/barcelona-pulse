@@ -288,6 +288,8 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   setLang('es');
+  // jsdom no trae geolocalización: las pruebas de «Cerca de mí» la ponen y aquí se quita siempre.
+  Reflect.deleteProperty(navigator, 'geolocation');
 });
 
 describe('App', () => {
@@ -669,6 +671,166 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: 'Ver toda la lista' }));
     expect(names()).toEqual(['Llevant']);
     expect(new URLSearchParams(window.location.search).get('lista')).toBeNull();
+  });
+
+  it('«Cerca de mí» ordena por distancia con los metros, y la ficha enseña las cercanas', async () => {
+    const real = [
+      stationFixture({
+        id: 51,
+        sourceStationId: '51',
+        name: 'LEJOS',
+        longitude: 2.2,
+        latitude: 41.42,
+      }),
+      stationFixture({
+        id: 52,
+        sourceStationId: '52',
+        name: 'MEDIA',
+        longitude: 2.16,
+        latitude: 41.39,
+      }),
+      stationFixture({
+        id: 53,
+        sourceStationId: '53',
+        name: 'CERCA',
+        longitude: 2.151,
+        latitude: 41.385,
+      }),
+    ];
+    mockApi((path) => json(path === '/api/sources' ? [observedSource] : observedResponse(real)));
+    // La ubicación la da el navegador al pulsar: aquí, un punto al oeste del Eixample.
+    const getCurrentPosition = vi.fn(
+      (ok: (p: { coords: { longitude: number; latitude: number; accuracy: number } }) => void) => {
+        ok({ coords: { longitude: 2.15, latitude: 41.385, accuracy: 40 } });
+      },
+    );
+    Object.defineProperty(navigator, 'geolocation', {
+      value: { getCurrentPosition },
+      configurable: true,
+    });
+    const user = userEvent.setup();
+    window.history.replaceState(null, '', '/');
+    renderApp();
+
+    await screen.findByText('3 estaciones');
+    const names = () =>
+      [...document.querySelectorAll('.station-list__name')].map((n) => n.textContent);
+    expect(names()).toEqual(['Cerca', 'Lejos', 'Media']);
+
+    await user.click(screen.getByRole('button', { name: 'Cerca de mí' }));
+    expect(getCurrentPosition).toHaveBeenCalledOnce();
+    await waitFor(() => {
+      expect(names()).toEqual(['Cerca', 'Media', 'Lejos']);
+    });
+    expect(screen.getByLabelText<HTMLSelectElement>('Orden').value).toBe('distance');
+    expect(screen.getByText(/de más cerca a más lejos/)).toBeTruthy();
+    // Los metros, medidos en EPSG:25831, abren la línea del estado; y nunca van a la URL.
+    const rows = [...document.querySelectorAll('.station-list__summary')].map((n) => n.textContent);
+    expect(rows[0]).toMatch(/^84 m · Con bicis/);
+    expect(rows[2]).toMatch(/^\d,\d km · Con bicis/);
+    expect(window.location.search).not.toContain('2.15');
+    expect(new URLSearchParams(window.location.search).get('orden')).toBeNull();
+
+    // El punto sale explicado en la clave del mapa.
+    expect(screen.getByText('Tu ubicación')).toBeTruthy();
+
+    // Con «Eléctricas», las cercanas enseñan la misma cifra que la lista.
+    await user.click(screen.getByRole('button', { name: 'Eléctricas' }));
+    // En la ficha, las dos restantes de más cerca a más lejos, con su distancia desde la estación.
+    const list = document.querySelector<HTMLElement>('.station-list');
+    if (list === null) throw new Error('No hay lista.');
+    await user.click(within(list).getByRole('button', { name: /^Cerca/ }));
+    const nearby = await screen.findByRole('region', { name: 'Cercanas' });
+    const nearbyNames = [...nearby.querySelectorAll('.station-list__name')].map(
+      (n) => n.textContent,
+    );
+    expect(nearbyNames).toEqual(['Media', 'Lejos']);
+    expect(nearby.querySelector('.station-list__summary')?.textContent).toMatch(/^\d{3} m · /);
+    expect(nearby.querySelector('.station-list__unit')?.textContent).toBe('eléc.');
+    await user.click(within(nearby).getByRole('button', { name: /^Media/ }));
+    expect(await screen.findByRole('heading', { level: 2, name: 'Media' })).toBeTruthy();
+
+    // «Copiar enlace» va sin la cámara del mapa, que apunta a la persona.
+    window.history.replaceState(
+      window.history.state,
+      '',
+      `${window.location.pathname}${window.location.search}#mapa=15/41.385/2.15/0/0`,
+    );
+    await user.click(screen.getByRole('button', { name: 'Copiar enlace' }));
+    expect(await screen.findByText('Enlace copiado, sin la posición del mapa.')).toBeTruthy();
+    const copied = await navigator.clipboard.readText();
+    expect(copied).toContain('estacion=52');
+    expect(copied).not.toContain('#mapa');
+    expect(copied).not.toContain('41.385');
+
+    // «Volver» vuelve atrás (la entrada era del detalle aunque se cambiara de estación desde las
+    // cercanas) y el orden por distancia, que no va en la URL, se queda.
+    await user.click(screen.getByRole('button', { name: 'Volver a la lista' }));
+    await screen.findByText('3 estaciones');
+    expect(names()).toEqual(['Cerca', 'Media', 'Lejos']);
+    expect(screen.getByLabelText<HTMLSelectElement>('Orden').value).toBe('distance');
+    expect(new URLSearchParams(window.location.search).get('estacion')).toBeNull();
+  });
+
+  it('«Cerca de mí» dice por qué no puede: fuera de Barcelona, sin permiso, sin respuesta', async () => {
+    mockApi((path) => json(path === '/api/sources' ? [demoSource] : stationsResponse(stations)));
+    type Ok = (p: { coords: { longitude: number; latitude: number; accuracy: number } }) => void;
+    type Fail = (e: { code: number; message: string }) => void;
+    let answer: (ok: Ok, fail: Fail) => void = () => undefined;
+    const getCurrentPosition = vi.fn((ok: Ok, fail: Fail) => {
+      answer(ok, fail);
+    });
+    Object.defineProperty(navigator, 'geolocation', {
+      value: { getCurrentPosition },
+      configurable: true,
+    });
+    const user = userEvent.setup();
+    window.history.replaceState(null, '', '/?fuente=demo');
+    renderApp();
+    await screen.findByText('3 estaciones');
+    const button = () => screen.getByRole('button', { name: 'Cerca de mí' });
+    const orderSelect = () => screen.getByLabelText<HTMLSelectElement>('Orden');
+
+    // En Madrid: la distancia no dice nada útil y el orden no cambia.
+    answer = (ok) => {
+      ok({ coords: { longitude: -3.7, latitude: 40.42, accuracy: 30 } });
+    };
+    await user.click(button());
+    expect(await screen.findByText(/fuera de Barcelona/)).toBeTruthy();
+    expect(orderSelect().value).toBe('name');
+    expect(screen.queryByRole('option', { name: 'Más cerca de mí' })).toBeNull();
+    expect(screen.queryByText('Tu ubicación')).toBeNull();
+
+    // Sin permiso, sin posición y tiempo agotado: cada uno con su motivo.
+    answer = (_ok, fail) => {
+      fail({ code: 1, message: '' });
+    };
+    await user.click(button());
+    expect(await screen.findByText(/no ha dado permiso/)).toBeTruthy();
+    answer = (_ok, fail) => {
+      fail({ code: 2, message: '' });
+    };
+    await user.click(button());
+    expect(await screen.findByText(/no ha podido saber dónde estás/)).toBeTruthy();
+    answer = (_ok, fail) => {
+      fail({ code: 3, message: '' });
+    };
+    await user.click(button());
+    expect(await screen.findByText(/tardado demasiado/)).toBeTruthy();
+
+    // Una ubicación con mucho error (la de un ordenador, por IP) se dice aproximada.
+    answer = (ok) => {
+      ok({ coords: { longitude: 2.15, latitude: 41.385, accuracy: 1800 } });
+    };
+    await user.click(button());
+    expect(await screen.findByText(/Ubicación aproximada \(±1,8 km\)/)).toBeTruthy();
+    expect(orderSelect().value).toBe('distance');
+
+    // Elegir otro orden a mano retira el aviso; la ubicación sigue en la clave del mapa.
+    await user.selectOptions(orderSelect(), 'name');
+    expect(screen.queryByText(/Ubicación aproximada/)).toBeNull();
+    expect(screen.getByRole('option', { name: 'Más cerca de mí' })).toBeTruthy();
+    expect(screen.getByText('Tu ubicación')).toBeTruthy();
   });
 
   it('«Copiar enlace» copia la URL de la vista y lo dice', async () => {

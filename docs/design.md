@@ -34,6 +34,29 @@ con «0» es «tiene bicis, ninguna eléctrica». Sin desglose publicado no se a
 Reproducir suma las eléctricas de cada paso junto a las bicis, solo si todas las estaciones
 contadas publican el desglose.
 
+## Cercanas y Cerca de mí
+
+Quien busca una bici está en un sitio concreto y, si la estación que tiene delante no sirve
+(vacía, llena, sin dato), quiere la siguiente. Hecho el 7-10-2026 como retoque de la lista y la
+ficha, sin pantalla nueva:
+
+- «Cerca de mí», junto al buscador: pide la ubicación al pulsar (nunca al abrir). La lista pasa a
+  ordenarse de más cerca a más lejos, con los metros en cada fila («240 m · Con bicis»; en línea
+  recta en EPSG:25831, no a pie), y el mapa se acerca a nivel de calle con un punto claro con halo
+  tenue, distinto del pictograma del metro y explicado en la clave «También en el mapa». Un aviso
+  dice que está ordenada y que la ubicación no sale del navegador; con un error grande (más de
+  500 m: la de un ordenador, que sale de la IP) dice «aproximada (±1,8 km)». Fuera de Barcelona no
+  ordena y lo dice; sin permiso, sin posición o con el tiempo agotado, cada uno con su motivo.
+- La ubicación vive solo en memoria: no va en la URL ni se guarda, y «Copiar enlace» va sin la
+  cámara del mapa mientras se sepa dónde está la persona (apuntaría a ella), y lo dice. «Más cerca
+  de mí» es un orden más del selector, solo mientras haya ubicación; Atrás no lo quita. La cámara
+  va a la persona solo cuando llega una ubicación nueva: al volver de Experimentar se queda donde
+  estaba.
+- «Cercanas», en la ficha, después de los datos de la estación y antes de «Cómo suele estar»: las
+  cinco más próximas con su estado y su distancia desde la estación, con la misma cifra que la
+  lista (bicis o eléctricas). Cada una abre su ficha.
+- En producción, la cabecera `Permissions-Policy` de nginx lleva `geolocation=(self)`.
+
 ## Estados de estación
 
 El marcador es una manzana del Eixample (cuadrado con chaflanes) y funciona como un depósito: la

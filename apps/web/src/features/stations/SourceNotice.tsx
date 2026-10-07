@@ -33,6 +33,7 @@ export function SourceNotice({
   months = null,
   onLimits,
   onChangeMoment,
+  shareWithoutCamera = false,
 }: {
   response: StationsResponse;
   /** Sin el momento: al reproducir, lo enseña el control de tiempo. */
@@ -43,6 +44,8 @@ export function SourceNotice({
   onLimits?: () => void;
   /** Lleva a Reproducir, parado en el momento mostrado, para elegir otro. */
   onChangeMoment?: () => void;
+  /** Con «Cerca de mí», el enlace va sin la cámara del mapa, que apunta a la persona. */
+  shareWithoutCamera?: boolean;
 }) {
   const m = t().source;
   const { source } = response;
@@ -56,7 +59,7 @@ export function SourceNotice({
         </p>
         {!compact && <Moment label={m.shownMoment} iso={response.at} />}
         <p className="source-notice__share">
-          <ShareLink />
+          <ShareLink withoutCamera={shareWithoutCamera} />
         </p>
       </div>
     );
@@ -100,7 +103,7 @@ export function SourceNotice({
         </p>
       )}
       <p className="source-notice__share">
-        <ShareLink />
+        <ShareLink withoutCamera={shareWithoutCamera} />
       </p>
     </div>
   );

@@ -16,13 +16,16 @@ import type { StationItem } from '../../api/client';
 import { THEME } from '../../app/theme';
 import { t } from '../../i18n';
 import { AVAILABILITY_ORDER, availabilityOf, lacksEbikes, type Availability } from './availability';
-import type { MapBounds } from './mapBounds';
+import { SERVICE_AREA, type MapBounds } from './mapBounds';
 import { loadNightStyle } from './basemap';
 import {
   BIKE_LANES_LAYER,
   BUILDINGS_LAYER,
   HALO_LAYER,
   MARKERS_LAYER,
+  ME_HALO_LAYER,
+  ME_LAYER,
+  ME_SOURCE,
   NETWORK_IMAGE,
   STATIONS_SOURCE,
   TRANSIT_IMAGE,
@@ -88,6 +91,8 @@ interface StationMapProps {
   onMapReady?: ((map: MapLibreMap | null) => void) | undefined;
   /** La parte del mapa que se ve, al cargar y después de cada movimiento; null si se pierde el mapa. */
   onBoundsChange?: ((bounds: MapBounds | null) => void) | undefined;
+  /** Dónde está la persona («Cerca de mí»): un punto en el mapa, al que se acerca la cámara. */
+  me?: { longitude: number; latitude: number } | null;
 }
 
 function boundsOf(map: MapLibreMap): MapBounds {
@@ -101,8 +106,8 @@ export type MarkerLabel = 'bikes' | 'ebikes';
 const CAMERA_HASH = 'mapa';
 const BARCELONA: [number, number] = [2.165, 41.395];
 const MAX_BOUNDS: [[number, number], [number, number]] = [
-  [1.9, 41.22],
-  [2.45, 41.58],
+  [SERVICE_AREA.west, SERVICE_AREA.south],
+  [SERVICE_AREA.east, SERVICE_AREA.north],
 ];
 /** Ancho del panel flotante en escritorio, para que el encuadre no quede debajo. */
 const FLOATING_PANEL_PX = 460;
@@ -388,6 +393,7 @@ export function StationMap({
   onStatusChange,
   onMapReady,
   onBoundsChange,
+  me = null,
 }: StationMapProps) {
   const padTop = framePadding?.top ?? 48;
   const padRight = framePadding?.right ?? 48;
@@ -657,6 +663,71 @@ export function StationMap({
       });
     }
   }, [selectedId, mapReady]);
+
+  // Dónde está la persona: un punto claro con un halo tenue (distinto del pictograma del metro),
+  // encima de las estaciones. La cámara va a su alrededor a nivel de calle solo cuando llega una
+  // ubicación nueva: al volver de Experimentar o al recuperar el mapa se queda donde estaba.
+  // Sin punto, se quita.
+  const easedToRef = useRef<{ longitude: number; latitude: number } | null>(null);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || map === null) return;
+    const source = map.getSource<GeoJSONSource>(ME_SOURCE);
+    if (me === null) {
+      easedToRef.current = null;
+      if (source !== undefined) {
+        map.removeLayer(ME_LAYER);
+        map.removeLayer(ME_HALO_LAYER);
+        map.removeSource(ME_SOURCE);
+      }
+      return;
+    }
+    const data: GeoJSON.FeatureCollection = {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [me.longitude, me.latitude] },
+          properties: {},
+        },
+      ],
+    };
+    if (source === undefined) {
+      map.addSource(ME_SOURCE, { type: 'geojson', data });
+      map.addLayer({
+        id: ME_HALO_LAYER,
+        type: 'circle',
+        source: ME_SOURCE,
+        paint: {
+          'circle-radius': 18,
+          'circle-color': THEME.tokens['--ink'],
+          'circle-opacity': 0.2,
+        },
+      });
+      map.addLayer({
+        id: ME_LAYER,
+        type: 'circle',
+        source: ME_SOURCE,
+        paint: {
+          'circle-radius': 6,
+          'circle-color': THEME.tokens['--ink'],
+          'circle-stroke-color': THEME.night,
+          'circle-stroke-width': 2.5,
+        },
+      });
+    } else {
+      void source.setData(data);
+    }
+    if (easedToRef.current === me) return;
+    easedToRef.current = me;
+    movedByUserRef.current = true;
+    map.easeTo({
+      center: [me.longitude, me.latitude],
+      zoom: Math.max(map.getZoom(), 15),
+      offset: window.innerWidth >= 768 ? [FLOATING_PANEL_PX / 2, 0] : [0, 0],
+      duration: prefersReducedMotion() ? 0 : 800,
+    });
+  }, [me, mapReady]);
 
   const togglePitch = () => {
     const map = mapRef.current;

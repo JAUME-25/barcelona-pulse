@@ -135,7 +135,20 @@ export const ca: Messages = {
       bikes: 'Més bicis',
       docks: 'Més ancoratges lliures',
       ebikes: 'Més elèctriques',
+      distance: 'Més a prop meu',
     },
+    nearMe: 'A prop meu',
+    locating: 'Buscant-te…',
+    located:
+      'Ordenades de més a prop a més lluny d’on ets, en línia recta. La teva ubicació no surt del navegador.',
+    locatedRough: (error: string) =>
+      `Ubicació aproximada (±${error}): ordenades de més a prop a més lluny, en línia recta. La teva ubicació no surt del navegador.`,
+    locationOutside: 'Ets fora de Barcelona: la llista no s’ordena per distància.',
+    locationDenied:
+      'El navegador no ha donat permís per saber on ets. Ho pots canviar als ajustos del lloc.',
+    locationUnavailable: 'El navegador no ha pogut saber on ets.',
+    locationTimeout: 'El navegador ha trigat massa a saber on ets. Torna-ho a provar.',
+    locationUnsupported: 'Aquest navegador no dona la ubicació.',
     listTitle: 'Estacions',
     onlyOnMap: 'Només les del mapa',
     noneOnMap: 'Cap estació a la part del mapa que es veu. Mou el mapa o allunya’l.',
@@ -169,6 +182,7 @@ export const ca: Messages = {
     limits: 'Què mostra i què no',
     share: 'Copiar l’enllaç',
     shared: 'Enllaç copiat.',
+    sharedNoCamera: 'Enllaç copiat, sense la posició del mapa.',
     shareFailed: 'El navegador no deixa copiar-lo. Copia’l d’aquí:',
     shareUrl: 'Enllaç d’aquesta vista',
     texts: {
@@ -224,6 +238,7 @@ export const ca: Messages = {
     mapKey: 'També al mapa',
     bikeLane: 'Carril bici (OSM, no tots)',
     transit: 'Metro, tren i tramvia',
+    me: 'La teva ubicació',
   },
 
   districts: {
@@ -305,6 +320,8 @@ export const ca: Messages = {
     unavailable: 'No disponibles',
     capacity: 'Capacitat publicada',
     notPublished: 'No publicada',
+    nearby: 'Properes',
+    nearbyNote: 'Les més properes, en línia recta (no a peu), amb el seu estat en aquest moment.',
     last: 'Última observació',
     none: 'Cap',
     source: 'Font',

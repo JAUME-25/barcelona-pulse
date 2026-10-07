@@ -123,7 +123,21 @@ export const es = {
       bikes: 'Más bicis',
       docks: 'Más anclajes libres',
       ebikes: 'Más eléctricas',
+      distance: 'Más cerca de mí',
     } as Record<ListOrderKey, string>,
+    nearMe: 'Cerca de mí',
+    locating: 'Buscándote…',
+    located:
+      'Ordenadas de más cerca a más lejos de donde estás, en línea recta. Tu ubicación no sale del navegador.',
+    /** Con un error grande («±1,8 km»), el orden vale poco y se dice. */
+    locatedRough: (error: string) =>
+      `Ubicación aproximada (±${error}): ordenadas de más cerca a más lejos, en línea recta. Tu ubicación no sale del navegador.`,
+    locationOutside: 'Estás fuera de Barcelona: la lista no se ordena por distancia.',
+    locationDenied:
+      'El navegador no ha dado permiso para saber dónde estás. Puedes cambiarlo en sus ajustes del sitio.',
+    locationUnavailable: 'El navegador no ha podido saber dónde estás.',
+    locationTimeout: 'El navegador ha tardado demasiado en saber dónde estás. Vuelve a intentarlo.',
+    locationUnsupported: 'Este navegador no da la ubicación.',
     listTitle: 'Estaciones',
     onlyOnMap: 'Solo las del mapa',
     noneOnMap: 'Ninguna estación en la parte del mapa que se ve. Mueve el mapa o acércate menos.',
@@ -159,6 +173,7 @@ export const es = {
     limits: 'Qué muestra y qué no',
     share: 'Copiar enlace',
     shared: 'Enlace copiado.',
+    sharedNoCamera: 'Enlace copiado, sin la posición del mapa.',
     shareFailed: 'El navegador no deja copiarlo. Cópialo de aquí:',
     shareUrl: 'Enlace de esta vista',
     /** En castellano manda la API: nombre y atribución tal como los guarda. */
@@ -204,6 +219,7 @@ export const es = {
     mapKey: 'También en el mapa',
     bikeLane: 'Carril bici (OSM, no todos)',
     transit: 'Metro, tren y tranvía',
+    me: 'Tu ubicación',
   },
 
   districts: {
@@ -294,6 +310,8 @@ export const es = {
     unavailable: 'No disponibles',
     capacity: 'Capacidad publicada',
     notPublished: 'No publicada',
+    nearby: 'Cercanas',
+    nearbyNote: 'Las más próximas, en línea recta (no a pie), con su estado en este momento.',
     last: 'Última observación',
     none: 'Ninguna',
     source: 'Fuente',

@@ -45,10 +45,14 @@ export function syncParam(name: string, value: string | null): void {
   if (readParam(name) !== value) writeParam(name, value);
 }
 
-/** Cambia la URL sin añadir entrada al historial. */
+/**
+ * Cambia la URL sin añadir entrada al historial. Conserva el estado de la entrada (`{pushed}`):
+ * pasar a otra estación con el detalle abierto, o la hora al reproducir, no deben hacer que
+ * «Volver» deje de volver atrás.
+ */
 export function replaceUrl(url: URL): void {
   try {
-    window.history.replaceState(null, '', url);
+    window.history.replaceState(window.history.state, '', url);
   } catch {
     // Safari lanza SecurityError con más de 100 cambios seguidos: la URL se queda como estaba,
     // pero la aplicación sigue.

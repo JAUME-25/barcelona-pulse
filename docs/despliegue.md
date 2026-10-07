@@ -148,6 +148,17 @@ Cada paso en Forge o en Cloudflare se hace mirando la pantalla real (los paneles
 «Deploy now» en Forge (o activar el despliegue al hacer push, cuando todo esté estable). La CI
 no despliega: un push con la CI en rojo no debería publicarse.
 
+Si el despliegue cambia `infra/nginx/pulse.conf` (el 7-10-2026, `geolocation=(self)` para
+«Cerca de mí»), hay que recargar nginx: Forge solo lo recarga al guardar desde su panel, no al
+desplegar. En Forge, el botón de reiniciar nginx del servidor (el nombre exacto, en pantalla) o,
+por SSH, `sudo service nginx reload`. Comprobación desde fuera:
+
+```bash
+curl -sI https://pulse.jaumeperez.com/ | grep -i permissions-policy
+```
+
+tiene que decir `geolocation=(self)`; hasta entonces, «Cerca de mí» falla siempre.
+
 ## Datos
 
 - Otro periodo: `ingest bicing-archive --from … --to …` como arriba (hasta 31 días por vez y,

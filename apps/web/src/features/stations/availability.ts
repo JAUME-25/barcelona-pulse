@@ -1,5 +1,6 @@
 import type { StationItem, StationState } from '../../api/client';
 import { t } from '../../i18n';
+import { distanceMeters } from './distance';
 import { stationName } from './names';
 
 /**
@@ -128,9 +129,17 @@ export function lacksEbikes(station: StationItem): boolean {
   return station.state.ebikesAvailable === 0;
 }
 
-/** Orden de la lista: por nombre o, de más a menos, por bicis, anclajes libres o eléctricas. */
-export type ListOrder = 'name' | 'bikes' | 'docks' | 'ebikes';
+/**
+ * Orden de la lista: por nombre; de más a menos, por bicis, anclajes libres o eléctricas; o de
+ * más cerca a más lejos de donde está la persona («distance», solo cuando se sabe dónde está).
+ */
+export type ListOrder = 'name' | 'bikes' | 'docks' | 'ebikes' | 'distance';
 export const LIST_ORDERS: readonly ListOrder[] = ['name', 'bikes', 'docks', 'ebikes'];
+
+export interface Point {
+  longitude: number;
+  latitude: number;
+}
 
 /** La cifra por la que se ordena; null si no se enseña (sin dato o fuera de servicio). */
 function orderValue(station: StationItem, order: ListOrder): number | null {
@@ -144,6 +153,7 @@ function orderValue(station: StationItem, order: ListOrder): number | null {
     case 'ebikes':
       return station.state.ebikesAvailable;
     case 'name':
+    case 'distance':
       return null;
   }
 }
@@ -153,8 +163,19 @@ function orderValue(station: StationItem, order: ListOrder): number | null {
  * cifra (sin dato, fuera de servicio o una fuente que no la publica) quedan al final, y a igual
  * cifra se conserva el orden por nombre.
  */
-export function sortStations(stations: readonly StationItem[], order: ListOrder): StationItem[] {
-  if (order === 'name') return [...stations];
+export function sortStations(
+  stations: readonly StationItem[],
+  order: ListOrder,
+  from: Point | null = null,
+): StationItem[] {
+  if (order === 'name' || (order === 'distance' && from === null)) return [...stations];
+  if (order === 'distance' && from !== null) {
+    // De más cerca a más lejos, en metros (EPSG:25831), sin dejar fuera a las que no tienen dato.
+    return stations
+      .map((s) => ({ s, d: distanceMeters(from, s) }))
+      .sort((a, b) => a.d - b.d)
+      .map(({ s }) => s);
+  }
   return stations
     .map((s) => ({ s, value: orderValue(s, order) }))
     .sort((a, b) => {

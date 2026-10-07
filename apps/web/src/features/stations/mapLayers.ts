@@ -10,3 +10,7 @@ export const BIKE_LANES_LAYER = 'bp-bike-lanes';
 export const TRANSIT_IMAGE = 'bp-transit';
 /** Marcador de estación sin estado (variante «network»). */
 export const NETWORK_IMAGE = 'bp-network';
+/** Dónde está la persona («Cerca de mí»): el punto y su halo. */
+export const ME_SOURCE = 'bp-me';
+export const ME_LAYER = 'bp-me';
+export const ME_HALO_LAYER = 'bp-me-halo';

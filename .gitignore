@@ -13,6 +13,7 @@ apps/web/test-results/
 apps/web/playwright-report/
 apps/web/captures/
 apps/web/.impeccable/
+.impeccable/
 *.tsbuildinfo
 
 # Entorno

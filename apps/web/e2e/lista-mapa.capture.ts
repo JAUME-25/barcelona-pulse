@@ -45,7 +45,8 @@ test('lista-mapa: la lista sigue al mapa', async ({ page }, testInfo) => {
       window.location.hash = '#mapa=15.2/41.3875/2.1795/0/0';
     });
   } else {
-    const box = (await page.locator('.station-map__canvas canvas').boundingBox())!;
+    const box = await page.locator('.station-map__canvas canvas').boundingBox();
+    if (box === null) throw new Error('El mapa no tiene lienzo.');
     await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5);
     await page.mouse.down();
     await page.mouse.move(box.x + box.width * 0.6 - 260, box.y + box.height * 0.5 - 120, {

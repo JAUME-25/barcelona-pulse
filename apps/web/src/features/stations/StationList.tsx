@@ -1,7 +1,8 @@
 import { memo, useCallback, useEffect, useRef } from 'react';
 import type { StationItem } from '../../api/client';
 import { t } from '../../i18n';
-import { availabilityLabel, availabilityOf, type Availability } from './availability';
+import { availabilityLabel, availabilityOf, type Availability, type Point } from './availability';
+import { distanceLabel, distanceMeters } from './distance';
 import { stationName } from './names';
 import { OctagonGlyph } from './OctagonGlyph';
 
@@ -15,6 +16,8 @@ interface StationListProps {
   selectedId: number | null;
   onSelect: (id: number) => void;
   figures?: ListFigures;
+  /** Desde dónde se mide la distancia de cada fila (donde está la persona, o una estación). */
+  distanceFrom?: Point | null;
 }
 
 function summary(station: StationItem, at: string): string {
@@ -119,6 +122,7 @@ export function StationList({
   selectedId,
   onSelect,
   figures = 'bikes',
+  distanceFrom = null,
 }: StationListProps) {
   // La función que llega cambia con los datos; las filas reciben siempre la misma.
   const onSelectRef = useRef(onSelect);
@@ -135,6 +139,11 @@ export function StationList({
         const category = availabilityOf(station.state);
         // Sin dato o fuera de servicio no se enseñan cifras: se leerían como disponibles.
         const known = category !== 'unknown' && category !== 'outOfService';
+        // Con un punto de referencia, la distancia abre la línea del estado: «240 m · Con bicis».
+        const summaryText =
+          distanceFrom === null
+            ? summary(station, at)
+            : `${distanceLabel(distanceMeters(distanceFrom, station))} · ${summary(station, at)}`;
         return (
           <StationRow
             key={station.id}
@@ -142,7 +151,7 @@ export function StationList({
             name={stationName(station)}
             place={station.neighbourhood}
             category={category}
-            summaryText={summary(station, at)}
+            summaryText={summaryText}
             bikes={known ? station.state.bikesAvailable : null}
             ebikes={known ? station.state.ebikesAvailable : null}
             docks={known ? station.state.docksAvailable : null}

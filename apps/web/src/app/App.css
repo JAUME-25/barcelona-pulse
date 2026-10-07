@@ -311,6 +311,26 @@
   font-size: 1.0625rem;
 }
 
+/* El campo y «Cerca de mí» en la misma línea; a 320 px el botón se queda estrecho pero entero. */
+.search__row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.search__row .search__input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.search__near {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.search__notice {
+  margin: 6px 0 0;
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+}
+
 .search__input::placeholder {
   color: var(--ink-2);
 }
@@ -695,6 +715,20 @@
 
 .station-detail__id {
   color: var(--ink-2);
+}
+
+/* Las estaciones más próximas, con el mismo aspecto que la lista. */
+.station-detail__nearby {
+  margin-top: 22px;
+}
+.station-detail__nearby h3 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+.station-detail__note {
+  margin: 2px 0 4px;
+  color: var(--ink-2);
+  font-size: 0.9375rem;
 }
 
 .station-detail__notes {

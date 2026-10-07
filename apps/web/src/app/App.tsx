@@ -45,7 +45,9 @@ import { BrandMark } from '../features/stations/OctagonGlyph';
 import { SourceNotice } from '../features/stations/SourceNotice';
 import { StationDetail } from '../features/stations/StationDetail';
 import { StationList } from '../features/stations/StationList';
+import { distanceLabel } from '../features/stations/distance';
 import { inBounds, type MapBounds } from '../features/stations/mapBounds';
+import { ROUGH_ACCURACY_M, useNearMe, type LocationNotice } from '../features/stations/useNearMe';
 import type { MapStatus } from '../features/stations/StationMap';
 import {
   instantFor,
@@ -173,6 +175,27 @@ function ReplayStationsMessage({ failed, onRetry }: { failed: boolean; onRetry: 
  * Al reproducir, el aviso de procedencia no enseña el instante (lo hace el reproductor): basta
  * la fuente. Así sigue a la vista mientras llega un paso y la cabecera no salta.
  */
+/** Qué pasó al pulsar «Cerca de mí», con su motivo: cada fallo se arregla de una manera. */
+function locationNoticeText(notice: LocationNotice): string {
+  const m = t().app;
+  switch (notice.kind) {
+    case 'located':
+      return notice.accuracy !== null && notice.accuracy > ROUGH_ACCURACY_M
+        ? m.locatedRough(distanceLabel(notice.accuracy))
+        : m.located;
+    case 'outside':
+      return m.locationOutside;
+    case 'denied':
+      return m.locationDenied;
+    case 'unavailable':
+      return m.locationUnavailable;
+    case 'timeout':
+      return m.locationTimeout;
+    case 'unsupported':
+      return m.locationUnsupported;
+  }
+}
+
 function replayNotice(source: SourceSummary): StationsResponse {
   const { id, kind, name, attribution, license, url } = source;
   return {
@@ -304,12 +327,18 @@ export function App() {
     listFollowsMapFromParam(readParam(LIST_PARAM)),
   );
   const [bounds, setBounds] = useState<MapBounds | null>(null);
+  // «Cerca de mí»: dónde está la persona, solo en memoria (nunca en la URL ni guardado). Al
+  // llegar, la lista se ordena por distancia y el punto se marca en el mapa.
+  const nearMe = useNearMe(() => {
+    setOrder('distance');
+  });
+  const { me } = nearMe;
   const onMap = useMemo(
     () =>
       listFollowsMap && bounds !== null ? filtered.filter((s) => inBounds(s, bounds)) : filtered,
     [filtered, listFollowsMap, bounds],
   );
-  const listed = useMemo(() => sortStations(onMap, order), [onMap, order]);
+  const listed = useMemo(() => sortStations(onMap, order, me), [onMap, order, me]);
   // Mientras se busca, el mapa encuadra los resultados, aunque se haya movido antes.
   const searching = normalizeForSearch(query.trim());
   const selected =
@@ -485,7 +514,10 @@ export function App() {
       setQuery(readParam(SEARCH_PARAM) ?? '');
       setVisible(visibleFromParam(readParam(HIDE_PARAM)));
       setDistrict(readParam(DISTRICT_PARAM));
-      setOrder(orderFromParam(readParam(ORDER_PARAM)));
+      // La distancia nunca va en la URL: mientras se sepa dónde está la persona, Atrás no la quita.
+      setOrder((current) =>
+        current === 'distance' ? current : orderFromParam(readParam(ORDER_PARAM)),
+      );
       setNumberMode(numberModeFromParam(readParam(NUMBER_PARAM)));
       setListFollowsMap(listFollowsMapFromParam(readParam(LIST_PARAM)));
     };
@@ -624,25 +656,40 @@ export function App() {
             <label htmlFor="station-search" className="search__label">
               {m.search}
             </label>
-            <input
-              id="station-search"
-              className="search__input"
-              type="search"
-              autoComplete="off"
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                if (selectedKey !== null) closeDetail();
-              }}
-              // Intro abre la primera estación de la lista.
-              onKeyDown={(e) => {
-                const first = listed[0];
-                if (e.key === 'Enter' && searching !== '' && first !== undefined) {
-                  e.preventDefault();
-                  select(first.id);
-                }
-              }}
-            />
+            <div className="search__row">
+              <input
+                id="station-search"
+                className="search__input"
+                type="search"
+                autoComplete="off"
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  if (selectedKey !== null) closeDetail();
+                }}
+                // Intro abre la primera estación de la lista.
+                onKeyDown={(e) => {
+                  const first = listed[0];
+                  if (e.key === 'Enter' && searching !== '' && first !== undefined) {
+                    e.preventDefault();
+                    select(first.id);
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="button search__near"
+                onClick={nearMe.locate}
+                disabled={nearMe.locating}
+              >
+                {nearMe.locating ? m.locating : m.nearMe}
+              </button>
+            </div>
+            {nearMe.notice !== null && (
+              <p className="search__notice" role="status">
+                {locationNoticeText(nearMe.notice)}
+              </p>
+            )}
           </div>
           <div className="panel-tools__row">
             {/* Al reproducir cambia en cada paso: anunciarlo no dejaría oír nada más. */}
@@ -656,6 +703,8 @@ export function App() {
                   value={order}
                   onChange={(e) => {
                     setOrder(e.target.value as ListOrder);
+                    // Elegir otro orden a mano retira el aviso de «Cerca de mí».
+                    nearMe.dismiss();
                   }}
                 >
                   {LIST_ORDERS.map((value) => (
@@ -663,6 +712,7 @@ export function App() {
                       {m.orders[value]}
                     </option>
                   ))}
+                  {me !== null && <option value="distance">{m.orders.distance}</option>}
                 </select>
               </label>
             )}
@@ -675,6 +725,9 @@ export function App() {
             onBack={backToList}
             focusOnOpen={selectedByUser}
             onFocused={detailFocused}
+            all={all}
+            onSelect={select}
+            figures={numberMode}
           />
         ) : filtered.length === 0 ? (
           <div className="panel-status">
@@ -723,6 +776,7 @@ export function App() {
                 figures={numberMode}
                 selectedId={selectedId}
                 onSelect={select}
+                distanceFrom={me}
               />
             )}
           </>
@@ -776,6 +830,7 @@ export function App() {
             months={source === undefined ? null : formatMonths(source.days)}
             onLimits={notice.source.kind === 'observed' ? openSheet : undefined}
             onChangeMoment={source?.period == null ? undefined : changeMoment}
+            shareWithoutCamera={me !== null}
           />
         )}
       </header>
@@ -807,6 +862,7 @@ export function App() {
               onStatusChange={setMapStatus}
               onMapReady={setMap}
               onBoundsChange={setBounds}
+              me={experimenting ? null : me}
             />
           </Suspense>
         </MapBoundary>
@@ -849,6 +905,7 @@ export function App() {
                 onToggle={toggleCategory}
                 numberMode={numberMode}
                 onNumberMode={setNumberMode}
+                showMe={me !== null}
               />
             )}
           </div>

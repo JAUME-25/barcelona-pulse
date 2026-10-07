@@ -61,6 +61,20 @@ export function TransitGlyph({ size = 16 }: { size?: number }) {
   );
 }
 
+/**
+ * Dónde está la persona («Cerca de mí»): un punto claro con un halo tenue, para que no se confunda
+ * con el pictograma del metro (un disco con la cara de un tren). Mismo dibujo que en el mapa.
+ */
+export function MeGlyph({ size = 16 }: { size?: number }) {
+  const ink = THEME.tokens['--ink'];
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+      <circle cx="9" cy="9" r="8.5" fill={ink} opacity="0.22" />
+      <circle cx="9" cy="9" r="4" fill={ink} stroke={THEME.night} strokeWidth="1.6" />
+    </svg>
+  );
+}
+
 /** Rayo: bicis eléctricas. En el ámbar de «con bicis», con el contorno oscuro de los marcadores. */
 export function BoltGlyph({ size = 16 }: { size?: number }) {
   return (

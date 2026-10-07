@@ -3,10 +3,15 @@ import type { StationItem, StationsResponse } from '../../api/client';
 import { t } from '../../i18n';
 import { formatDateTime, formatDay, formatDuration, formatTime } from '../../shared/format';
 import { availabilityLabel, availabilityOf, qualityFlagLabel, statusLabel } from './availability';
+import { distanceMeters } from './distance';
 import { districtName, stationName } from './names';
 import { OctagonGlyph } from './OctagonGlyph';
 import { sourceName } from './sources';
+import { StationList, type ListFigures } from './StationList';
 import { StationPatternSection } from './StationPattern';
+
+/** Cuántas cercanas se enseñan: las justas para tener alternativa sin alargar la ficha. */
+const NEARBY_COUNT = 5;
 
 interface StationDetailProps {
   station: StationItem;
@@ -16,6 +21,52 @@ interface StationDetailProps {
   focusOnOpen: boolean;
   /** Ya tiene el foco: al volver a montarse (p. ej., al reproducir otro día) no lo pide otra vez. */
   onFocused: () => void;
+  /** Todas las estaciones del momento, para las cercanas; y cómo abrir una de ellas. */
+  all?: readonly StationItem[];
+  onSelect?: ((id: number) => void) | undefined;
+  /** La cifra que enseñan las cercanas: la misma que la lista (bicis o eléctricas). */
+  figures?: ListFigures;
+}
+
+/**
+ * Las estaciones más próximas, con su estado: si esta no sirve (vacía, llena, sin dato), la
+ * alternativa está a un toque. En línea recta (EPSG:25831), no a pie.
+ */
+function NearbyStations({
+  station,
+  all,
+  at,
+  onSelect,
+  figures,
+}: {
+  station: StationItem;
+  all: readonly StationItem[];
+  at: string;
+  onSelect: (id: number) => void;
+  figures: ListFigures;
+}) {
+  const m = t().detail;
+  const nearby = all
+    .filter((s) => s.id !== station.id)
+    .map((s) => ({ s, d: distanceMeters(station, s) }))
+    .sort((a, b) => a.d - b.d)
+    .slice(0, NEARBY_COUNT)
+    .map(({ s }) => s);
+  if (nearby.length === 0) return null;
+  return (
+    <section className="station-detail__nearby" aria-labelledby="station-nearby">
+      <h3 id="station-nearby">{m.nearby}</h3>
+      <p className="station-detail__note">{m.nearbyNote}</p>
+      <StationList
+        stations={nearby}
+        at={at}
+        selectedId={null}
+        onSelect={onSelect}
+        figures={figures}
+        distanceFrom={station}
+      />
+    </section>
+  );
 }
 
 function UnknownExplanation({
@@ -51,6 +102,9 @@ export function StationDetail({
   onBack,
   focusOnOpen,
   onFocused,
+  all = [],
+  onSelect,
+  figures = 'bikes',
 }: StationDetailProps) {
   const m = t().detail;
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -173,6 +227,17 @@ export function StationDetail({
           ))}
           {station.metadataAssumed && <li>{m.metadataAssumed}</li>}
         </ul>
+      )}
+
+      {/* Después de los datos de esta estación y antes del patrón: la alternativa, a un toque. */}
+      {onSelect !== undefined && (
+        <NearbyStations
+          station={station}
+          all={all}
+          at={response.at}
+          onSelect={onSelect}
+          figures={figures}
+        />
       )}
 
       <StationPatternSection stationId={station.id} at={response.at} />

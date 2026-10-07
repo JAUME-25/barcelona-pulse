@@ -5,7 +5,7 @@ import {
   AVAILABILITY_ORDER,
   type Availability,
 } from './availability';
-import { BoltGlyph, OctagonGlyph, TransitGlyph } from './OctagonGlyph';
+import { BoltGlyph, MeGlyph, OctagonGlyph, TransitGlyph } from './OctagonGlyph';
 
 /** Qué número llevan los marcadores y la cifra grande de la lista. */
 export type NumberMode = 'bikes' | 'ebikes';
@@ -17,6 +17,8 @@ interface AvailabilityFilterProps {
   /** Interruptor del número: todas las bicis o solo las eléctricas. */
   numberMode: NumberMode;
   onNumberMode: (mode: NumberMode) => void;
+  /** El punto de «Cerca de mí» está en el mapa: se explica en la clave. */
+  showMe?: boolean;
 }
 
 /**
@@ -30,6 +32,7 @@ export function AvailabilityFilter({
   onToggle,
   numberMode,
   onNumberMode,
+  showMe = false,
 }: AvailabilityFilterProps) {
   const m = t().availability;
   return (
@@ -93,6 +96,12 @@ export function AvailabilityFilter({
           <TransitGlyph size={15} />
           {m.transit}
         </li>
+        {showMe && (
+          <li>
+            <MeGlyph size={15} />
+            {m.me}
+          </li>
+        )}
       </ul>
     </fieldset>
   );

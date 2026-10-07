@@ -11,7 +11,7 @@ type Notice = { kind: 'copied' } | { kind: 'failed'; url: string } | null;
  * compartir; si no, copia al portapapeles y lo dice. Si el navegador no deja copiar, enseña la
  * URL en un campo para copiarla a mano.
  */
-export function ShareLink() {
+export function ShareLink({ withoutCamera = false }: { withoutCamera?: boolean }) {
   const m = t().source;
   const [notice, setNotice] = useState<Notice>(null);
   const timerRef = useRef<number | null>(null);
@@ -24,7 +24,10 @@ export function ShareLink() {
   );
 
   const share = async () => {
-    const url = window.location.href;
+    const target = new URL(window.location.href);
+    // Con «Cerca de mí», la cámara del mapa apunta a la persona: el enlace va sin ella.
+    if (withoutCamera) target.hash = '';
+    const url = target.toString();
     const coarse =
       typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
     if (coarse && typeof navigator.share === 'function') {
@@ -59,7 +62,13 @@ export function ShareLink() {
         {m.share}
       </button>
       <span className="share-link__notice" role="status">
-        {notice?.kind === 'copied' ? m.shared : notice?.kind === 'failed' ? m.shareFailed : ''}
+        {notice?.kind === 'copied'
+          ? withoutCamera
+            ? m.sharedNoCamera
+            : m.shared
+          : notice?.kind === 'failed'
+            ? m.shareFailed
+            : ''}
       </span>
       {notice?.kind === 'failed' && (
         <input

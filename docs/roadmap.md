@@ -376,6 +376,27 @@ honesta de lo hecho.
       todos; el archivo de un día que trae observaciones del anterior cambia también el
       anterior; ETag y 304 en estado, línea temporal, fotogramas, detalle y patrón, y que el
       patrón cambia con otro día mientras el estado del 19 sigue en 304; «ahora» sin ETag).
+19. **Hecho** en local (7-10-2026, sin commit). «Cercanas» y «Cerca de mí», el bloque 5 de la
+    propuesta (`docs/design.md`, «Cercanas y Cerca de mí»):
+    - «Cerca de mí» junto al buscador: la ubicación se pide al pulsar y vive solo en memoria. La
+      lista se ordena por distancia en línea recta (EPSG:25831 en el navegador,
+      `features/stations/distance.ts`, comprobado contra PostGIS a menos de 1 cm), con los metros
+      en cada fila, y el mapa se acerca a la persona con un punto con halo y su clave. «Más cerca
+      de mí» es un orden más mientras haya ubicación, nunca en la URL; Atrás no lo quita. Fuera de
+      Barcelona, sin permiso, sin posición o con el tiempo agotado se dice cada uno; con mucho
+      error, «aproximada (±1,8 km)» (`features/stations/useNearMe.ts`).
+    - «Copiar enlace» va sin la cámara del mapa mientras se sepa dónde está la persona, y lo dice.
+    - «Cercanas» en la ficha, tras los datos de la estación: las cinco más próximas, con su
+      distancia y la misma cifra que la lista (bicis o eléctricas).
+    - De paso: `replaceUrl` borraba la marca de la entrada del historial al cambiar de estación
+      con el detalle abierto (o la hora al reproducir), y «Volver» dejaba una entrada de más.
+    - nginx: `geolocation=(self)` en `infra/nginx/pulse.conf`; hay que recargar nginx al
+      desplegarlo (`docs/despliegue.md`).
+    - Pruebas: 189 de la web (la distancia contra PostGIS; la app: orden, Atrás, enlace sin
+      cámara, cercanas con eléctricas, fuera de Barcelona, fallos por motivo, aproximada y la
+      clave; `shared/url.test.ts`), humo 20/20 y `e2e/cerca.capture.ts` con el mapa real
+      (ubicación concedida y denegada) en escritorio y 375 px. Usado en el navegador en los tres
+      idiomas a 1440, 375 y 320 px.
 
 ## Siguiente
 

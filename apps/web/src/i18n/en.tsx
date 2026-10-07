@@ -118,7 +118,20 @@ export const en: Messages = {
       bikes: 'Most bikes',
       docks: 'Most free docks',
       ebikes: 'Most e-bikes',
+      distance: 'Nearest to me',
     },
+    nearMe: 'Near me',
+    locating: 'Locating you…',
+    located:
+      'Sorted from nearest to farthest from where you are, as the crow flies. Your location never leaves the browser.',
+    locatedRough: (error: string) =>
+      `Approximate location (±${error}): sorted from nearest to farthest, as the crow flies. Your location never leaves the browser.`,
+    locationOutside: 'You are outside Barcelona: the list is not sorted by distance.',
+    locationDenied:
+      'The browser did not allow access to your location. You can change that in its site settings.',
+    locationUnavailable: 'The browser could not determine your location.',
+    locationTimeout: 'The browser took too long to find your location. Try again.',
+    locationUnsupported: 'This browser does not provide location.',
     listTitle: 'Stations',
     onlyOnMap: 'Only those on the map',
     noneOnMap: 'No stations in the visible part of the map. Move the map or zoom out.',
@@ -152,6 +165,7 @@ export const en: Messages = {
     limits: 'What it shows and what it doesn’t',
     share: 'Copy link',
     shared: 'Link copied.',
+    sharedNoCamera: 'Link copied, without the map position.',
     shareFailed: 'The browser will not copy it. Copy it from here:',
     shareUrl: 'Link to this view',
     texts: {
@@ -207,6 +221,7 @@ export const en: Messages = {
     mapKey: 'Also on the map',
     bikeLane: 'Bike lane (OSM, not all)',
     transit: 'Metro, train and tram',
+    me: 'Your location',
   },
 
   districts: {
@@ -286,6 +301,9 @@ export const en: Messages = {
     unavailable: 'Unavailable',
     capacity: 'Published capacity',
     notPublished: 'Not published',
+    nearby: 'Nearby',
+    nearbyNote:
+      'The closest ones, as the crow flies (not on foot), with their state at this moment.',
     last: 'Last observation',
     none: 'None',
     source: 'Source',

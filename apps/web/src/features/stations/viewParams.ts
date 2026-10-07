@@ -32,7 +32,8 @@ export function hiddenParam(visible: ReadonlySet<Availability>): string | null {
   return hidden.length === 0 ? null : hidden.join(',');
 }
 
-const ORDER_SLUG: Record<ListOrder, string> = {
+// La distancia no va en la URL: depende de dónde está la persona, que no se guarda en ningún sitio.
+const ORDER_SLUG: Record<Exclude<ListOrder, 'distance'>, string> = {
   name: 'nombre',
   bikes: 'bicis',
   docks: 'libres',
@@ -40,11 +41,15 @@ const ORDER_SLUG: Record<ListOrder, string> = {
 };
 
 export function orderFromParam(value: string | null): ListOrder {
-  return (Object.keys(ORDER_SLUG) as ListOrder[]).find((o) => ORDER_SLUG[o] === value) ?? 'name';
+  return (
+    (Object.keys(ORDER_SLUG) as Exclude<ListOrder, 'distance'>[]).find(
+      (o) => ORDER_SLUG[o] === value,
+    ) ?? 'name'
+  );
 }
 
 export function orderParam(order: ListOrder): string | null {
-  return order === 'name' ? null : ORDER_SLUG[order];
+  return order === 'name' || order === 'distance' ? null : ORDER_SLUG[order];
 }
 
 export function numberModeFromParam(value: string | null): NumberMode {

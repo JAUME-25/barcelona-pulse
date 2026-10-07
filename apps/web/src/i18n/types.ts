@@ -3,7 +3,7 @@
 
 export type AvailabilityKey = 'available' | 'few' | 'empty' | 'full' | 'outOfService' | 'unknown';
 /** Orden de la lista de estaciones (`features/stations/availability.ts`). */
-export type ListOrderKey = 'name' | 'bikes' | 'docks' | 'ebikes';
+export type ListOrderKey = 'name' | 'bikes' | 'docks' | 'ebikes' | 'distance';
 export type StatusKey = 'in_service' | 'maintenance' | 'closed' | 'planned' | 'unknown';
 export type CoverageKey = 'complete' | 'partial' | 'none';
 export type SilenceKey = 'never' | 'days' | 'hours' | 'minutes';
