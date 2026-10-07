@@ -194,7 +194,8 @@
   position: relative;
   grid-area: track;
   height: 104px;
-  touch-action: none;
+  /* El dedo en vertical desplaza la página; en horizontal mueve la hora (ReplayDeck). */
+  touch-action: pan-y;
   cursor: col-resize;
 }
 

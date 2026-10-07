@@ -49,6 +49,7 @@ import { t } from '../i18n';
 import { formatMonths } from '../shared/format';
 import { readParam, writeParam } from '../shared/url';
 import { LanguageSwitch } from './LanguageSwitch';
+import { MapBoundary } from './MapBoundary';
 import './App.css';
 
 // MapLibre es casi todo el JavaScript: el mapa llega en su propio fragmento y el panel y la lista
@@ -178,6 +179,11 @@ export function App() {
     readParam(VIEW_PARAM) === VIEW_LIMITS ? { byUser: false } : null,
   );
   const restoreLimitsFocusRef = useRef(false);
+  const sheetFocused = useCallback(() => {
+    setSheet((s) => (s?.byUser === true ? { byUser: false } : s));
+  }, []);
+  // Al elegir un día en la ficha, el foco va a la pista del reproductor.
+  const focusReplayRef = useRef(false);
   // Solo se reproduce una fuente con datos; sin ellos, la vista es la de explorar.
   const replaying = mode === 'replay' && (source?.period ?? null) !== null;
   const experimenting = mode === 'experiment' && sourceId !== null;
@@ -211,10 +217,18 @@ export function App() {
   // (?estacion=demo-008) y no depende de los ids internos de cada base de datos.
   const [selectedKey, setSelectedKey] = useState<string | null>(readStationParam);
   const [mapStatus, setMapStatus] = useState<MapStatus>({ kind: 'loading' });
+  const mapCrashed = useCallback(() => {
+    setMapStatus({ kind: 'failed' });
+  }, []);
   const lastSelectedRef = useRef<number | null>(null);
   const restoreFocusRef = useRef(false);
   // Al abrir un enlace directo no se mueve el foco: la página quedaría desplazada fuera del mapa.
+  // Una vez tomado, no se vuelve a pedir: al reproducir, el detalle se vuelve a montar al llegar
+  // otro día y se llevaba el foco de la pista (y, en móvil, la página).
   const [selectedByUser, setSelectedByUser] = useState(false);
+  const detailFocused = useCallback(() => {
+    setSelectedByUser(false);
+  }, []);
   const bodyRef = useRef<HTMLElement>(null);
 
   // Al reproducir, mientras llega el momento siguiente se sigue viendo el anterior de la misma
@@ -341,7 +355,14 @@ export function App() {
     closeSheet(false);
     replay.selectDay(day);
     changeMode('replay');
+    focusReplayRef.current = true;
   };
+  // La ficha desaparece al elegir el día: sin esto, el foco se quedaba en la página.
+  useEffect(() => {
+    if (!replaying || !focusReplayRef.current) return;
+    focusReplayRef.current = false;
+    document.querySelector<HTMLElement>('.replay-deck__track')?.focus();
+  });
   const selectFromSheet = (id: number) => {
     closeSheet(false);
     select(id);
@@ -395,6 +416,7 @@ export function App() {
         source={source}
         response={response}
         focusOnOpen={sheet.byUser}
+        onFocused={sheetFocused}
         onClose={() => {
           closeSheet(true);
         }}
@@ -425,7 +447,8 @@ export function App() {
               }}
             />
           </div>
-          <p className="panel-tools__count" aria-live="polite">
+          {/* Al reproducir cambia en cada paso: anunciarlo no dejaría oír nada más. */}
+          <p className="panel-tools__count" aria-live={replaying ? 'off' : 'polite'}>
             {m.count(filtered.length, all.length)}
           </p>
         </div>
@@ -435,6 +458,7 @@ export function App() {
             response={response}
             onBack={backToList}
             focusOnOpen={selectedByUser}
+            onFocused={detailFocused}
           />
         ) : filtered.length === 0 ? (
           <div className="panel-status">
@@ -506,22 +530,25 @@ export function App() {
       </header>
 
       <div className="map-area">
-        <Suspense fallback={<div className="station-map" aria-hidden="true" />}>
-          <StationMap
-            stations={experimenting ? scenarioStations : filtered}
-            frame={all}
-            frameKey={`${sourceId ?? ''}:${shownMode}`}
-            framePadding={
-              replaying ? REPLAY_FRAME : experimenting ? EXPERIMENT_FRAME : EXPLORE_FRAME
-            }
-            selectedId={experimenting ? null : selectedId}
-            variant={experimenting ? 'network' : 'availability'}
-            buildings={!experimenting}
-            onSelect={experimenting ? tapStation : select}
-            onStatusChange={setMapStatus}
-            onMapReady={setMap}
-          />
-        </Suspense>
+        <MapBoundary onError={mapCrashed}>
+          <Suspense fallback={<div className="station-map" aria-hidden="true" />}>
+            <StationMap
+              stations={experimenting ? scenarioStations : filtered}
+              frame={all}
+              frameKey={sourceId ?? ''}
+              frameMode={shownMode}
+              framePadding={
+                replaying ? REPLAY_FRAME : experimenting ? EXPERIMENT_FRAME : EXPLORE_FRAME
+              }
+              selectedId={experimenting ? null : selectedId}
+              variant={experimenting ? 'network' : 'availability'}
+              buildings={!experimenting}
+              onSelect={experimenting ? tapStation : select}
+              onStatusChange={setMapStatus}
+              onMapReady={setMap}
+            />
+          </Suspense>
+        </MapBoundary>
         <MapStatusMessage status={mapStatus} />
         {replaying && response === null && replay.point !== undefined && !mapUnavailable && (
           <ReplayStationsMessage

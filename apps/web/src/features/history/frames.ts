@@ -1,4 +1,4 @@
-import type { FramesResponse, StationItem, StationsResponse } from '../../api/client';
+import type { FramesResponse, StationItem, StationState, StationsResponse } from '../../api/client';
 
 export const HOUR_MS = 3_600_000;
 
@@ -64,6 +64,37 @@ export function latestFrameBefore(
         best = { frames, at: frame.at, time };
     }
   }
-  if (best === undefined || t - best.time > best.frames.toleranceMinutes * 60_000) return undefined;
-  return stationsAt(best.frames, best.at);
+  const tolerance = (best?.frames.toleranceMinutes ?? 0) * 60_000;
+  if (best === undefined || t - best.time > tolerance) return undefined;
+  const response = stationsAt(best.frames, best.at);
+  if (response === undefined) return undefined;
+  // Se ve bajo la hora pedida: lo que a esa hora ya pasa de la tolerancia es desconocido, como lo
+  // diría la API (ADR 0005), aunque en su paso aún contara.
+  return {
+    ...response,
+    stations: response.stations.map((s) => {
+      const last = s.state.lastObservedAt;
+      if (s.state.freshness !== 'current' || last === null || t - Date.parse(last) <= tolerance)
+        return s;
+      return { ...s, state: staleState(last) };
+    }),
+  };
+}
+
+/** Estado desconocido por dato viejo, igual que el que devuelve la API. */
+function staleState(lastObservedAt: string): StationState {
+  return {
+    freshness: 'stale',
+    lastObservedAt,
+    status: 'unknown',
+    bikesAvailable: null,
+    mechanicalBikesAvailable: null,
+    ebikesAvailable: null,
+    docksAvailable: null,
+    bikesDisabled: null,
+    docksDisabled: null,
+    isRenting: null,
+    isReturning: null,
+    qualityFlags: [],
+  };
 }

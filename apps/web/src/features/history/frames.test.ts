@@ -73,6 +73,31 @@ describe('fotogramas', () => {
     expect(latestFrameBefore([frames], '2026-03-10T06:40:00Z')).toBeUndefined();
   });
 
+  it('el paso anterior se ve con la hora pedida: lo que ya pasa de la tolerancia es desconocido', () => {
+    const hour: FramesResponse = {
+      ...frames,
+      frames: [
+        {
+          at: '2026-03-10T06:05:00+00:00',
+          states: [
+            { station: 0, state: { ...state(5), lastObservedAt: '2026-03-10T05:58:00+00:00' } },
+            { station: 2, state: { ...state(7), lastObservedAt: '2026-03-10T06:04:00+00:00' } },
+          ],
+        },
+      ],
+    };
+    // A las 06:30, Pl. de Catalunya lleva 32 min sin dato (tolerancia de 30) y Liceu, 26.
+    const [catalunya, liceu] = latestFrameBefore([hour], '2026-03-10T06:30:00Z')?.stations ?? [];
+    expect(catalunya?.state).toMatchObject({
+      freshness: 'stale',
+      status: 'unknown',
+      bikesAvailable: null,
+      docksAvailable: null,
+      lastObservedAt: '2026-03-10T05:58:00+00:00',
+    });
+    expect(liceu?.state).toMatchObject({ freshness: 'current', bikesAvailable: 7 });
+  });
+
   it('las ventanas son horas UTC, que coinciden con las de Barcelona', () => {
     expect(new Date(hourOf('2026-08-20T08:35:00+02:00')).toISOString()).toBe(
       '2026-08-20T06:00:00.000Z',

@@ -211,6 +211,7 @@ export function LimitsSheet({
   source,
   response,
   focusOnOpen,
+  onFocused,
   onClose,
   onPickDay,
   onSelectStation,
@@ -220,6 +221,8 @@ export function LimitsSheet({
   response: StationsResponse;
   /** Mover el foco al título: sí si la persona la acaba de abrir, no al llegar con un enlace. */
   focusOnOpen: boolean;
+  /** Ya tiene el foco: al volver a montarse no lo pide otra vez. */
+  onFocused: () => void;
   onClose: () => void;
   onPickDay: (day: string) => void;
   /** Abre la estación (detalle y marca en el mapa). Sin ella (al experimentar), solo texto. */
@@ -231,8 +234,10 @@ export function LimitsSheet({
   const period = periodText(source.days);
 
   useEffect(() => {
-    if (focusOnOpen) headingRef.current?.focus();
-  }, [focusOnOpen]);
+    if (!focusOnOpen) return;
+    headingRef.current?.focus();
+    onFocused();
+  }, [focusOnOpen, onFocused]);
 
   return (
     <article className="limits-sheet" aria-labelledby="limits-sheet-title">

@@ -97,12 +97,16 @@ export function useReplay(
   const weekPoints = weekState.status === 'ready' ? weekState.data.points : NO_POINTS;
   const weekByDay = useMemo(() => byLocalDay(weekPoints), [weekPoints]);
 
-  const [time] = useState(initialTime);
+  const [time, setTime] = useState(initialTime);
   const [chosenIndex, setChosenIndex] = useState<number | null>(null);
   const fallbackIndex = useMemo(() => initialIndex(points, time), [points, time]);
   const count = points.length;
   const index = count === 0 ? -1 : Math.min(chosenIndex ?? fallbackIndex, count - 1);
   const point = index >= 0 ? points[index] : undefined;
+  const pointRef = useRef(point);
+  useEffect(() => {
+    pointRef.current = point;
+  });
 
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState<Speed>('normal');
@@ -163,7 +167,12 @@ export function useReplay(
     setPlaying(!playing);
   }, [playing, count]);
 
+  // El otro día, a la misma hora de reloj: con el índice, en los días de 23 o 25 h (cambio de
+  // hora) se saltaba una hora.
   const selectDay = useCallback((next: string) => {
+    const current = pointRef.current;
+    if (current !== undefined) setTime(localClock(current.at));
+    setChosenIndex(null);
     setChosenDay(next);
     writeParam('dia', next);
   }, []);

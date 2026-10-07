@@ -61,8 +61,9 @@ export function formatTime(iso: string): string {
   return dateFormat({ ...BARCELONA, hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
 }
 
-const dayKey = (iso: string) =>
-  new Intl.DateTimeFormat('en-CA', { ...BARCELONA, dateStyle: 'short' }).format(new Date(iso));
+// No depende del idioma: un solo formateador (crearlo en cada llamada costaba en cada paso).
+const DAY_KEY = new Intl.DateTimeFormat('en-CA', { ...BARCELONA, dateStyle: 'short' });
+const dayKey = (iso: string) => DAY_KEY.format(new Date(iso));
 
 /** El mismo día de Barcelona. */
 export function sameLocalDay(a: string, b: string): boolean {

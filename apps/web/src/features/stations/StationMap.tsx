@@ -45,7 +45,13 @@ interface StationMapProps {
   stations: readonly StationItem[];
   /** Todas las estaciones de la fuente: el encuadre inicial las abarca. */
   frame: readonly StationItem[];
+  /** Al cambiar (otra fuente), se vuelve a encuadrar. */
   frameKey: string;
+  /**
+   * Al cambiar (otro modo, con otros controles encima), se vuelve a encuadrar solo si la persona
+   * no ha movido el mapa: si se ha acercado a su barrio, ahí se queda.
+   */
+  frameMode?: string;
   /** Margen extra que tapan otros controles sobre el mapa (solo escritorio). */
   framePadding?: { top?: number; right: number; bottom: number; left?: number } | undefined;
   selectedId: number | null;
@@ -323,6 +329,7 @@ export function StationMap({
   stations,
   frame,
   frameKey,
+  frameMode = '',
   framePadding,
   selectedId,
   variant = 'availability',
@@ -346,6 +353,10 @@ export function StationMap({
   const onStatusRef = useRef(onStatusChange);
   const onMapReadyRef = useRef(onMapReady);
   const fittedKeyRef = useRef<string | null>(null);
+  const fittedModeRef = useRef<string | null>(null);
+  // La persona ha movido la cámara (o ha elegido una estación) desde el último encuadre. Una
+  // cámara que llega en el enlace cuenta igual: es la vista que alguien quería enseñar.
+  const movedByUserRef = useRef(hasCameraInUrl());
   // Se mira al montar: en cuanto la cámara se mueve, MapLibre reescribe el hash.
   const cameraFromUrlRef = useRef(hasCameraInUrl());
   const [mapReady, setMapReady] = useState(false);
@@ -401,6 +412,11 @@ export function StationMap({
 
       const instance = map;
       mapRef.current = instance;
+      // Un fallo suelto (una tesela) deja el aviso hasta que la vista vuelve a cargar sin fallos.
+      let degraded = false;
+      let errorSinceMove = false;
+      // La cámara del enlace (#mapa=…) se aplica al crearlo, sin «pitchend»: el botón la refleja.
+      setOblique(instance.getPitch() > 5);
       instance.addControl(new NavigationControl({ visualizePitch: true }), 'top-right');
 
       instance.on('load', () => {
@@ -413,7 +429,7 @@ export function StationMap({
           buildingsRef.current,
         );
         setMapReady(true);
-        onStatusRef.current({ kind: 'ready' });
+        onStatusRef.current({ kind: degraded ? 'degraded' : 'ready' });
         onMapReadyRef.current?.(instance);
       });
       instance.on('click', MARKERS_LAYER, (e: MapLayerMouseEvent) => {
@@ -429,16 +445,17 @@ export function StationMap({
       instance.on('pitchend', () => {
         setOblique(instance.getPitch() > 5);
       });
-      // Un fallo suelto (una tesela) deja el aviso hasta que la vista vuelve a cargar sin fallos.
-      let degraded = false;
-      let errorSinceMove = false;
-      instance.on('movestart', () => {
+      instance.on('movestart', (e) => {
         errorSinceMove = false;
+        if (e.originalEvent !== undefined) movedByUserRef.current = true;
       });
-      instance.on('error', () => {
+      instance.on('error', (e) => {
         errorSinceMove = true;
-        degraded = loadedRef.current;
-        onStatusRef.current({ kind: loadedRef.current ? 'degraded' : 'failed' });
+        // Una tesela que no llega antes de cargar no impide el mapa: antes se daba por perdido
+        // («No se ha podido cargar el mapa base») hasta el «load».
+        const partial = loadedRef.current || 'tile' in e || 'sourceId' in e;
+        degraded = partial;
+        onStatusRef.current({ kind: partial ? 'degraded' : 'failed' });
       });
       instance.on('idle', () => {
         if (!degraded || errorSinceMove || !loadedRef.current) return;
@@ -502,24 +519,26 @@ export function StationMap({
     map.setLayoutProperty(BUILDINGS_LAYER, 'visibility', buildings ? 'visible' : 'none');
   }, [buildings, mapReady]);
 
-  // Encuadre inicial: una vez por fuente, abarcando todas sus estaciones.
+  // Encuadre: abarcando todas las estaciones al abrir y con cada fuente; al cambiar de modo, solo
+  // si la persona no ha movido el mapa.
   useEffect(() => {
     const map = mapRef.current;
-    if (!mapReady || map === null || frame.length === 0 || fittedKeyRef.current === frameKey) {
-      return;
-    }
+    const sameFrame = fittedKeyRef.current === frameKey && fittedModeRef.current === frameMode;
+    if (!mapReady || map === null || frame.length === 0 || sameFrame) return;
+    const onlyMode = fittedKeyRef.current === frameKey;
+    const firstTime = fittedKeyRef.current === null;
+    fittedKeyRef.current = frameKey;
+    fittedModeRef.current = frameMode;
     // Si la URL ya trae una cámara, se respeta en vez de encuadrar.
-    if (fittedKeyRef.current === null && cameraFromUrlRef.current) {
-      fittedKeyRef.current = frameKey;
-      return;
-    }
+    if (firstTime && cameraFromUrlRef.current) return;
+    if (onlyMode && movedByUserRef.current) return;
     const floatingPanel = window.innerWidth >= 768;
     const padding = floatingPanel
       ? { top: padTop, right: padRight, bottom: padBottom, left: padLeft }
       : { top: 24, right: 24, bottom: 24, left: 24 };
     frameStations(map, frame, padding);
-    fittedKeyRef.current = frameKey;
-  }, [frame, frameKey, mapReady, padTop, padRight, padBottom, padLeft]);
+    movedByUserRef.current = false;
+  }, [frame, frameKey, frameMode, mapReady, padTop, padRight, padBottom, padLeft]);
 
   // Selección: resalta y, si queda fuera de la vista, centra la estación.
   useEffect(() => {
@@ -537,6 +556,8 @@ export function StationMap({
     const visible =
       point.x > left && point.x < width * 0.9 && point.y > height * 0.1 && point.y < height * 0.9;
     if (!visible) {
+      // Como si la hubiera movido a mano: al cambiar de modo, el mapa se queda en la estación.
+      movedByUserRef.current = true;
       // En escritorio se centra en la parte del mapa que no tapa el panel.
       map.easeTo({
         center: [station.longitude, station.latitude],

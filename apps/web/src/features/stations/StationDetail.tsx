@@ -13,6 +13,8 @@ interface StationDetailProps {
   onBack: () => void;
   /** Mover el foco al nombre: sí si la persona acaba de elegirla, no al abrir un enlace. */
   focusOnOpen: boolean;
+  /** Ya tiene el foco: al volver a montarse (p. ej., al reproducir otro día) no lo pide otra vez. */
+  onFocused: () => void;
 }
 
 function UnknownExplanation({
@@ -42,7 +44,13 @@ function UnknownExplanation({
   );
 }
 
-export function StationDetail({ station, response, onBack, focusOnOpen }: StationDetailProps) {
+export function StationDetail({
+  station,
+  response,
+  onBack,
+  focusOnOpen,
+  onFocused,
+}: StationDetailProps) {
   const m = t().detail;
   const headingRef = useRef<HTMLHeadingElement>(null);
   const { state } = station;
@@ -51,8 +59,10 @@ export function StationDetail({ station, response, onBack, focusOnOpen }: Statio
 
   // Al abrir el detalle, el foco va al nombre para que el lector de pantalla lo anuncie.
   useEffect(() => {
-    if (focusOnOpen) headingRef.current?.focus();
-  }, [station.id, focusOnOpen]);
+    if (!focusOnOpen) return;
+    headingRef.current?.focus();
+    onFocused();
+  }, [station.id, focusOnOpen, onFocused]);
 
   const unavailable = [
     state.docksDisabled ? m.docks(state.docksDisabled) : null,

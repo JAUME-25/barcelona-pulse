@@ -44,9 +44,11 @@ export function useFrames(sourceId: string | null, at: string | undefined) {
   const entriesRef = useRef(entries);
   const inFlight = useRef(new Set<string>());
   const hour = at === undefined ? null : hourOf(at);
+  const hourRef = useRef(hour);
 
   useEffect(() => {
     entriesRef.current = entries;
+    hourRef.current = hour;
   });
 
   // Al desmontar se cancelan las peticiones pendientes: sus respuestas ya no sirven.
@@ -92,7 +94,13 @@ export function useFrames(sourceId: string | null, at: string | undefined) {
             store(key, { status: 'ready', data });
           })
           .catch((error: unknown) => {
-            if (!signal.aborted) store(key, { status: 'error', error: asApiError(error) });
+            if (signal.aborted) return;
+            // Solo se guarda el fallo de la hora que se está viendo. El de la siguiente, pedida
+            // por adelantado, se olvida: se vuelve a pedir al llegar a ella. Guardado, paraba la
+            // reproducción en esa hora aunque ya se pudiera cargar.
+            if (hourOfKey(key) === hourRef.current) {
+              store(key, { status: 'error', error: asApiError(error) });
+            }
           })
           .finally(() => {
             inFlight.current.delete(key);

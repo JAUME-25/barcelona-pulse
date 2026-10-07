@@ -74,13 +74,16 @@ export function useScenario(
     [stations],
   );
   useEffect(() => {
+    // Solo al experimentar: al reproducir, la red cambia en cada paso y cada cambio de URL cuenta
+    // para el límite de Safari (y la hora final dejaba de guardarse).
+    if (sourceId === null) return;
     // Sin la red (mientras llega otra vez) se perderían de la URL las estaciones reales.
     const changesStations = scenario.moved.length > 0 || scenario.removed.length > 0;
     if (links !== null || (changesStations && sourceIds.size === 0)) return;
     const url = new URL(window.location.href);
     scenarioToParams(scenario, url.searchParams, (id) => sourceIds.get(id));
-    replaceUrl(url);
-  }, [scenario, links, sourceIds]);
+    if (url.href !== window.location.href) replaceUrl(url);
+  }, [sourceId, scenario, links, sourceIds]);
 
   const requestKey =
     sourceId === null || links !== null

@@ -7,6 +7,9 @@ import { areaPath, coverageRuns, dataSegments, hourMarks, niceMax } from './seri
 import type { Replay } from './useReplay';
 import { WeekDials } from './WeekDials';
 
+/** Píxeles que se mueve el dedo antes de decidir si arrastra la hora o desplaza la página. */
+const TOUCH_SLOP = 8;
+
 /**
  * Reproductor de un día, bajo el mapa. La pista es la forma del día: estaciones sin bicis hacia
  * arriba, llenas hacia abajo, y los huecos sin dato a la vista (eje discontinuo y, debajo, a qué
@@ -62,6 +65,38 @@ export function ReplayDeck({ replay }: { replay: Replay }) {
     replay.seek(((e.clientX - rect.left) / rect.width) * last);
   };
 
+  // Con el dedo, la pista no busca al tocarla: un gesto vertical que empiece en ella desplaza la
+  // página (touch-action: pan-y). Busca al arrastrar en horizontal o al soltar sin moverse.
+  const touchStart = useRef<{ x: number; y: number; dragging: boolean } | null>(null);
+  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'touch') {
+      touchStart.current = { x: e.clientX, y: e.clientY, dragging: false };
+      return;
+    }
+    e.currentTarget.setPointerCapture(e.pointerId);
+    seekTo(e);
+  };
+  const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    const touch = touchStart.current;
+    if (e.pointerType === 'touch' && touch !== null) {
+      const dx = Math.abs(e.clientX - touch.x);
+      if (!touch.dragging && dx > TOUCH_SLOP && dx > Math.abs(e.clientY - touch.y)) {
+        touch.dragging = true;
+        e.currentTarget.setPointerCapture(e.pointerId);
+      }
+      if (touch.dragging) seekTo(e);
+      return;
+    }
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) seekTo(e);
+  };
+  const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
+    const touch = touchStart.current;
+    touchStart.current = null;
+    if (e.pointerType !== 'touch' || touch === null || touch.dragging) return;
+    // Un toque sin desplazarse: va a esa hora.
+    if (Math.hypot(e.clientX - touch.x, e.clientY - touch.y) <= TOUCH_SLOP) seekTo(e);
+  };
+
   const m = t().replay;
   return (
     <section ref={deckRef} className="replay-deck" aria-label={m.deck}>
@@ -88,12 +123,11 @@ export function ReplayDeck({ replay }: { replay: Replay }) {
         className="replay-deck__track"
         {...sliderProps(replay, m.slider)}
         onKeyDown={onTimeKey(replay)}
-        onPointerDown={(e) => {
-          e.currentTarget.setPointerCapture(e.pointerId);
-          seekTo(e);
-        }}
-        onPointerMove={(e) => {
-          if (e.currentTarget.hasPointerCapture(e.pointerId)) seekTo(e);
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={() => {
+          touchStart.current = null;
         }}
       >
         <span className="replay-deck__label replay-deck__label--empty" aria-hidden="true">

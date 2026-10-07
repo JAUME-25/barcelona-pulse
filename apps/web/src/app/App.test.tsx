@@ -630,6 +630,105 @@ describe('App', () => {
     expect(farAttempts).toBe(2);
   });
 
+  it('al reproducir, la URL no cambia en cada paso (la hora se escribe al pararse)', async () => {
+    mockApi((path, url) => {
+      if (path === '/api/sources') return json([demoSource]);
+      if (path === '/api/sources/demo/timeline') return json(timelineFor(url));
+      if (path === '/api/sources/demo/frames') return json(framesFor(url));
+      return json({ title: 'Petición inesperada' }, 500);
+    });
+    const user = userEvent.setup();
+    window.history.replaceState(null, '', '/?fuente=demo&modo=reproducir&hora=08:30');
+    renderApp();
+
+    const slider = await screen.findByRole('slider', { name: 'Momento del día' });
+    await waitFor(() => {
+      expect(
+        within(screen.getByRole('button', { name: /^Pl\. de Catalunya/ })).getByText('30'),
+      ).toBeTruthy();
+    });
+    const replaceState = vi.spyOn(window.history, 'replaceState');
+    for (let i = 0; i < 3; i++) {
+      await user.click(screen.getByRole('button', { name: '5 minutos después' }));
+    }
+    expect(slider.getAttribute('aria-valuetext')).toMatch(/^08:45,/);
+    expect(replaceState).not.toHaveBeenCalled();
+    replaceState.mockRestore();
+  });
+
+  it('al reproducir con una estación abierta, el foco se queda en la pista al cambiar de hora', async () => {
+    mockApi((path, url) => {
+      if (path === '/api/sources') return json([demoSource]);
+      if (path === '/api/sources/demo/timeline') return json(timelineFor(url));
+      if (path === '/api/sources/demo/frames') return json(framesFor(url));
+      return json({ title: 'Petición inesperada' }, 500);
+    });
+    const user = userEvent.setup();
+    window.history.replaceState(null, '', '/?fuente=demo&modo=reproducir&hora=08:30');
+    renderApp();
+
+    const slider = await screen.findByRole('slider', { name: 'Momento del día' });
+    const catalunya = await screen.findByRole('button', { name: /^Pl\. de Catalunya/ });
+    await waitFor(() => {
+      expect(within(catalunya).getByText('30')).toBeTruthy();
+    });
+
+    // La persona abre la estación: el foco va a su nombre.
+    await user.click(catalunya);
+    const heading = await screen.findByRole('heading', { name: 'Pl. de Catalunya' });
+    expect(document.activeElement).toBe(heading);
+
+    // Vuelve a la pista y salta a una hora sin cargar: al llegar, el detalle vuelve a estar y el
+    // foco sigue en la pista (antes se lo llevaba el nombre de la estación).
+    slider.focus();
+    await user.keyboard('{End}');
+    await waitFor(() => {
+      expect(screen.getByText('Cargando el estado de las estaciones…')).toBeTruthy();
+    });
+    expect(
+      await screen.findByRole('heading', { name: 'Pl. de Catalunya' }, { timeout: 3000 }),
+    ).toBeTruthy();
+    expect(document.activeElement).toBe(slider);
+  });
+
+  it('al cambiar de día se queda la misma hora de reloj, también en un día de 25 horas', async () => {
+    // El 25-10-2026 se atrasa la hora: el día tiene 300 pasos de 5 min.
+    const october = {
+      ...demoSource,
+      period: {
+        from: '2026-10-23T22:00:00+00:00',
+        to: '2026-10-25T22:55:00+00:00',
+        observationCount: 30,
+      },
+      days: ['2026-10-24', '2026-10-25'],
+    };
+    mockApi((path, url) => {
+      if (path === '/api/sources') return json([october]);
+      if (path === '/api/sources/demo/timeline') return json(timelineFor(url));
+      if (path === '/api/sources/demo/frames') return json(framesFor(url));
+      return json({ title: 'Petición inesperada' }, 500);
+    });
+    const user = userEvent.setup();
+    window.history.replaceState(
+      null,
+      '',
+      '/?fuente=demo&modo=reproducir&dia=2026-10-24&hora=20:00',
+    );
+    renderApp();
+
+    const slider = await screen.findByRole('slider', { name: 'Momento del día' });
+    await waitFor(() => {
+      expect(slider.getAttribute('aria-valuetext')).toMatch(/^20:00, sábado, 24 de octubre/);
+    });
+    await user.click(screen.getByRole('button', { name: '5 minutos después' }));
+    expect(slider.getAttribute('aria-valuetext')).toMatch(/^20:05, sábado/);
+    await user.click(screen.getByRole('button', { name: 'dom 25' }));
+    // Con el mismo índice serían las 19:05: la hora de 02:00 a 03:00 se repite ese día.
+    await waitFor(() => {
+      expect(slider.getAttribute('aria-valuetext')).toMatch(/^20:05, domingo, 25 de octubre/);
+    });
+  });
+
   it('con días importados en dos semanas, se pasa de una a otra con las flechas', async () => {
     const twoWeeks = { ...observedSource, days: ['2026-08-21', '2026-08-24'] };
     mockApi((path, url) => {
@@ -720,6 +819,38 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: 'Recuperar: Pl. de Catalunya' }));
     expect(screen.getByRole('button', { name: 'Marcador Pl. de Catalunya' })).toBeTruthy();
     expect(new URLSearchParams(window.location.search).get('retiradas')).toBeNull();
+  });
+
+  it('si falla el cálculo de la cobertura, no enseña el anterior como si fuera el del escenario', async () => {
+    let fail = false;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) => {
+        const url = new URL(input.url);
+        if (url.pathname === '/api/sources') return json([demoSource]);
+        if (url.pathname === '/api/stations') return json(stationsResponse(stations));
+        if (url.pathname === '/api/study-areas') return json([barcelona]);
+        if (url.pathname === '/api/scenarios/coverage') {
+          if (fail) return json({ title: 'Error' }, 500);
+          return json(coverageFor((await input.json()) as CoverageRequest));
+        }
+        return json({ title: 'Petición inesperada' }, 500);
+      }),
+    );
+    const user = userEvent.setup();
+    window.history.replaceState(null, '', '/?modo=experimentar');
+    renderApp();
+
+    const deck = await screen.findByRole('region', { name: 'Escenario de cobertura' });
+    await waitFor(() => {
+      expect(within(deck).getAllByText('50,0 %')).toHaveLength(2);
+    });
+
+    fail = true;
+    await user.click(within(deck).getByRole('button', { name: 'Quitar' }));
+    await user.click(screen.getByRole('button', { name: 'Marcador Pl. de Catalunya' }));
+    expect(await within(deck).findByText(/No se ha podido calcular la cobertura/)).toBeTruthy();
+    expect(within(deck).queryByText('50,0 %')).toBeNull();
   });
 
   it.each([

@@ -124,8 +124,25 @@ export function readableName(raw: string): string {
 
 const compact = (text: string) => text.replace(/\s+/g, '').toLocaleUpperCase('ca');
 
+/**
+ * Nombres ya escritos para leerse. Al reproducir, cada paso trae objetos nuevos para las ~550
+ * estaciones, pero los nombres casi nunca cambian: sin esto se recalculaban dos veces por paso.
+ */
+const NAMES = new Map<string, string>();
+const MAX_NAMES = 5000;
+
 /** El nombre de una estación para enseñarlo. */
 export function stationName(station: Pick<StationItem, 'name' | 'address'>): string {
+  const key = `${station.name}\u0000${station.address ?? ''}`;
+  const known = NAMES.get(key);
+  if (known !== undefined) return known;
+  const readable = computeStationName(station);
+  if (NAMES.size >= MAX_NAMES) NAMES.clear();
+  NAMES.set(key, readable);
+  return readable;
+}
+
+function computeStationName(station: Pick<StationItem, 'name' | 'address'>): string {
   const { name, address } = station;
   // La fuente corta los nombres largos; si la dirección empieza igual y sigue, es el nombre entero.
   const whole =
