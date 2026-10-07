@@ -497,8 +497,12 @@ honesta de lo hecho.
       fuera: Healthy, `geolocation=(self)`, ETag con la compilación, cabecera plegable en móvil,
       guiones `despliegue` y `limites` 12 de 12 y `cerca` 2 de 2. Después, solo pruebas y
       documentación (`2f8a4fc`, `a4d0b94`).
-26. **Hecho** en local (8-10-2026). Balance entre dos horas, lo primero que quedaba de la
-    propuesta: el cuarto modo, «Balance» (`docs/design.md`, «Balance entre dos horas»), elegido
+26. **Hecho** y en producción desde el 8-10-2026 (`4c40842`, CI verde; comprobado desde fuera:
+    Healthy, el bundle servido con los textos del balance en los tres idiomas y
+    `e2e/balance.capture.ts` contra producción 4 de 4: el 13-5-2026 de 07:00 a 10:00, 197
+    ganan, 297 pierden, 38 igual y 15 sin dato de 547). Balance entre dos horas, lo primero que
+    quedaba de la propuesta: el cuarto modo, «Balance» (`docs/design.md`, «Balance entre dos
+    horas»), elegido
     entre tres direcciones con capturas sobre datos reales (Marea, Antes y después, Por barrios)
     por encargo de Jaume («la que veas más cómoda para el usuario siguiendo la estética de la
     web»): Marea, con la frase y las barras por distrito de Por barrios.
