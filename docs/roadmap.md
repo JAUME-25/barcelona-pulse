@@ -250,6 +250,26 @@ honesta de lo hecho.
       1440, 375 y 320 px, sin desbordes ni errores, y al reproducir, una sola petición.
     - Comprobado en producción desde fuera: el patrón en los tres idiomas a 1440, 375 y 320 px,
       sin desbordes ni errores en la consola, y una sola petición al reproducir.
+11. **Hecho** y en `main` desde el 7-10-2026 (`a23c0fd`, CI verde; lo despliega Jaume). Lo que
+    la API ya calculaba y la web no enseñaba, salido de una revisión de backend y web de ese día:
+    - Reproducir: bicis ancladas y anclajes libres de cada paso junto a los recuentos, y una
+      línea ámbar en la pista con esa cifra. Un paso sin dato queda en hueco, no en cero.
+    - «Por distrito» bajo la búsqueda, en Explorar y Reproducir: estaciones, sin bicis, llenas y
+      sin dato por distrito en el instante mostrado. Elegida entre tres formas con capturas
+      (selector con la tabla plegada, tabla siempre a la vista con el nombre como filtro, y
+      tarjetas con barras); Jaume pidió la mejor para quien la usa y es la segunda: resumen y
+      filtro en lo mismo, y en Reproducir se ve cambiar cada distrito a cada paso. La de
+      tarjetas ocupaba dos pantallas en móvil. El nombre de cada fila filtra lista, mapa,
+      recuento y leyenda (teclado y `aria-pressed`; la elegida con marca, negrita y ámbar);
+      «Sin distrito» y «Sin dato» van aparte y nunca suman a vacías. El desplegable se puede
+      plegar y el navegador lo recuerda.
+    - `GET /api/sources/{id}/ingestions`: ingestas terminadas con periodo cubierto, recuentos
+      (nuevas, repetidas, en conflicto, rechazadas) y rechazos por motivo. «Qué muestra y qué
+      no» lo enseña en «Lo que entró cada día».
+    - Pruebas: 199 de backend (la nueva, contra PostGIS) y 158 de la web; capturas en
+      escritorio, 375 y 320 px (`e2e/distritos.capture.ts`, que además filtra por el Eixample
+      con el teclado y comprueba lista, leyenda y recuento, y `e2e/limites.capture.ts`). Sin
+      comprobar: la tabla en catalán e inglés a 320 px y el móvil con un dedo real.
 
 ## Siguiente
 
@@ -257,8 +277,32 @@ honesta de lo hecho.
   13-5-2026 de 7 a 10, el tercio de estaciones más cerca del mar ganó 5,2 bicis de media y el
   intermedio perdió 6,1), estaciones que más tiempo pasan vacías o llenas, «cerca de mí» y una
   lista que siga al mapa, y en móvil un mapa más arriba (empieza a 475 px de 812).
+- De la revisión del 7-10-2026, con datos que ya llegan: tooltip en el marcador; enlace
+  compartible con título de pestaña por vista y metadatos; mediana de bicis por hora e
+  historial de versiones en la ficha; cada casilla de la rejilla de huecos a su hora; aviso
+  cuando la respuesta viene recortada (`truncated` se ignora) o el enlace trae un día o una
+  estación que ya no existe; agrupación de marcadores a escala de ciudad con los recuentos
+  en texto; en móvil, «Atrás» que cierre el detalle y la ficha. Lo grande: tiempo real con
+  el token de Open Data BCN, que pide una clave de caché de la línea temporal por rango (hoy
+  cualquier ingesta invalida todas las semanas) y `/api/sources` agregado en SQL.
 
 ## Backlog
+
+- Riesgos vistos en la revisión del 7-10-2026, sin arreglar:
+  - `station_versions` no tiene restricción de solape: si la ingesta fuera de orden dejara dos
+    versiones vigentes, el mapa duplicaría la estación sin aviso. Una `EXCLUDE` con
+    `btree_gist` lo convertiría en ingesta fallida.
+  - El patrón de la estación no tiene caché ni semáforo y crece con los días importados.
+  - `/health/ready` queda fuera del límite por IP y abre una conexión por petición.
+  - CORS solo admite `GET` y la cobertura es `POST`: con un origen configurado, Experimentar
+    fallaría.
+  - `purge` borra por instante, no por ingesta: las observaciones del día que caen fuera de él
+    sobreviven y la fuente sigue diciendo que tiene datos.
+  - La regla del estado y la precedencia de la leyenda están cuatro veces en SQL y una en la
+    web, con el umbral de «pocas» duplicado; el patrón no tiene prueba cruzada con el mapa.
+  - Web: desde la ficha hay más de diez tabulaciones hasta el buscador y no hay «saltar a la
+    lista»; `useScenario` llama a `setState` durante el render; `App.tsx` y `StationMap.tsx`
+    pasan de 600 líneas y mezclan los tres modos.
 
 - Ingesta fuera de orden: un periodo antiguo que acaba con otros atributos que los conocidos
   aún supone los de antes hasta la versión siguiente, incluidos los minutos antes de la primera
