@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { demoSource, observedSource } from '../../test/fixtures';
-import { defaultDay, historicalInstant, instantOf, isClock, isWeekday } from './moment';
+import {
+  defaultDay,
+  historicalInstant,
+  instantOf,
+  isClock,
+  isWeekday,
+  momentLikeNow,
+} from './moment';
 
 /** El histórico de prueba con otro final de periodo. */
 const endingAt = (to: string) => ({
@@ -17,6 +24,30 @@ const may = [
   '2026-05-30',
   '2026-05-31',
 ];
+
+describe('«A esta hora»: el momento importado que más se parece a ahora', () => {
+  // Miércoles 7-10-2026 a las 18:07 de Barcelona (16:07 UTC, horario de verano).
+  const wednesday = Date.parse('2026-10-07T16:07:00Z');
+  // Sábado 10-10-2026 a las 10:00 de Barcelona.
+  const saturday = Date.parse('2026-10-10T08:00:00Z');
+
+  it('el último día con el mismo día de la semana, a la hora de ahora en pasos de 5 minutos', () => {
+    expect(momentLikeNow(may, wednesday)).toEqual({ day: '2026-05-27', time: '18:05' });
+    expect(momentLikeNow(may, saturday)).toEqual({ day: '2026-05-30', time: '10:00' });
+  });
+
+  it('sin ese día de la semana, el último del mismo tipo; sin ninguno del tipo, el último', () => {
+    expect(momentLikeNow(['2026-05-28', '2026-05-29'], wednesday)).toEqual({
+      day: '2026-05-29',
+      time: '18:05',
+    });
+    expect(momentLikeNow(['2026-05-30', '2026-05-31'], wednesday)).toEqual({
+      day: '2026-05-31',
+      time: '18:05',
+    });
+    expect(momentLikeNow([], wednesday)).toBeNull();
+  });
+});
 
 describe('el día representativo', () => {
   it('es el último laborable importado, no el domingo con que acaba el mes', () => {

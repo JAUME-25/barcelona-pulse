@@ -20,6 +20,11 @@ las 23:55, el rato más tranquilo de la semana, y no decía nada de cómo se usa
 momento», junto a la hora, lleva a Reproducir parado en ese instante; el momento que se deja allí
 sigue en Explorar y Experimentar y va en la URL. Los festivos cuentan como laborables.
 
+«A esta hora» (7-10-2026), al lado: quien abre a las 18:00 veía la mañana del viernes. Pone el
+último día importado con el mismo día de la semana que hoy (si no lo hay, el último del mismo
+tipo; si no, el último) a la hora de reloj de ahora en Barcelona, en pasos de 5 minutos, y lo deja
+en la URL como «Cambiar momento». En la demo no sale.
+
 ## Eléctricas
 
 Mucha gente prefiere una eléctrica, y quien la busca mira el mapa. Elegido el 7-10-2026 entre tres
@@ -33,6 +38,22 @@ cambian: siguen diciendo si hay bicis, con la misma regla que la API, así que u
 con «0» es «tiene bicis, ninguna eléctrica». Sin desglose publicado no se atenúa ni se dice cero.
 Reproducir suma las eléctricas de cada paso junto a las bicis, solo si todas las estaciones
 contadas publican el desglose.
+
+## Anclajes y atajos
+
+«¿Podré aparcar?» no tenía vista propia: los anclajes libres solo salían en la lista y en el
+detalle. Desde el 7-10-2026, como retoque de la leyenda:
+
+- El interruptor del número tiene una tercera opción, **Anclajes**: el marcador lleva los anclajes
+  libres y, en la lista, van delante y las bicis detrás (siempre se ven las dos cifras). Las
+  llenas se atenúan, como las sin eléctricas con «Eléctricas»; forma y color no cambian. Va en la
+  URL (`numero=anclajes`).
+- Dos **atajos** encima del interruptor, para las dos preguntas de siempre: «Quiero una bici» deja
+  a la vista las que tienen alguna (también las llenas) y pone las bicis; «Quiero aparcar» deja
+  las que tienen anclajes libres (también las vacías) y pone los anclajes. Fuera, las que no
+  operan y las sin dato. Un atajo está marcado solo si lo visible y el número coinciden
+  exactamente con él; pulsado otra vez, vuelve a enseñarlo todo con las bicis. No añaden nada a
+  la URL: son `ocultar=` y `numero=`, que ya iban.
 
 ## Cercanas y Cerca de mí
 
@@ -170,9 +191,11 @@ para cualquiera: usa los mismos estados y colores que la leyenda del mapa.
   partida en las veces que estuvo sin bicis (abajo, en rojo), con pocas, con bicis, llena, fuera
   de servicio o sin dato (en discontinuo: sin dato no es cero). La hora del momento mostrado,
   recuadrada.
-- Debajo de cada una, en frases: cuándo se quedó sin bicis («De 10 a 11 h estuvo sin bicis el
-  78 % del tiempo») o que casi nunca (por debajo del 10 %), cuándo se llenó y, si pasa del 10 %,
-  cuánto falta de dato. Es lo que oye un lector de pantalla.
+- Debajo de cada una, en frases: primero la hora que se ve en el mapa, en el bloque de su tipo de
+  día («De 8 a 9 h tuvo alguna bici el 62 % del tiempo; la mediana, 5 bicis», desde el
+  7-10-2026: la mediana la daba ya la API y no se enseñaba); después cuándo se quedó sin bicis
+  («De 10 a 11 h estuvo sin bicis el 78 % del tiempo») o que casi nunca (por debajo del 10 %),
+  cuándo se llenó y, si pasa del 10 %, cuánto falta de dato. Es lo que oye un lector de pantalla.
 - Una clave con solo los estados que salen en esa estación.
 - Siempre dice de qué días sale («en los 42 días importados, del…») y que no es una previsión;
   los festivos cuentan como laborables.

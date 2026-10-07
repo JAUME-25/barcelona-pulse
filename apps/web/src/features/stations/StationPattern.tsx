@@ -1,6 +1,7 @@
 import { api, toApiError, type StationPatternResponse } from '../../api/client';
 import { t } from '../../i18n';
 import { numberFormat } from '../../i18n/intl';
+import { isWeekday } from '../history/moment';
 import { localParts } from '../history/time';
 import { periodText } from '../limits/limits';
 import { availabilityLabel } from './availability';
@@ -13,6 +14,7 @@ import {
   peakHour,
   shareOf,
   totalShare,
+  withBikesShare,
   type DayType,
   type PatternHourRow,
   type PatternPart,
@@ -73,16 +75,27 @@ function partLabel(part: PatternPart): string {
 }
 
 /**
- * Lo que dice cada tipo de día en palabras: cuándo se quedó sin bicis, cuándo se llenó y cuánto
+ * Lo que dice cada tipo de día en palabras: primero la hora que se ve en el mapa (cuántas veces
+ * tuvo alguna bici y la mediana), y después cuándo se quedó sin bicis, cuándo se llenó y cuánto
  * falta. También es lo que oye un lector de pantalla (las columnas no se leen).
  */
-function Summary({ rows }: { rows: readonly PatternHourRow[] }) {
+function Summary({
+  rows,
+  shown,
+}: {
+  rows: readonly PatternHourRow[];
+  /** La hora del momento mostrado, si este tipo de día es el suyo. */
+  shown: PatternHourRow | null;
+}) {
   const m = t().pattern;
   const empty = peakHour(rows, 'empty');
   const full = peakHour(rows, 'full');
   const unknown = totalShare(rows, 'unknown');
   return (
     <p className="station-pattern__summary">
+      {shown !== null && shown.steps > 0 && (
+        <>{m.atHour(shown.hour, percent(withBikesShare(shown)), shown.medianBikes)} </>
+      )}
       {empty === null ? m.emptyRare : m.emptyMost(empty.hour, percent(empty.share))}
       {full !== null && <> {m.fullMost(full.hour, percent(full.share))}</>}
       {unknown >= 0.1 && <> {m.unknownShare(percent(unknown))}</>}
@@ -181,7 +194,10 @@ function Key({ parts }: { parts: readonly PatternPart[] }) {
 export function StationPatternSection({ stationId, at }: { stationId: number; at: string }) {
   const m = t().pattern;
   const { state, retry } = usePattern(stationId);
-  const nowHour = localParts(Date.parse(at)).hour;
+  const shownParts = localParts(Date.parse(at));
+  const nowHour = shownParts.hour;
+  // El tipo de día del momento mostrado: su frase va solo en ese bloque.
+  const shownType: DayType = isWeekday(shownParts.date) ? 'weekday' : 'weekend';
 
   let body;
   if (state.status === 'loading') {
@@ -221,7 +237,10 @@ export function StationPatternSection({ stationId, at }: { stationId: number; at
                 </span>
               </h4>
               <Columns rows={rows[dayType]} nowHour={nowHour} />
-              <Summary rows={rows[dayType]} />
+              <Summary
+                rows={rows[dayType]}
+                shown={dayType === shownType ? (rows[dayType][nowHour] ?? null) : null}
+              />
             </div>
           ))}
           <Key parts={partsPresent(types.flatMap((d) => rows[d]))} />

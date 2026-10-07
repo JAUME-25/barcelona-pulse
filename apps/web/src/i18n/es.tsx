@@ -163,6 +163,7 @@ export const es = {
     demoLead: 'Datos inventados para probar la aplicación. No es la disponibilidad real de Bicing.',
     shownMoment: 'Momento mostrado',
     changeMoment: 'Cambiar momento',
+    thisHour: 'A esta hora',
     realBadge: 'Datos reales',
     past: 'Es un momento del pasado, no el estado actual.',
     historical: (months: string) => `Datos históricos · ${months}. No es el estado actual.`,
@@ -216,6 +217,11 @@ export const es = {
     numberEbikes: 'Eléctricas',
     numberEbikesHelp:
       'Cuántas eléctricas hay en cada estación. Las que no tienen ninguna se atenúan; el color sigue diciendo si hay bicis.',
+    numberDocks: 'Anclajes',
+    numberDocksHelp:
+      'Cuántos anclajes libres hay en cada estación. Las llenas se atenúan; el color sigue diciendo si hay bicis.',
+    presetsLabel: 'Atajos',
+    presets: { bike: 'Quiero una bici', park: 'Quiero aparcar' },
     mapKey: 'También en el mapa',
     bikeLane: 'Carril bici (OSM, no todos)',
     transit: 'Metro, tren y tranvía',
@@ -261,6 +267,11 @@ export const es = {
     fullMost: (hour: number, share: string) =>
       `De ${String(hour)} a ${String(hour + 1)} h estuvo llena, sin sitio para dejar la bici, el ${share} del tiempo.`,
     unknownShare: (share: string) => `Sin dato el ${share} del tiempo.`,
+    /** La hora que se ve en el mapa: cuántas veces tuvo alguna bici y la mediana, si hay dato. */
+    atHour: (hour: number, share: string, median: number | null) =>
+      `De ${String(hour)} a ${String(hour + 1)} h tuvo alguna bici el ${share} del tiempo${
+        median === null ? '.' : `; la mediana, ${count(median, 'bici', 'bicis')}.`
+      }`,
     noDays: 'Aún no hay días importados de esta fuente.',
     loading: 'Calculando cómo suele estar…',
     failed: 'No se ha podido calcular cómo suele estar.',

@@ -18,6 +18,8 @@ export interface PatternHourRow {
   hour: number;
   steps: number;
   counts: Record<PatternPart, number>;
+  /** Mediana de bicis en los pasos con dato de esa hora; null si ninguno. */
+  medianBikes: number | null;
 }
 
 /**
@@ -41,6 +43,7 @@ export function hoursOf(pattern: StationPatternResponse, dayType: DayType): Patt
         outOfService: h?.outOfService ?? 0,
         unknown: h?.unknown ?? 0,
       },
+      medianBikes: h?.medianBikes ?? null,
     };
   });
 }
@@ -48,6 +51,13 @@ export function hoursOf(pattern: StationPatternResponse, dayType: DayType): Patt
 /** Parte de los pasos de la hora en un estado (0 si la hora no tiene pasos). */
 export function shareOf(row: PatternHourRow, part: PatternPart): number {
   return row.steps === 0 ? 0 : row.counts[part] / row.steps;
+}
+
+/** Parte de los pasos de la hora con alguna bici: pocas, con bicis o llena. */
+export function withBikesShare(row: PatternHourRow): number {
+  return row.steps === 0
+    ? 0
+    : (row.counts.few + row.counts.available + row.counts.full) / row.steps;
 }
 
 /**

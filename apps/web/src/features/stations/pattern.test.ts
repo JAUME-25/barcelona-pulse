@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PatternHour, StationPatternResponse } from '../../api/client';
 import { stationsResponse } from '../../test/fixtures';
-import { hoursOf, partsPresent, peakHour, shareOf, totalShare } from './pattern';
+import { hoursOf, partsPresent, peakHour, shareOf, totalShare, withBikesShare } from './pattern';
 
 const hour = (h: number, counts: Partial<PatternHour> = {}): PatternHour => ({
   dayType: 'weekday',
@@ -30,6 +30,30 @@ const pattern = (hours: PatternHour[]): StationPatternResponse => ({
 });
 
 describe('patrón de la estación', () => {
+  it('cada hora lleva su mediana y la parte de pasos con alguna bici', () => {
+    const rows = hoursOf(
+      pattern([
+        hour(8, { empty: 3, few: 1, available: 0, medianBikes: 2 }),
+        hour(9, { unknown: 4, available: 0, medianBikes: null }),
+        hour(10, { available: 2, full: 2 }),
+      ]),
+      'weekday',
+    );
+    const row = (h: number) => {
+      const found = rows[h];
+      if (found === undefined) throw new Error(`Falta la hora ${String(h)}.`);
+      return found;
+    };
+    expect(row(8).medianBikes).toBe(2);
+    expect(withBikesShare(row(8))).toBe(0.25);
+    expect(row(9).medianBikes).toBeNull();
+    expect(withBikesShare(row(9))).toBe(0);
+    expect(withBikesShare(row(10))).toBe(1);
+    // Una hora sin pasos: ni mediana ni parte.
+    expect(row(3).medianBikes).toBeNull();
+    expect(withBikesShare(row(3))).toBe(0);
+  });
+
   it('siempre 24 horas; la que no tiene pasos no se cuenta como vacía', () => {
     // El día que se adelanta la hora no hay 2:00.
     const rows = hoursOf(

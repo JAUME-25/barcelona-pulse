@@ -394,8 +394,11 @@ describe('App', () => {
     const section = await screen.findByRole('region', { name: 'Cómo suele estar' });
     expect(within(section).getByText(/Es lo que pasó, no una previsión/)).toBeTruthy();
     expect(within(section).getByRole('heading', { name: 'Laborables 1 día' })).toBeTruthy();
+    // Primero la hora que se ve en el mapa (las 10 de un martes): alguna bici siempre, mediana 8.
     expect(
-      within(section).getByText(/^De 8 a 9 h estuvo sin bicis el 75\s%\sdel tiempo\./),
+      within(section).getByText(
+        /^De 10 a 11 h tuvo alguna bici el 100\s%\sdel tiempo; la mediana, 8 bicis\. De 8 a 9 h estuvo sin bicis el 75\s%\sdel tiempo\./,
+      ),
     ).toBeTruthy();
     expect(within(section).getByText(/Sin dato el 25\s%\sdel tiempo\.$/)).toBeTruthy();
     // La clave solo explica lo que sale en esta estación.
@@ -878,6 +881,83 @@ describe('App', () => {
 
     await user.click(screen.getByRole('button', { name: 'Bicis' }));
     expect(within(catalunya()).getByText('bicis')).toBeTruthy();
+  });
+
+  it('«Anclajes» pone los anclajes libres delante, y los atajos cambian lo visible y el número a la vez', async () => {
+    mockApi((path) => json(path === '/api/sources' ? [demoSource] : stationsResponse(stations)));
+    const user = userEvent.setup();
+    window.history.replaceState(null, '', '/?fuente=demo');
+    renderApp();
+    const catalunya = () => screen.getByRole('button', { name: /^Pl\. de Catalunya/ });
+    const map = () => screen.getByRole('region', { name: 'Mapa de estaciones' });
+    const params = () => new URLSearchParams(window.location.search);
+    const pressed = (name: string) =>
+      screen.getByRole('button', { name }).getAttribute('aria-pressed');
+    await screen.findByText('3 estaciones');
+
+    await user.click(screen.getByRole('button', { name: 'Anclajes' }));
+    expect(map().dataset['label']).toBe('docks');
+    expect(params().get('numero')).toBe('anclajes');
+    expect(screen.getByText(/Las llenas se atenúan/)).toBeTruthy();
+    // Los anclajes delante y las bicis detrás: las dos cifras siguen a la vista.
+    const units = [...catalunya().querySelectorAll('.station-list__unit')].map(
+      (n) => n.textContent,
+    );
+    expect(units).toEqual(['libres', 'bicis']);
+
+    // «Quiero aparcar»: fuera las llenas, las que no operan y las sin dato; el número, anclajes.
+    await user.click(screen.getByRole('button', { name: 'Quiero aparcar' }));
+    expect(pressed('Quiero aparcar')).toBe('true');
+    expect(params().get('ocultar')).toBe('llenas,fuera-de-servicio,sin-dato');
+    expect(params().get('numero')).toBe('anclajes');
+    expect(screen.getByText('1 de 3 estaciones')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Llena/ }).getAttribute('aria-pressed')).toBe(
+      'false',
+    );
+
+    // «Quiero una bici»: fuera las vacías; el número vuelve a las bicis.
+    await user.click(screen.getByRole('button', { name: 'Quiero una bici' }));
+    expect(params().get('ocultar')).toBe('sin-bicis,fuera-de-servicio,sin-dato');
+    expect(params().get('numero')).toBeNull();
+    expect(map().dataset['label']).toBe('bikes');
+    expect(pressed('Quiero aparcar')).toBe('false');
+    expect(pressed('Quiero una bici')).toBe('true');
+
+    // El que ya está puesto, pulsado otra vez: todo a la vista.
+    await user.click(screen.getByRole('button', { name: 'Quiero una bici' }));
+    expect(params().get('ocultar')).toBeNull();
+    expect(screen.getByText('3 estaciones')).toBeTruthy();
+    expect(pressed('Quiero una bici')).toBe('false');
+  });
+
+  it('«A esta hora» pone el día importado que más se parece a hoy, a la hora de ahora', async () => {
+    mockApi((path, url) => {
+      if (path === '/api/sources') return json([observedSource]);
+      if (path === '/api/stations') {
+        return json({ ...observedResponse(stations), at: url.searchParams.get('at') ?? '' });
+      }
+      return json({ title: 'Petición inesperada' }, 500);
+    });
+    // Miércoles 7-10-2026 a las 18:07 de Barcelona; el único día importado es un jueves.
+    const now = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-07T16:07:00Z'));
+    const user = userEvent.setup();
+    window.history.replaceState(null, '', '/');
+    renderApp();
+    expect(await screen.findByText('Datos reales')).toBeTruthy();
+    expect(document.querySelector('.source-notice__time')?.textContent).toMatch(/08:30/);
+
+    await user.click(screen.getByRole('button', { name: 'A esta hora' }));
+    await waitFor(() => {
+      expect(document.querySelector('.source-notice__time')?.textContent).toMatch(
+        /jueves, 20 de agosto de 2026.*18:05/,
+      );
+    });
+    const last = requests.filter((u) => u.pathname === '/api/stations').at(-1);
+    expect(last?.searchParams.get('at')).toBe('2026-08-20T16:05:00.000Z');
+    const params = new URLSearchParams(window.location.search);
+    expect(params.get('dia')).toBe('2026-08-20');
+    expect(params.get('hora')).toBe('18:05');
+    now.mockRestore();
   });
 
   it('«Cambiar momento» lleva a Reproducir en ese momento y, al volver, se queda el elegido', async () => {

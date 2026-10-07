@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import type { StationState } from '../../api/client';
 import { stationFixture } from '../../test/fixtures';
 import {
+  activePreset,
   availabilityOf,
   countByAvailability,
   filterStations,
+  lacksDocks,
+  PRESET_VIEW,
   sortStations,
   AVAILABILITY_ORDER,
 } from './availability';
@@ -184,5 +187,36 @@ describe('sortStations', () => {
       stationFixture({ id: 7, name: 'G', state: { ebikesAvailable: 1 } }),
     ];
     expect(ids(sortStations(noTypes, 'ebikes'))).toEqual([7, 6]);
+  });
+});
+
+describe('los atajos de la leyenda', () => {
+  it('cada uno deja a la vista lo que sirve y pone el número que importa', () => {
+    expect([...PRESET_VIEW.bike.visible].sort()).toEqual(['available', 'few', 'full']);
+    expect(PRESET_VIEW.bike.numberMode).toBe('bikes');
+    expect([...PRESET_VIEW.park.visible].sort()).toEqual(['available', 'empty', 'few']);
+    expect(PRESET_VIEW.park.numberMode).toBe('docks');
+  });
+
+  it('está activo solo si lo visible y el número coinciden exactamente', () => {
+    expect(activePreset(PRESET_VIEW.park.visible, 'docks')).toBe('park');
+    expect(activePreset(PRESET_VIEW.park.visible, 'bikes')).toBeNull();
+    expect(activePreset(PRESET_VIEW.bike.visible, 'bikes')).toBe('bike');
+    expect(activePreset(new Set(AVAILABILITY_ORDER), 'bikes')).toBeNull();
+    expect(activePreset(new Set(['available']), 'bikes')).toBeNull();
+  });
+
+  it('con el número de anclajes se atenúa la que no tiene ninguno libre, si se sabe', () => {
+    expect(lacksDocks(stationFixture({ state: { docksAvailable: 0 } }))).toBe(true);
+    expect(lacksDocks(stationFixture({ state: { docksAvailable: 3 } }))).toBe(false);
+    expect(lacksDocks(stationFixture({ state: { docksAvailable: null } }))).toBe(false);
+    expect(lacksDocks(stationFixture({ state: { status: 'closed', docksAvailable: 0 } }))).toBe(
+      false,
+    );
+    expect(
+      lacksDocks(
+        stationFixture({ state: { freshness: 'none', status: 'unknown', docksAvailable: null } }),
+      ),
+    ).toBe(false);
   });
 });

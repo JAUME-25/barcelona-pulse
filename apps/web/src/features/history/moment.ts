@@ -29,16 +29,40 @@ export function availableDays(source: SourceSummary | undefined): string[] {
   return period === null ? [] : lastLocalDays(period.from, period.to, MAX_DAYS);
 }
 
+/** Día de la semana de una fecha de Barcelona (0 = domingo). */
+function weekdayOf(date: string): number {
+  const [y = Number.NaN, m = Number.NaN, d = Number.NaN] = date.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+}
+
 /** De lunes a viernes. Los festivos cuentan como laborables: no hay calendario. */
 export function isWeekday(date: string): boolean {
-  const [y = Number.NaN, m = Number.NaN, d = Number.NaN] = date.split('-').map(Number);
-  const weekday = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0 = domingo
+  const weekday = weekdayOf(date);
   return weekday >= 1 && weekday <= 5;
 }
 
 /** El último laborable de los días importados; si no hay ninguno, el último día. */
 export function defaultDay(days: readonly string[]): string | null {
   return days.findLast(isWeekday) ?? days.at(-1) ?? null;
+}
+
+const pad = (n: number) => String(n).padStart(2, '0');
+
+/**
+ * El momento importado que más se parece a ahora («A esta hora»): el último día con el mismo día
+ * de la semana que hoy (si no lo hay, el último del mismo tipo, laborable o fin de semana; si no,
+ * el último), a la hora de reloj de ahora en Barcelona, en pasos de 5 minutos. Null sin días.
+ */
+export function momentLikeNow(days: readonly string[], now: number): Moment | null {
+  const today = localParts(now);
+  const weekday = weekdayOf(today.date);
+  const day =
+    days.findLast((d) => weekdayOf(d) === weekday) ??
+    days.findLast((d) => isWeekday(d) === isWeekday(today.date)) ??
+    days.at(-1) ??
+    null;
+  if (day === null) return null;
+  return { day, time: `${pad(today.hour)}:${pad(Math.floor(today.minute / 5) * 5)}` };
 }
 
 const CLOCK = /^([01]\d|2[0-3]):([0-5]\d)$/;

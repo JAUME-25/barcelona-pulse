@@ -33,8 +33,10 @@ describe('la vista en la URL', () => {
     expect(orderParam('name')).toBeNull();
     expect(orderParam('bikes')).toBe('bicis');
     expect(numberModeFromParam('electricas')).toBe('ebikes');
+    expect(numberModeFromParam('anclajes')).toBe('docks');
     expect(numberModeFromParam(null)).toBe('bikes');
     expect(numberModeParam('ebikes')).toBe('electricas');
+    expect(numberModeParam('docks')).toBe('anclajes');
     expect(numberModeParam('bikes')).toBeNull();
   });
 

@@ -130,6 +130,53 @@ export function lacksEbikes(station: StationItem): boolean {
 }
 
 /**
+ * Operativa, con dato y sin ningún anclaje libre: la que se atenúa en el mapa cuando el número
+ * es el de anclajes. Sin la cifra (null) no se sabe, y no se atenúa.
+ */
+export function lacksDocks(station: StationItem): boolean {
+  const category = availabilityOf(station.state);
+  if (category === 'unknown' || category === 'outOfService') return false;
+  return station.state.docksAvailable === 0;
+}
+
+/** Qué número llevan los marcadores y la primera cifra de la lista: bicis, eléctricas o anclajes libres. */
+export type NumberMode = 'bikes' | 'ebikes' | 'docks';
+
+/**
+ * Atajos de la leyenda para las dos preguntas de siempre. Cada uno deja a la vista solo lo que
+ * sirve y pone el número que importa; las categorías no cambian.
+ */
+export type Preset = 'bike' | 'park';
+export const PRESETS: readonly Preset[] = ['bike', 'park'];
+export const PRESET_VIEW: Record<
+  Preset,
+  { visible: ReadonlySet<Availability>; numberMode: NumberMode }
+> = {
+  // Una bici: las que tienen alguna, también las llenas. Fuera las vacías, las que no operan y
+  // las que no tienen dato.
+  bike: { visible: new Set<Availability>(['available', 'few', 'full']), numberMode: 'bikes' },
+  // Aparcar: las que tienen anclajes libres, también las vacías; el número, los anclajes.
+  park: { visible: new Set<Availability>(['available', 'few', 'empty']), numberMode: 'docks' },
+};
+
+/** El atajo que coincide exactamente con lo que se ve y con el número elegido; null si ninguno. */
+export function activePreset(
+  visible: ReadonlySet<Availability>,
+  numberMode: NumberMode,
+): Preset | null {
+  return (
+    PRESETS.find((preset) => {
+      const view = PRESET_VIEW[preset];
+      return (
+        view.numberMode === numberMode &&
+        view.visible.size === visible.size &&
+        [...view.visible].every((category) => visible.has(category))
+      );
+    }) ?? null
+  );
+}
+
+/**
  * Orden de la lista: por nombre; de más a menos, por bicis, anclajes libres o eléctricas; o de
  * más cerca a más lejos de donde está la persona («distance», solo cuando se sabe dónde está).
  */

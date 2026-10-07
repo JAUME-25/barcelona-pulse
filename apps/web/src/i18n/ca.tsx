@@ -172,6 +172,7 @@ export const ca: Messages = {
     demoLead: 'Dades inventades per provar l’aplicació. No és la disponibilitat real de Bicing.',
     shownMoment: 'Moment mostrat',
     changeMoment: 'Canviar el moment',
+    thisHour: 'A aquesta hora',
     realBadge: 'Dades reals',
     past: 'És un moment del passat, no l’estat actual.',
     historical: (months) => `Dades històriques · ${months}. No és l’estat actual.`,
@@ -235,6 +236,11 @@ export const ca: Messages = {
     numberEbikes: 'Elèctriques',
     numberEbikesHelp:
       'Quantes elèctriques hi ha a cada estació. Les que no en tenen cap s’atenuen; el color continua dient si hi ha bicis.',
+    numberDocks: 'Ancoratges',
+    numberDocksHelp:
+      'Quants ancoratges lliures hi ha a cada estació. Les plenes s’atenuen; el color continua dient si hi ha bicis.',
+    presetsLabel: 'Dreceres',
+    presets: { bike: 'Vull una bici', park: 'Vull aparcar' },
     mapKey: 'També al mapa',
     bikeLane: 'Carril bici (OSM, no tots)',
     transit: 'Metro, tren i tramvia',
@@ -279,6 +285,10 @@ export const ca: Messages = {
     fullMost: (hour: number, share: string) =>
       `De ${String(hour)} a ${String(hour + 1)} h va estar plena, sense lloc per deixar la bici, el ${share} del temps.`,
     unknownShare: (share: string) => `Sense dada el ${share} del temps.`,
+    atHour: (hour: number, share: string, median: number | null) =>
+      `De ${String(hour)} a ${String(hour + 1)} h va tenir alguna bici el ${share} del temps${
+        median === null ? '.' : `; la mediana, ${count(median, 'bici', 'bicis')}.`
+      }`,
     noDays: 'Encara no hi ha dies importats d’aquesta font.',
     loading: 'Calculant com sol estar…',
     failed: 'No s’ha pogut calcular com sol estar.',

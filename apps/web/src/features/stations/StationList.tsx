@@ -1,13 +1,22 @@
 import { memo, useCallback, useEffect, useRef } from 'react';
 import type { StationItem } from '../../api/client';
 import { t } from '../../i18n';
-import { availabilityLabel, availabilityOf, type Availability, type Point } from './availability';
+import {
+  availabilityLabel,
+  availabilityOf,
+  type Availability,
+  type NumberMode,
+  type Point,
+} from './availability';
 import { distanceLabel, distanceMeters } from './distance';
 import { stationName } from './names';
 import { OctagonGlyph } from './OctagonGlyph';
 
-/** La cifra grande de cada fila, junto a los anclajes libres: todas las bicis o las eléctricas. */
-export type ListFigures = 'bikes' | 'ebikes';
+/**
+ * La primera cifra de cada fila: todas las bicis, las eléctricas o los anclajes libres; la otra
+ * (anclajes, o bicis cuando van delante los anclajes) siempre al lado.
+ */
+export type ListFigures = NumberMode;
 
 interface StationListProps {
   stations: readonly StationItem[];
@@ -105,10 +114,17 @@ const StationRow = memo(function StationRow({
         <span className="station-list__figures" aria-hidden="true">
           {figures === 'ebikes' ? (
             <Figure value={ebikes} unit={m.unitEbikes} />
+          ) : figures === 'docks' ? (
+            <Figure value={docks} unit={m.unitDocks} />
           ) : (
             <Figure value={bikes} unit={m.unitBikes(bikes ?? 0)} />
           )}
-          <Figure value={docks} unit={m.unitDocks} />
+          {/* Con los anclajes delante, las bicis detrás: siempre se ven las dos cifras. */}
+          {figures === 'docks' ? (
+            <Figure value={bikes} unit={m.unitBikes(bikes ?? 0)} />
+          ) : (
+            <Figure value={docks} unit={m.unitDocks} />
+          )}
         </span>
       </button>
     </li>

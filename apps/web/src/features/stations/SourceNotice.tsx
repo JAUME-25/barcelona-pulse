@@ -5,8 +5,21 @@ import { ShareLink } from './ShareLink';
 import { sourceAttribution, sourceName } from './sources';
 import '../limits/limits.css';
 
-/** El momento, con el día de la semana (si es un laborable se nota) y, si se puede, cambiarlo. */
-function Moment({ label, iso, onChange }: { label: string; iso: string; onChange?: () => void }) {
+/**
+ * El momento, con el día de la semana (si es un laborable se nota) y, si se puede, cambiarlo o
+ * saltar al día importado que más se parece a hoy a la hora de ahora («A esta hora»).
+ */
+function Moment({
+  label,
+  iso,
+  onChange,
+  onThisHour,
+}: {
+  label: string;
+  iso: string;
+  onChange?: () => void;
+  onThisHour?: () => void;
+}) {
   return (
     <p className="source-notice__moment">
       <span className="source-notice__label">{label}</span>
@@ -17,6 +30,11 @@ function Moment({ label, iso, onChange }: { label: string; iso: string; onChange
       {onChange !== undefined && (
         <button type="button" className="limits-link" onClick={onChange}>
           {t().source.changeMoment}
+        </button>
+      )}
+      {onThisHour !== undefined && (
+        <button type="button" className="limits-link" onClick={onThisHour}>
+          {t().source.thisHour}
         </button>
       )}
     </p>
@@ -33,6 +51,7 @@ export function SourceNotice({
   months = null,
   onLimits,
   onChangeMoment,
+  onThisHour,
   shareWithoutCamera = false,
 }: {
   response: StationsResponse;
@@ -44,6 +63,8 @@ export function SourceNotice({
   onLimits?: () => void;
   /** Lleva a Reproducir, parado en el momento mostrado, para elegir otro. */
   onChangeMoment?: () => void;
+  /** Pone el día importado que más se parece a hoy, a la hora de reloj de ahora. */
+  onThisHour?: () => void;
   /** Con «Cerca de mí», el enlace va sin la cámara del mapa, que apunta a la persona. */
   shareWithoutCamera?: boolean;
 }) {
@@ -80,7 +101,12 @@ export function SourceNotice({
         {!historical ? `${sourceName(source)}.` : months === null ? m.past : m.historical(months)}
       </p>
       {compact ? null : historical ? (
-        <Moment label={m.shownMoment} iso={response.at} onChange={onChangeMoment} />
+        <Moment
+          label={m.shownMoment}
+          iso={response.at}
+          onChange={onChangeMoment}
+          onThisHour={onThisHour}
+        />
       ) : latest === undefined ? (
         <p className="source-notice__moment">{m.noObservations}</p>
       ) : (

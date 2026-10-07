@@ -15,7 +15,14 @@ import { useEffect, useRef, useState } from 'react';
 import type { StationItem } from '../../api/client';
 import { THEME } from '../../app/theme';
 import { t } from '../../i18n';
-import { AVAILABILITY_ORDER, availabilityOf, lacksEbikes, type Availability } from './availability';
+import {
+  AVAILABILITY_ORDER,
+  availabilityOf,
+  lacksDocks,
+  lacksEbikes,
+  type Availability,
+  type NumberMode,
+} from './availability';
 import { SERVICE_AREA, type MapBounds } from './mapBounds';
 import { loadNightStyle } from './basemap';
 import {
@@ -101,7 +108,7 @@ function boundsOf(map: MapLibreMap): MapBounds {
 }
 
 export type MarkerVariant = 'availability' | 'network';
-export type MarkerLabel = 'bikes' | 'ebikes';
+export type MarkerLabel = NumberMode;
 
 const CAMERA_HASH = 'mapa';
 const BARCELONA: [number, number] = [2.165, 41.395];
@@ -224,12 +231,18 @@ function prefersReducedMotion(): boolean {
 }
 
 /**
- * Texto dentro del marcador: bicis disponibles (o solo las eléctricas), «0» si no hay y «?» si no
- * hay dato. Sin la cifra pedida (una fuente sin desglose), nada: no se dice cero.
+ * Texto dentro del marcador: bicis disponibles (o solo las eléctricas, o los anclajes libres),
+ * «0» si no hay y «?» si no hay dato. Sin la cifra pedida (una fuente sin desglose), nada: no se
+ * dice cero.
  */
 function markerLabel(category: Availability, station: StationItem, label: MarkerLabel): string {
   if (category === 'unknown') return '?';
-  const value = label === 'ebikes' ? station.state.ebikesAvailable : station.state.bikesAvailable;
+  const value =
+    label === 'ebikes'
+      ? station.state.ebikesAvailable
+      : label === 'docks'
+        ? station.state.docksAvailable
+        : station.state.bikesAvailable;
   if (category === 'outOfService' || value === null) return '';
   return String(value);
 }
@@ -242,8 +255,9 @@ function toFeatureCollection(
     type: 'FeatureCollection',
     features: stations.map((s) => {
       const category = availabilityOf(s.state);
-      // Con el número de eléctricas, las que no tienen ninguna se atenúan y van debajo.
-      const dim = label === 'ebikes' && lacksEbikes(s);
+      // Con el número de eléctricas, las que no tienen ninguna se atenúan y van debajo; con el
+      // de anclajes, las que no tienen ninguno libre.
+      const dim = (label === 'ebikes' && lacksEbikes(s)) || (label === 'docks' && lacksDocks(s));
       return {
         type: 'Feature',
         id: s.id,

@@ -155,6 +155,7 @@ export const en: Messages = {
     demoLead: 'Made-up data for trying out the app. Not Bicing’s real availability.',
     shownMoment: 'Moment shown',
     changeMoment: 'Change moment',
+    thisHour: 'At this hour',
     realBadge: 'Real data',
     past: 'This is a moment in the past, not the current state.',
     historical: (months) => `Historical data · ${months}. Not the current state.`,
@@ -218,6 +219,11 @@ export const en: Messages = {
     numberEbikes: 'E-bikes',
     numberEbikesHelp:
       'How many e-bikes each station has. Stations with none are dimmed; the colour still says whether there are bikes.',
+    numberDocks: 'Docks',
+    numberDocksHelp:
+      'How many free docks each station has. Full stations are dimmed; the colour still says whether there are bikes.',
+    presetsLabel: 'Shortcuts',
+    presets: { bike: 'I want a bike', park: 'I want to park' },
     mapKey: 'Also on the map',
     bikeLane: 'Bike lane (OSM, not all)',
     transit: 'Metro, train and tram',
@@ -262,6 +268,10 @@ export const en: Messages = {
     fullMost: (hour: number, share: string) =>
       `Between ${String(hour)}:00 and ${String(hour + 1)}:00 it was full, with no space to return a bike, ${share} of the time.`,
     unknownShare: (share: string) => `No data ${share} of the time.`,
+    atHour: (hour: number, share: string, median: number | null) =>
+      `Between ${String(hour)}:00 and ${String(hour + 1)}:00 it had at least one bike ${share} of the time${
+        median === null ? '.' : `; median, ${count(median, 'bike', 'bikes')}.`
+      }`,
     noDays: 'No days imported from this source yet.',
     loading: 'Working out how it usually is…',
     failed: 'Could not work out how it usually is.',

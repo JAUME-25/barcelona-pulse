@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { SourceSummary, StationItem, StationsResponse } from '../api/client';
-import type { Moment } from '../features/history/moment';
+import { availableDays, momentLikeNow, type Moment } from '../features/history/moment';
 import { ReplayDeck } from '../features/history/ReplayDeck';
 import { ModeSwitch, type Mode } from '../features/history/ReplayParts';
 import { localClock } from '../features/history/time';
@@ -30,14 +30,17 @@ import type { Tool } from '../features/scenarios/scenarioView';
 import { useScenario, useStudyAreas } from '../features/scenarios/useScenario';
 import { AvailabilityFilter, type NumberMode } from '../features/stations/AvailabilityFilter';
 import {
+  activePreset,
   AVAILABILITY_ORDER,
   countByAvailability,
   filterStations,
   LIST_ORDERS,
   normalizeForSearch,
+  PRESET_VIEW,
   sortStations,
   type Availability,
   type ListOrder,
+  type Preset,
 } from '../features/stations/availability';
 import { districtKey, summarizeByDistrict } from '../features/stations/districts';
 import { DistrictSummary } from '../features/stations/DistrictSummary';
@@ -533,6 +536,29 @@ export function App() {
     focusReplayRef.current = true;
   };
 
+  // «A esta hora»: el día importado que más se parece a hoy, a la hora de reloj de ahora. Cambia
+  // el momento sin apilar historial, como al salir de Reproducir.
+  const showThisHour = () => {
+    const like = momentLikeNow(availableDays(source), Date.now());
+    if (like === null) return;
+    setMoment(like);
+    writeParam('dia', like.day);
+    writeParam('hora', like.time);
+  };
+
+  // Atajos de la leyenda: lo visible y el número a la vez. El que ya está puesto, pulsado otra
+  // vez, vuelve a enseñarlo todo con las bicis.
+  const applyPreset = (preset: Preset) => {
+    if (activePreset(visible, numberMode) === preset) {
+      setVisible(new Set(AVAILABILITY_ORDER));
+      setNumberMode('bikes');
+      return;
+    }
+    const view = PRESET_VIEW[preset];
+    setVisible(new Set(view.visible));
+    setNumberMode(view.numberMode);
+  };
+
   const openSheet = () => {
     setSheet({ byUser: true });
     pushParams({ [VIEW_PARAM]: VIEW_LIMITS }, 'sheet');
@@ -830,6 +856,7 @@ export function App() {
             months={source === undefined ? null : formatMonths(source.days)}
             onLimits={notice.source.kind === 'observed' ? openSheet : undefined}
             onChangeMoment={source?.period == null ? undefined : changeMoment}
+            onThisHour={source?.period == null ? undefined : showThisHour}
             shareWithoutCamera={me !== null}
           />
         )}
@@ -905,6 +932,7 @@ export function App() {
                 onToggle={toggleCategory}
                 numberMode={numberMode}
                 onNumberMode={setNumberMode}
+                onPreset={applyPreset}
                 showMe={me !== null}
               />
             )}

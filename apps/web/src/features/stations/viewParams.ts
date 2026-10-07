@@ -1,5 +1,9 @@
-import type { NumberMode } from './AvailabilityFilter';
-import { AVAILABILITY_ORDER, type Availability, type ListOrder } from './availability';
+import {
+  AVAILABILITY_ORDER,
+  type Availability,
+  type ListOrder,
+  type NumberMode,
+} from './availability';
 
 // La vista de Explorar en la URL, para que un enlace lleve lo que se ve y sobreviva al cambio de
 // idioma: qué categorías se ocultan, el distrito, la búsqueda, el orden de la lista y qué número
@@ -53,11 +57,11 @@ export function orderParam(order: ListOrder): string | null {
 }
 
 export function numberModeFromParam(value: string | null): NumberMode {
-  return value === 'electricas' ? 'ebikes' : 'bikes';
+  return value === 'electricas' ? 'ebikes' : value === 'anclajes' ? 'docks' : 'bikes';
 }
 
 export function numberModeParam(mode: NumberMode): string | null {
-  return mode === 'ebikes' ? 'electricas' : null;
+  return mode === 'ebikes' ? 'electricas' : mode === 'docks' ? 'anclajes' : null;
 }
 
 /** La búsqueda: null en la URL si está vacía. */

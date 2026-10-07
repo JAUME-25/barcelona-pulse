@@ -435,6 +435,24 @@ honesta de lo hecho.
     - Descartado por ahora: `healthcheck` de la API en Compose. Sin orquestador no reinicia nada
       (Docker solo marca «unhealthy»), la imagen no tiene shell y arrancar `dotnet` cada 30 s
       cuesta; UptimeRobot ya avisa por `/health/ready`.
+22. **Hecho** en local (7-10-2026, sin commit). Para quien busca bici o sitio, los puntos 3, 4 y
+    5 de la propuesta, solo web (`docs/design.md`, «Anclajes y atajos», «Momento mostrado» y
+    «Cómo suele estar»):
+    - «Anclajes» en el interruptor del número: el marcador lleva los anclajes libres, la lista
+      los pone delante y las llenas se atenúan (`numero=anclajes`).
+    - Dos atajos en la leyenda, «Quiero una bici» y «Quiero aparcar»: lo visible y el número a
+      la vez, con `ocultar=` y `numero=`; pulsado otra vez, todo a la vista.
+    - «A esta hora», junto a «Cambiar momento»: el último día importado con el día de la semana
+      de hoy (o del mismo tipo, o el último) a la hora de reloj de ahora
+      (`features/history/moment.ts`, `momentLikeNow`).
+    - «Cómo suele estar» empieza por la hora que se ve en el mapa: cuántas veces tuvo alguna
+      bici y la mediana (`medianBikes`, que la API ya daba).
+    - Pruebas: 197 de la web (parámetro `anclajes`, atajos y su marca, `lacksDocks`,
+      `momentLikeNow` con día de la semana, tipo y sin días, mediana y parte con bici por hora,
+      y en la app: Anclajes y atajos, «A esta hora» con el reloj fijado, la frase del patrón),
+      humo 20/20 y `e2e/atajos.capture.ts` con el mapa real en escritorio y 375 px (aparcar,
+      anclajes delante en la lista, «A esta hora» y la frase). Usado en el navegador en
+      castellano, catalán e inglés a 320 px, sin desbordes.
 
 ## Siguiente
 
