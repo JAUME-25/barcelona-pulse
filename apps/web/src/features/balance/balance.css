@@ -1,0 +1,191 @@
+/* «Balance»: dónde se acumulan y dónde se vacían las bicis entre dos horas del mismo día
+   (dirección «Marea», elegida el 8-10-2026). El panel: las dos horas, los totales, los distritos
+   con barras divergentes y las estaciones que más cambian. La clave va en la leyenda del mapa. */
+
+.balance {
+  padding-top: 14px;
+}
+
+.balance__when {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+}
+
+/* «De 07:00 a 10:00»: las dos horas van juntas, también al saltar de línea. */
+.balance__range {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.balance__hint,
+.balance__rest {
+  margin: 10px 0 0;
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+}
+
+.balance__h {
+  margin: 22px 0 8px;
+  font-size: 1.0625rem;
+}
+
+.balance__totals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.balance__total {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+}
+
+.balance__big {
+  display: block;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.balance__total--gain .balance__big,
+.balance__num--gain,
+.balance-bars__value--gain {
+  color: var(--balance-gain);
+}
+
+.balance__total--loss .balance__big,
+.balance__num--loss,
+.balance-bars__value--loss {
+  color: var(--balance-loss);
+}
+
+.balance__what {
+  display: block;
+  margin-top: 6px;
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+  line-height: 1.3;
+}
+
+.balance__story {
+  margin: 14px 0 0;
+  font-size: 1.0625rem;
+  line-height: 1.4;
+}
+
+.balance__arrow {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Por distrito: barras divergentes, pérdidas a la izquierda y ganancias a la derecha. */
+.balance-bars {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.balance-bars li {
+  display: grid;
+  grid-template-columns: minmax(96px, 118px) 1fr auto;
+  gap: 10px;
+  align-items: center;
+  font-size: 0.9375rem;
+}
+
+.balance-bars__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.balance-bars__track {
+  position: relative;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--panel-2);
+}
+
+.balance-bars__track::before {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  left: 50%;
+  width: 1px;
+  background: var(--line);
+  content: '';
+}
+
+.balance-bars__bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 3px;
+}
+
+.balance-bars__bar--gain {
+  left: 50%;
+  background: var(--balance-gain);
+}
+
+.balance-bars__bar--loss {
+  right: 50%;
+  background: var(--balance-loss);
+}
+
+.balance-bars__value {
+  display: grid;
+  justify-items: end;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.balance-bars__value small {
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+/* La clave, en la leyenda del mapa. */
+.balance-key__title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.balance-key {
+  display: grid;
+  gap: 7px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.balance-key li {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.9375rem;
+}
+
+.balance-key__count {
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.balance-key__hint {
+  margin: 10px 0 0;
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+  line-height: 1.35;
+}

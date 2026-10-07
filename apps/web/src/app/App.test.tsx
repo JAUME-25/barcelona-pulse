@@ -33,6 +33,7 @@ vi.mock('../features/stations/StationMap', () => ({
     stations: readonly StationItem[];
     selectedId: number | null;
     label?: 'bikes' | 'ebikes';
+    variant?: 'availability' | 'network' | 'balance';
     onSelect: (id: number) => void;
     onStatusChange: (s: { kind: 'ready' }) => void;
     onBoundsChange?: (b: { west: number; south: number; east: number; north: number }) => void;
@@ -44,7 +45,12 @@ vi.mock('../features/stations/StationMap', () => ({
       onBoundsChange?.({ west: 2.0, south: 41.3, east: 2.17, north: 41.5 });
     }, [onStatusChange, onBoundsChange]);
     return (
-      <div role="region" aria-label="Mapa de estaciones" data-label={props.label ?? 'bikes'}>
+      <div
+        role="region"
+        aria-label="Mapa de estaciones"
+        data-label={props.label ?? 'bikes'}
+        data-variant={props.variant ?? 'availability'}
+      >
         {props.stations.map((s) => (
           <button
             key={s.id}
@@ -1878,5 +1884,79 @@ describe('App', () => {
     expect(screen.getByText('3 stations')).toBeTruthy();
     expect(screen.getByRole('button', { name: /^No recent data/ })).toBeTruthy();
     expect(new URLSearchParams(window.location.search).get('idioma')).toBe('en');
+  });
+
+  it('balance entre dos horas: los dos instantes del día, totales, clave del mapa y la partida en la URL', async () => {
+    // Hasta las 08:00 (07:00Z) Catalunya tiene 2 bicis; a las 09:00 (08:00Z), 12. Lesseps no
+    // informa y la Barceloneta está cerrada: sin balance, nunca cero.
+    mockApi((path, url) => {
+      if (path === '/api/sources') return json([demoSource]);
+      const at = url.searchParams.get('at') ?? '';
+      const early = at < '2026-03-10T08:00';
+      return json(
+        stationsResponse(
+          stations.map((s, i) =>
+            i === 0 ? { ...s, state: { ...s.state, bikesAvailable: early ? 2 : 12 } } : s,
+          ),
+          { at },
+        ),
+      );
+    });
+    const user = userEvent.setup();
+    window.history.replaceState(
+      null,
+      '',
+      '/?fuente=demo&modo=balance&dia=2026-03-10&desde=07:00&hora=09:00',
+    );
+    renderApp();
+
+    // «+10» dos veces: el total de lo ganado y la fila de Catalunya.
+    expect(await screen.findAllByText('+10')).toHaveLength(2);
+    expect(screen.getByRole('button', { name: 'Balance' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(screen.getByText('bicis más, en 1 estación')).toBeTruthy();
+    expect(screen.getByText('bicis menos, en 0 estaciones')).toBeTruthy();
+    expect(
+      screen.getByText(
+        '0 igual · 2 sin dato en alguno de los dos momentos · en las 1 con dato en los dos, de 2 a 12 bicis ancladas.',
+      ),
+    ).toBeTruthy();
+    // La clave del mapa: 1 gana, 0 pierden, 0 igual, 2 sin dato.
+    expect(screen.getByText('Balance de 07:00 a 09:00')).toBeTruthy();
+    expect([...document.querySelectorAll('.balance-key__count')].map((e) => e.textContent)).toEqual(
+      ['1', '0', '0', '2'],
+    );
+    // El mapa dibuja el balance de las tres estaciones, sin filtros.
+    await waitFor(() => {
+      expect(
+        screen.getByRole('region', { name: 'Mapa de estaciones' }).getAttribute('data-variant'),
+      ).toBe('balance');
+    });
+    expect(screen.getAllByRole('button', { name: /^Marcador/ })).toHaveLength(3);
+    // Dos peticiones del día, la partida y la llegada, en UTC.
+    const ats = requests
+      .filter((u) => u.pathname === '/api/stations')
+      .map((u) => u.searchParams.get('at'))
+      .sort();
+    expect(ats).toEqual(['2026-03-10T06:00:00.000Z', '2026-03-10T08:00:00.000Z']);
+    expect(document.title).toBe('Balance · Barcelona Pulse');
+
+    // Otra hora de partida: la clave y la URL la siguen, y se pide ese instante.
+    await user.selectOptions(screen.getByLabelText('De'), '08:00');
+    expect(await screen.findByText('Balance de 08:00 a 09:00')).toBeTruthy();
+    await waitFor(() => {
+      expect(new URLSearchParams(window.location.search).get('desde')).toBe('08:00');
+    });
+    await waitFor(() => {
+      expect(requests.some((u) => u.searchParams.get('at') === '2026-03-10T07:00:00.000Z')).toBe(
+        true,
+      );
+    });
+
+    // Una estación de la lista abre su ficha del momento de llegada.
+    await user.click(screen.getByRole('button', { name: /^Pl\. de Catalunya/ }));
+    expect(screen.getByRole('heading', { level: 2, name: 'Pl. de Catalunya' })).toBeTruthy();
+    expect(screen.getByRole('article').textContent).toContain('12');
   });
 });

@@ -74,7 +74,53 @@ const AVAILABILITY_LABEL: Record<AvailabilityKey, string> = {
 export const es = {
   languages: { label: 'Idioma' },
   brand: { tagline: 'Estaciones de Bicing en el mapa' },
-  modes: { label: 'Modo', explore: 'Explorar', replay: 'Reproducir', experiment: 'Experimentar' },
+  modes: {
+    label: 'Modo',
+    explore: 'Explorar',
+    replay: 'Reproducir',
+    experiment: 'Experimentar',
+    balance: 'Balance',
+  },
+
+  balance: {
+    title: 'Balance entre dos horas',
+    day: 'Día',
+    from: 'De',
+    to: 'a',
+    hint: (from: string, to: string) =>
+      `Bicis ancladas en cada estación a las ${to} menos las que había a las ${from}. Son dos estados, no viajes: lo que entra y sale entre medias no se ve.`,
+    gained: (stations: number) => `bicis más, en ${count(stations, 'estación', 'estaciones')}`,
+    lost: (stations: number) => `bicis menos, en ${count(stations, 'estación', 'estaciones')}`,
+    rest: (same: number, nodata: number, known: number, before: number, after: number) =>
+      `${String(same)} igual · ${String(nodata)} sin dato en alguno de los dos momentos · en las ${String(known)} con dato en los dos, de ${String(before)} a ${String(after)} bicis ancladas.`,
+    /** «Ganan bicis Les Corts, Ciutat Vella y Sant Martí; pierden Sant Andreu y Gràcia.» */
+    story: (gainers: readonly string[], losers: readonly string[]) => {
+      const win =
+        gainers.length === 0 ? 'Ningún distrito gana bicis' : `Ganan bicis ${list(gainers)}`;
+      const lose = losers.length === 0 ? 'ninguno pierde' : `pierden ${list(losers)}`;
+      return `${win}; ${lose}.`;
+    },
+    byDistrict: 'Por distrito',
+    perStation: (value: string) => `${value} por estación`,
+    districtMeta: (stations: number, net: string) => `${String(stations)} est. · ${net} bicis`,
+    topGain: 'Las que más se llenan',
+    topLoss: 'Las que más se vacían',
+    /** «2 → 41 de 43»: las bicis en cada momento y, si se sabe, la capacidad. */
+    place: (before: number, after: number, capacity: number | null) =>
+      `${String(before)} → ${String(after)}${capacity === null ? '' : ` de ${String(capacity)}`}`,
+    unit: 'bicis',
+    loading: 'Calculando el balance…',
+    failed: 'No se ha podido cargar el momento de partida.',
+    none: 'Ninguna estación tiene dato en los dos momentos.',
+    key: {
+      title: (from: string, to: string) => `Balance de ${from} a ${to}`,
+      gain: 'Ganan bicis',
+      loss: 'Pierden bicis',
+      same: 'Igual',
+      nodata: 'Sin dato en uno de los dos momentos',
+      hint: 'El tamaño dice cuántas bicis cambian. A escala de calle, el número: «+39» o «−23».',
+    },
+  },
 
   format: {
     duration,

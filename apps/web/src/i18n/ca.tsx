@@ -88,7 +88,51 @@ const COVERAGE_ASSUMPTIONS = [
 export const ca: Messages = {
   languages: { label: 'Idioma' },
   brand: { tagline: 'Estacions de Bicing al mapa' },
-  modes: { label: 'Mode', explore: 'Explorar', replay: 'Reproduir', experiment: 'Experimentar' },
+  modes: {
+    label: 'Mode',
+    explore: 'Explorar',
+    replay: 'Reproduir',
+    experiment: 'Experimentar',
+    balance: 'Balanç',
+  },
+
+  balance: {
+    title: 'Balanç entre dues hores',
+    day: 'Dia',
+    from: 'De',
+    to: 'a',
+    hint: (from: string, to: string) =>
+      `Bicis ancorades a cada estació a les ${to} menys les que hi havia a les ${from}. Són dos estats, no viatges: el que entra i surt entremig no es veu.`,
+    gained: (stations: number) => `bicis més, a ${count(stations, 'estació', 'estacions')}`,
+    lost: (stations: number) => `bicis menys, a ${count(stations, 'estació', 'estacions')}`,
+    rest: (same: number, nodata: number, known: number, before: number, after: number) =>
+      `${String(same)} igual · ${String(nodata)} sense dada en algun dels dos moments · a les ${String(known)} amb dada en tots dos, de ${String(before)} a ${String(after)} bicis ancorades.`,
+    story: (gainers: readonly string[], losers: readonly string[]) => {
+      const win =
+        gainers.length === 0 ? 'Cap districte guanya bicis' : `Guanyen bicis ${list(gainers)}`;
+      const lose = losers.length === 0 ? 'cap no en perd' : `en perden ${list(losers)}`;
+      return `${win}; ${lose}.`;
+    },
+    byDistrict: 'Per districte',
+    perStation: (value: string) => `${value} per estació`,
+    districtMeta: (stations: number, net: string) => `${String(stations)} est. · ${net} bicis`,
+    topGain: 'Les que més s’omplen',
+    topLoss: 'Les que més es buiden',
+    place: (before: number, after: number, capacity: number | null) =>
+      `${String(before)} → ${String(after)}${capacity === null ? '' : ` de ${String(capacity)}`}`,
+    unit: 'bicis',
+    loading: 'Calculant el balanç…',
+    failed: 'No s’ha pogut carregar el moment de partida.',
+    none: 'Cap estació té dada en tots dos moments.',
+    key: {
+      title: (from: string, to: string) => `Balanç de ${from} a ${to}`,
+      gain: 'Guanyen bicis',
+      loss: 'Perden bicis',
+      same: 'Igual',
+      nodata: 'Sense dada en un dels dos moments',
+      hint: 'La mida diu quantes bicis canvien. A escala de carrer, el nombre: «+39» o «−23».',
+    },
+  },
 
   format: {
     duration,

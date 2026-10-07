@@ -10,7 +10,17 @@ import {
   type ReactNode,
 } from 'react';
 import type { SourceSummary, StationItem, StationsResponse } from '../api/client';
-import { availableDays, momentLikeNow, type Moment } from '../features/history/moment';
+import { computeBalance, DEFAULT_TO, FROM_PARAM, fromClock } from '../features/balance/balance';
+import { BalanceKey } from '../features/balance/BalanceKey';
+import { BalancePanel } from '../features/balance/BalancePanel';
+import {
+  availableDays,
+  defaultDay,
+  instantOf,
+  isClock,
+  momentLikeNow,
+  type Moment,
+} from '../features/history/moment';
 import { ReplayDeck } from '../features/history/ReplayDeck';
 import { ModeSwitch, type Mode } from '../features/history/ReplayParts';
 import { formatLocalDay, localClock } from '../features/history/time';
@@ -100,6 +110,7 @@ const MODE_IN_URL: Record<Mode, string | null> = {
   explore: null,
   replay: 'reproducir',
   experiment: 'experimentar',
+  balance: 'balance',
 };
 const NO_STATIONS: readonly StationItem[] = [];
 
@@ -107,6 +118,7 @@ function modeFromUrl(): Mode {
   const value = readParam(MODE_PARAM);
   if (value === MODE_IN_URL.replay) return 'replay';
   if (value === MODE_IN_URL.experiment) return 'experiment';
+  if (value === MODE_IN_URL.balance) return 'balance';
   return 'explore';
 }
 
@@ -248,7 +260,15 @@ export function App() {
   // Solo se reproduce una fuente con datos; sin ellos, la vista es la de explorar.
   const replaying = mode === 'replay' && (source?.period ?? null) !== null;
   const experimenting = mode === 'experiment' && sourceId !== null;
-  const shownMode: Mode = replaying ? 'replay' : experimenting ? 'experiment' : 'explore';
+  // El balance compara dos momentos de un día: solo con datos.
+  const balancing = mode === 'balance' && (source?.period ?? null) !== null;
+  const shownMode: Mode = replaying
+    ? 'replay'
+    : experimenting
+      ? 'experiment'
+      : balancing
+        ? 'balance'
+        : 'explore';
   // Mientras llega el estado de las estaciones, la reproducción espera; si no llega, se para.
   const stationsProgressRef = useRef<StationsProgress>('loading');
   const replay = useReplay(
@@ -258,9 +278,22 @@ export function App() {
     stationsProgressRef,
   );
 
-  // Al explorar, un instante con /api/stations; al reproducir, fotogramas de una hora.
+  // Al explorar, un instante con /api/stations; al reproducir, fotogramas de una hora. Al
+  // comparar dos horas (Balance), el momento mostrado es el de llegada y el de partida se pide
+  // aparte (`?desde=07:00`); los dos, del día mostrado.
   const exploreAt = instantFor(source, now, moment);
-  const explored = useStations(replaying ? null : sourceId, exploreAt);
+  const [from, setFrom] = useState<string | null>(() => readParam(FROM_PARAM));
+  const days = availableDays(source);
+  const balanceDay =
+    moment.day !== null && days.includes(moment.day) ? moment.day : defaultDay(days);
+  const balanceTo = isClock(moment.time) ? moment.time : DEFAULT_TO;
+  const balanceFrom = fromClock(from, balanceTo);
+  const balanceAt =
+    balancing && balanceDay !== null
+      ? { from: instantOf(balanceDay, balanceFrom), to: instantOf(balanceDay, balanceTo) }
+      : null;
+  const explored = useStations(replaying ? null : sourceId, balanceAt?.to ?? exploreAt);
+  const before = useStations(balanceAt === null ? null : sourceId, balanceAt?.from);
   const framed = useFrames(replaying ? sourceId : null, replay.point?.at);
   const {
     state: stationsState,
@@ -307,6 +340,18 @@ export function App() {
         : null;
   const notice = replaying && source !== undefined ? replayNotice(source) : response;
   const all = response?.stations ?? NO_STATIONS;
+  // El balance, en cuanto están los dos momentos de la misma fuente.
+  const beforeResponse = before.state.status === 'ready' ? before.state.data : null;
+  const balance = useMemo(
+    () =>
+      balancing &&
+      response !== null &&
+      beforeResponse !== null &&
+      beforeResponse.source.id === response.source.id
+        ? computeBalance(beforeResponse, response)
+        : null,
+    [balancing, response, beforeResponse],
+  );
   // Sin distritos en la fuente (la demo) no hay resumen ni filtro.
   const districtRows = useMemo(() => summarizeByDistrict(all), [all]);
   const activeDistrict = districtRows.length === 0 ? null : district;
@@ -463,6 +508,9 @@ export function App() {
   useEffect(() => {
     syncParam(LIST_PARAM, listFollowsMapParam(listFollowsMap));
   }, [listFollowsMap]);
+  useEffect(() => {
+    syncParam(FROM_PARAM, from);
+  }, [from]);
   const pendingQueryRef = useRef<string | null>(null);
   useEffect(() => {
     pendingQueryRef.current = query;
@@ -504,6 +552,12 @@ export function App() {
       setMoment({ day: replay.day, time });
       writeParam('dia', replay.day);
       writeParam('hora', time);
+    } else if (next === 'balance' && !isClock(moment.time) && balanceDay !== null) {
+      // Al entrar en Balance sin hora pedida, el momento pasa a la llegada de siempre (10:00) del
+      // día mostrado: es lo que se ve, lo que se comparte y adonde va «Cambiar momento».
+      setMoment({ day: balanceDay, time: DEFAULT_TO });
+      writeParam('dia', balanceDay);
+      writeParam('hora', DEFAULT_TO);
     }
     setMode(next);
     setTool(null);
@@ -527,6 +581,7 @@ export function App() {
       const day = readParam('dia');
       const time = readParam('hora');
       setMoment({ day, time });
+      setFrom(readParam(FROM_PARAM));
       if (day !== null) replaySelectRef.current(day, time);
       setQuery(readParam(SEARCH_PARAM) ?? '');
       setVisible(visibleFromParam(readParam(HIDE_PARAM)));
@@ -558,6 +613,19 @@ export function App() {
     setMoment(like);
     writeParam('dia', like.day);
     writeParam('hora', like.time);
+  };
+
+  // Balance: el día y la hora de llegada son el momento mostrado (y van en la URL como él); la
+  // de partida tiene su parámetro (`desde`).
+  const pickBalanceDay = (day: string) => {
+    setMoment({ day, time: balanceTo });
+    writeParam('dia', day);
+    writeParam('hora', balanceTo);
+  };
+  const pickBalanceTo = (clock: string) => {
+    setMoment({ day: balanceDay, time: clock });
+    writeParam('dia', balanceDay);
+    writeParam('hora', clock);
   };
 
   // Atajos de la leyenda: lo visible y el número a la vez. El que ya está puesto, pulsado otra
@@ -632,6 +700,15 @@ export function App() {
   const mapUnavailable = mapStatus.kind === 'failed' || mapStatus.kind === 'unsupported';
   const m = t().app;
 
+  // Lo que el enlace pedía y no se puede enseñar, y lo que la API recortó: en Explorar y Balance.
+  const linkNotices = (linkStationMissing !== null || linkDayMissing !== null || truncated) && (
+    <div className="link-notice" role="status">
+      {linkStationMissing !== null && <p>{m.linkStationMissing(linkStationMissing)}</p>}
+      {linkDayMissing !== null && <p>{m.linkDayMissing(formatLocalDay(linkDayMissing))}</p>}
+      {truncated && <p>{m.truncated}</p>}
+    </div>
+  );
+
   let body: ReactNode;
   if (sourcesState.status === 'error') {
     body = (
@@ -687,16 +764,44 @@ export function App() {
     );
   } else if (experimenting) {
     body = <ScenarioPanel {...scenarioView} />;
+  } else if (balancing && balanceDay !== null) {
+    // El balance de las dos horas o, elegida una estación, su ficha del momento de llegada.
+    body = (
+      <>
+        {linkNotices}
+        {selected !== undefined ? (
+          <StationDetail
+            station={selected}
+            response={response}
+            onBack={backToList}
+            focusOnOpen={selectedByUser}
+            onFocused={detailFocused}
+            all={all}
+            onSelect={select}
+            figures={numberMode}
+          />
+        ) : (
+          <BalancePanel
+            days={days}
+            day={balanceDay}
+            from={balanceFrom}
+            to={balanceTo}
+            onDay={pickBalanceDay}
+            onFrom={setFrom}
+            onTo={pickBalanceTo}
+            balance={balance}
+            failed={before.state.status === 'error'}
+            onRetry={before.retry}
+            selectedId={selectedId}
+            onSelect={select}
+          />
+        )}
+      </>
+    );
   } else {
     body = (
       <>
-        {(linkStationMissing !== null || linkDayMissing !== null || truncated) && (
-          <div className="link-notice" role="status">
-            {linkStationMissing !== null && <p>{m.linkStationMissing(linkStationMissing)}</p>}
-            {linkDayMissing !== null && <p>{m.linkDayMissing(formatLocalDay(linkDayMissing))}</p>}
-            {truncated && <p>{m.truncated}</p>}
-          </div>
-        )}
+        {linkNotices}
         {/* Búsqueda siempre a mano, también con el detalle abierto. */}
         <div className="panel-tools">
           <div className="search">
@@ -888,13 +993,13 @@ export function App() {
         <MapBoundary onError={mapCrashed}>
           <Suspense fallback={<div className="station-map" aria-hidden="true" />}>
             <StationMap
-              stations={experimenting ? scenarioStations : filtered}
-              frame={experimenting ? all : searching === '' ? inDistrict : filtered}
+              stations={experimenting ? scenarioStations : balancing ? all : filtered}
+              frame={experimenting || balancing ? all : searching === '' ? inDistrict : filtered}
               frameKey={sourceId ?? ''}
               // Con otro distrito se encuadra el distrito, solo si no se ha movido el mapa antes;
               // con una búsqueda, sus resultados, siempre.
               frameMode={
-                experimenting
+                experimenting || balancing
                   ? shownMode
                   : `${shownMode}${activeDistrict === null ? '' : `:${activeDistrict}`}${searching === '' ? '' : `?${searching}`}`
               }
@@ -904,7 +1009,15 @@ export function App() {
               }
               selectedId={experimenting ? null : selectedId}
               zoomOnSelect={selectedByUser}
-              variant={experimenting ? 'network' : 'availability'}
+              // Mientras llega el momento de partida, el mapa sigue enseñando el estado.
+              variant={
+                experimenting
+                  ? 'network'
+                  : balancing && balance !== null
+                    ? 'balance'
+                    : 'availability'
+              }
+              balance={balance?.deltaById ?? null}
               label={numberMode}
               buildings={!experimenting}
               onSelect={experimenting ? tapStation : select}
@@ -927,6 +1040,7 @@ export function App() {
           <MapStamp
             kind={notice.source.kind}
             at={replaying ? replay.point?.at : notice.at}
+            from={balancing ? balanceAt?.from : undefined}
             experiment={experimenting}
             hypothetical={hasChanges(scenario.scenario)}
           />
@@ -947,6 +1061,8 @@ export function App() {
           <div className="map-legend">
             {experimenting ? (
               <CoverageLegend />
+            ) : balancing ? (
+              <BalanceKey counts={balance?.counts ?? null} from={balanceFrom} to={balanceTo} />
             ) : (
               <AvailabilityFilter
                 counts={counts}

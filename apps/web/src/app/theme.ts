@@ -50,6 +50,16 @@ export const THEME = {
     unknown: { color: '#8a97a8', fill: 'none', dashed: true, text: '#c3ccd8', textHalo: true },
   } as Record<Availability, MarkerStyle>,
   /**
+   * Balance entre dos horas: ganar bicis acerca a «llena» (violeta, lleno) y perder acerca a
+   * «sin bicis» (rojo, hueco); forma y signo del número dicen lo mismo que el color. Igual, un
+   * marcador neutro y pequeño; sin dato en uno de los dos momentos, el de desconocido.
+   */
+  balance: {
+    gain: { color: '#c38bff', fill: 'full', text: '#1b0b30' },
+    loss: { color: '#ff5468', fill: 'none', text: '#ff8a98', textHalo: true },
+    same: { color: '#c9d3df', fill: 'full', text: NIGHT },
+  } as Record<'gain' | 'loss' | 'same', MarkerStyle>,
+  /**
    * Escala reservada para cobertura y escenarios (B4): cian, que no usa ningún estado de
    * estación. Así una simulación nunca se confunde con una observación.
    */
@@ -79,6 +89,8 @@ export const THEME = {
     '--coverage-3': '#26a9b8',
     '--coverage-4': '#7fe3ea',
     '--bike-lane': '#7ad08f',
+    '--balance-gain': '#c38bff',
+    '--balance-loss': '#ff5468',
   },
 } as const;
 

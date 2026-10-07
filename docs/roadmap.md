@@ -497,13 +497,41 @@ honesta de lo hecho.
       fuera: Healthy, `geolocation=(self)`, ETag con la compilación, cabecera plegable en móvil,
       guiones `despliegue` y `limites` 12 de 12 y `cerca` 2 de 2. Después, solo pruebas y
       documentación (`2f8a4fc`, `a4d0b94`).
+26. **Hecho** en local (8-10-2026). Balance entre dos horas, lo primero que quedaba de la
+    propuesta: el cuarto modo, «Balance» (`docs/design.md`, «Balance entre dos horas»), elegido
+    entre tres direcciones con capturas sobre datos reales (Marea, Antes y después, Por barrios)
+    por encargo de Jaume («la que veas más cómoda para el usuario siguiendo la estética de la
+    web»): Marea, con la frase y las barras por distrito de Por barrios.
+    - Sin cambios en la API: dos peticiones a `/api/stations` del mismo día (la partida,
+      `?desde=07:00`, y la llegada, que es el momento mostrado, `dia` y `hora`) y el balance en
+      el navegador (`features/balance/balance.ts`): bicis ancladas después menos antes por
+      estación; sin dato fiable o fuera de servicio en cualquiera de los dos momentos, «sin
+      dato», nunca cero. Totales solo con las que tienen dato en los dos, por distrito en bicis
+      por estación, y las seis que más se llenan y más se vacían. Al entrar sin hora pedida, el
+      momento pasa a las 10:00 del día mostrado y la partida va tres horas antes.
+    - Mapa: variante «balance» de los marcadores (`StationMap`): octógono lleno violeta si gana,
+      hueco rojo si pierde, el tamaño según cuántas bicis (tope en 25) y el número con signo
+      desde z13; las que más cambian, encima. Mientras llega la partida sigue el estado.
+    - Panel (`features/balance/BalancePanel.tsx`): día y dos horas en pasos de media hora,
+      totales, la frase de los distritos, barras divergentes y las dos listas; cada estación
+      abre su ficha del momento de llegada. La clave, en la leyenda (`BalanceKey`); en móvil, el
+      sello con las dos horas. Con cuatro modos, el selector se aprieta a 375 px y a 320 pasa a
+      dos filas.
+    - El 13-5-2026 de 07:00 a 10:00: 197 estaciones ganan (+2019), 297 pierden (−2478), 38
+      igual y 16 sin dato; en las 532 con dato en los dos momentos, de 5289 a 4830 bicis
+      ancladas. Ganan Les Corts (+6,5 por estación), Ciutat Vella y Sant Martí; pierden Sant
+      Andreu (−6,5), Horta-Guinardó y Gràcia.
+    - Pruebas: 215 de la web (nuevas: el balance con sus clases, totales, listas y distritos;
+      las dos horas y sus selectores; y en la app, los dos instantes pedidos, la clave, la
+      partida en la URL y la ficha desde la lista), humo 22 de 22 (el balance con la demo:
+      totales, clave, las dos horas en la URL y Atrás) y `e2e/balance.capture.ts` con el mapa
+      real: escritorio a escala de ciudad y de calle, 375 px (mapa, panel y distritos, en los
+      tres idiomas) y 320 px. Tipos, lint y formato en verde.
 
 ## Siguiente
 
-- Lo que queda de la propuesta del 7-10-2026, en este orden:
-  - Balance entre dos horas: dónde se acumulan y dónde se vacían (el 13-5-2026 de 7 a 10, el
-    tercio de estaciones más cerca del mar ganó 5,2 bicis de media y el intermedio perdió 6,1).
-    Pantalla nueva: se elige entre dos o tres direcciones con capturas.
+- Lo que queda de la propuesta del 7-10-2026, en este orden (el balance entre dos horas se hizo
+  el 8-10-2026, B5.26):
   - Altitud de las estaciones: migración y reimportar (en local ya se puede).
   - Página del contrato OpenAPI.
   - Nacimiento y retirada de estaciones.

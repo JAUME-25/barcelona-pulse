@@ -173,6 +173,42 @@ Consola, un mando bajo el mapa como el de Reproducir.
 - En escritorio la leyenda sube por encima del mando; en móvil, el mando va entre el mapa y la
   leyenda, y el panel debajo.
 
+## Balance entre dos horas
+
+Dónde se acumulan y dónde se vacían las bicis entre dos horas del mismo día: el cuarto modo,
+«Balance». Elegido el 8-10-2026 entre tres direcciones con capturas sobre datos reales (el
+13-5-2026 de 07:00 a 10:00): «Marea» (cada estación con su diferencia en el mapa), «Antes y
+después» (el mapa de siempre en dos momentos, con un conmutador) y «Por barrios» (un círculo por
+barrio con su balance). Por encargo de Jaume («la que veas más cómoda para el usuario siguiendo la
+estética de la web»): **Marea**, con la frase y las barras por distrito de «Por barrios» en el
+panel.
+
+- Cada estación es el mismo octógono, con el balance en vez del estado: **lleno violeta** si gana
+  bicis y **hueco rojo** si las pierde; el tamaño dice cuántas (de poco más de la mitad del
+  marcador a casi el doble, con el tope en 25 bicis) y, a escala de calle, el número con signo
+  («+39», «−23»). Igual, un marcador neutro y pequeño; sin dato en uno de los dos momentos, el de
+  desconocido. Violeta y rojo son los de «llena» y «sin bicis»: ganar bicis acerca a lo uno y
+  perder, a lo otro. Las que más cambian se dibujan encima.
+- El panel: el día y las dos horas (en pasos de media hora; la de llegada es el momento mostrado
+  y la de partida, tres horas antes si nadie pide otra); los totales en dos cifras grandes
+  («+2019 bicis más, en 197 estaciones» y «−2478 bicis menos, en 297»), cuántas quedan igual y
+  cuántas sin dato, y las bicis ancladas antes y después en las que tienen dato en los dos
+  momentos; la frase de los distritos («Ganan bicis Les Corts, Ciutat Vella y Sant Martí; pierden
+  Sant Andreu, Horta-Guinardó y Gràcia»); las barras divergentes por distrito, en bicis por
+  estación para comparar distritos de distinto tamaño; y las seis que más se llenan y las seis
+  que más se vacían, con «2 → 41 de 43». Cada una abre su ficha del momento de llegada.
+- La clave, en la leyenda del mapa, con el recuento de cada clase; en móvil, el sello dice las
+  dos horas.
+- Son dos estados, no viajes, y se dice: lo que entra y sale entre medias no se ve. Sin dato no es
+  cero: una estación sin dato fiable o fuera de servicio en cualquiera de los dos momentos queda
+  en «sin dato» y fuera de los totales.
+- En la URL: `modo=balance`, `dia` y `hora` (la llegada, como el momento mostrado) y `desde`. Al
+  entrar sin hora pedida, el momento pasa a las 10:00 del día mostrado.
+- Con cuatro modos, en móvil el selector va más prieto a 375 px y a 320 pasa a dos filas.
+- Descartadas: «Antes y después» obliga a comparar de memoria dos mapas de 540 estaciones; «Por
+  barrios» resume bien pero esconde las estaciones y mete una forma nueva (el círculo) para una
+  zona. Su frase y sus barras se quedan.
+
 ## Límites visibles
 
 Elegido el 6 de octubre de 2026 mezclando tres propuestas (Ficha, Sello y Lupa): la explicación

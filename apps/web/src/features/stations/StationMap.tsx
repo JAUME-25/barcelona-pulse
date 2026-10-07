@@ -90,6 +90,8 @@ interface StationMapProps {
   variant?: MarkerVariant;
   /** Qué número lleva el marcador: todas las bicis o solo las eléctricas. */
   label?: MarkerLabel;
+  /** Con «balance»: cuántas bicis gana o pierde cada estación, por id; null, sin dato. */
+  balance?: ReadonlyMap<number, number | null> | null;
   /** Edificios en 3D y carriles bici. Al experimentar no: taparían la cobertura o se confundirían con ella. */
   buildings?: boolean;
   onSelect: (id: number) => void;
@@ -107,7 +109,7 @@ function boundsOf(map: MapLibreMap): MapBounds {
   return { west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() };
 }
 
-export type MarkerVariant = 'availability' | 'network';
+export type MarkerVariant = 'availability' | 'network' | 'balance';
 export type MarkerLabel = NumberMode;
 
 const CAMERA_HASH = 'mapa';
@@ -247,9 +249,40 @@ function markerLabel(category: Availability, station: StationItem, label: Marker
   return String(value);
 }
 
+type BalanceKind = 'gain' | 'loss' | 'same' | 'nodata';
+
+/** A partir de cuántas bicis de balance el marcador tiene su tamaño máximo. */
+const BALANCE_FULL_AT = 25;
+
+/**
+ * Lo que dibuja la variante «balance»: la clase, el tamaño relativo (las que cambian, de poco
+ * más de la mitad del marcador a casi el doble según cuántas bicis; igual y sin dato,
+ * pequeñas), el número con signo y el orden (las que más cambian, encima).
+ */
+function balanceProps(delta: number | null | undefined) {
+  const known = delta !== null && delta !== undefined;
+  const kind: BalanceKind = !known ? 'nodata' : delta > 0 ? 'gain' : delta < 0 ? 'loss' : 'same';
+  const size = Math.abs(delta ?? 0);
+  const magnitude = Math.min(size, BALANCE_FULL_AT) / BALANCE_FULL_AT;
+  return {
+    bkind: kind,
+    bscale: kind === 'gain' || kind === 'loss' ? 0.55 + 0.9 * magnitude : 0.5,
+    blabel:
+      kind === 'gain'
+        ? `+${String(size)}`
+        : kind === 'loss'
+          ? `−${String(size)}`
+          : kind === 'same'
+            ? '0'
+            : '?',
+    bsort: size,
+  };
+}
+
 function toFeatureCollection(
   stations: readonly StationItem[],
   label: MarkerLabel,
+  balance: ReadonlyMap<number, number | null> | null,
 ): GeoJSON.FeatureCollection {
   return {
     type: 'FeatureCollection',
@@ -269,6 +302,7 @@ function toFeatureCollection(
           // Las desconocidas debajo: no deben tapar a las que tienen dato.
           sort: category === 'unknown' ? 0 : dim ? 0.5 : 1,
           label: markerLabel(category, s, label),
+          ...balanceProps(balance?.get(s.id)),
         },
       };
     }),
@@ -280,19 +314,82 @@ function byCategory(pick: (c: Availability) => string | number): ExpressionSpeci
   return ['match', ['get', 'cat'], ...pairs, pick('unknown')] as unknown as ExpressionSpecification;
 }
 
+const BALANCE_STYLE = {
+  gain: THEME.balance.gain,
+  loss: THEME.balance.loss,
+  same: THEME.balance.same,
+  nodata: THEME.markers.unknown,
+} as const;
+
+function byBalance(pick: (k: BalanceKind) => string | number): ExpressionSpecification {
+  const pairs = (['gain', 'loss', 'same'] as const).flatMap((k) => [k, pick(k)]);
+  return [
+    'match',
+    ['get', 'bkind'],
+    ...pairs,
+    pick('nodata'),
+  ] as unknown as ExpressionSpecification;
+}
+
+const scaled = (base: number): ExpressionSpecification => ['*', base, ['get', 'bscale']];
+
+// Como ICON_SIZE, multiplicado por el tamaño relativo de cada estación.
+const BALANCE_ICON_SIZE: ExpressionSpecification = [
+  'interpolate',
+  ['linear'],
+  ['zoom'],
+  11,
+  scaled(0.38),
+  12.5,
+  scaled(0.5),
+  14,
+  scaled(0.82),
+  16,
+  scaled(1.12),
+  17.5,
+  scaled(1.25),
+];
+
 const MARKER_IMAGE: Record<MarkerVariant, ExpressionSpecification | string> = {
   availability: ['concat', 'bp-', ['get', 'cat']],
   network: NETWORK_IMAGE,
+  balance: [
+    'match',
+    ['get', 'bkind'],
+    'nodata',
+    'bp-unknown',
+    ['concat', 'bp-bal-', ['get', 'bkind']],
+  ],
 };
 
 const MARKER_TEXT: Record<MarkerVariant, ExpressionSpecification | string> = {
   availability: ['step', ['zoom'], '', 13, ['get', 'label']],
   network: '',
+  balance: ['step', ['zoom'], '', 13, ['get', 'blabel']],
 };
 
 const MARKER_SIZE: Record<MarkerVariant, ExpressionSpecification> = {
   availability: ICON_SIZE,
   network: NETWORK_ICON_SIZE,
+  balance: BALANCE_ICON_SIZE,
+};
+
+const MARKER_SORT: Record<MarkerVariant, ExpressionSpecification> = {
+  availability: ['get', 'sort'],
+  network: ['get', 'sort'],
+  balance: ['get', 'bsort'],
+};
+
+const MARKER_TEXT_COLOR: Record<MarkerVariant, ExpressionSpecification> = {
+  availability: byCategory((c) => THEME.markers[c].text),
+  network: byCategory((c) => THEME.markers[c].text),
+  balance: byBalance((k) => BALANCE_STYLE[k].text),
+};
+
+const MARKER_TEXT_HALO: Record<MarkerVariant, ExpressionSpecification> = {
+  availability: byCategory((c) => (THEME.markers[c].textHalo === true ? 1.2 : 0)),
+  network: byCategory((c) => (THEME.markers[c].textHalo === true ? 1.2 : 0)),
+  balance: byBalance((k) => (BALANCE_STYLE[k].textHalo === true ? 1.2 : 0)),
 };
 
 function addLayers(
@@ -302,6 +399,7 @@ function addLayers(
   variant: MarkerVariant,
   label: MarkerLabel,
   buildings: boolean,
+  balance: ReadonlyMap<number, number | null> | null,
 ) {
   for (const category of AVAILABILITY_ORDER) {
     map.addImage(`bp-${category}`, createMarkerImage(THEME.markers[category]), {
@@ -309,6 +407,11 @@ function addLayers(
     });
   }
   map.addImage(NETWORK_IMAGE, createMarkerImage(THEME.networkMarker), { pixelRatio: PIXEL_RATIO });
+  for (const kind of ['gain', 'loss', 'same'] as const) {
+    map.addImage(`bp-bal-${kind}`, createMarkerImage(THEME.balance[kind]), {
+      pixelRatio: PIXEL_RATIO,
+    });
+  }
   map.addImage('bp-halo', createHaloImage(), { pixelRatio: PIXEL_RATIO });
 
   // Edificios en 3D desde z14, opacos y más claros cuanto más altos para que se lean de noche.
@@ -346,7 +449,7 @@ function addLayers(
 
   map.addSource(STATIONS_SOURCE, {
     type: 'geojson',
-    data: toFeatureCollection(stations, label),
+    data: toFeatureCollection(stations, label, balance),
   });
   map.addLayer({
     id: HALO_LAYER,
@@ -369,7 +472,7 @@ function addLayers(
       'icon-size': MARKER_SIZE[variant],
       'icon-allow-overlap': true,
       'icon-ignore-placement': true,
-      'symbol-sort-key': ['get', 'sort'],
+      'symbol-sort-key': MARKER_SORT[variant],
       'text-field': MARKER_TEXT[variant],
       'text-font': [...THEME.textFont],
       'text-size': ['interpolate', ['linear'], ['zoom'], 13, 10, 15, 12.5, 17.5, 15],
@@ -380,9 +483,9 @@ function addLayers(
       // Atenuadas: con el número de eléctricas, las estaciones que no tienen ninguna.
       'icon-opacity': ['case', ['get', 'dim'], DIM_OPACITY, 1],
       'text-opacity': ['case', ['get', 'dim'], DIM_OPACITY, 1],
-      'text-color': byCategory((c) => THEME.markers[c].text),
+      'text-color': MARKER_TEXT_COLOR[variant],
       'text-halo-color': THEME.night,
-      'text-halo-width': byCategory((c) => (THEME.markers[c].textHalo === true ? 1.2 : 0)),
+      'text-halo-width': MARKER_TEXT_HALO[variant],
     },
   });
 }
@@ -402,6 +505,7 @@ export function StationMap({
   zoomOnSelect = false,
   variant = 'availability',
   label = 'bikes',
+  balance = null,
   buildings = true,
   onSelect,
   onStatusChange,
@@ -420,6 +524,7 @@ export function StationMap({
   const selectedRef = useRef(selectedId);
   const variantRef = useRef(variant);
   const labelRef = useRef(label);
+  const balanceRef = useRef(balance);
   const buildingsRef = useRef(buildings);
   const onSelectRef = useRef(onSelect);
   const onStatusRef = useRef(onStatusChange);
@@ -523,6 +628,7 @@ export function StationMap({
           variantRef.current,
           labelRef.current,
           buildingsRef.current,
+          balanceRef.current,
         );
         setMapReady(true);
         onStatusRef.current({ kind: degraded ? 'degraded' : 'ready' });
@@ -599,11 +705,12 @@ export function StationMap({
   useEffect(() => {
     stationsRef.current = stations;
     labelRef.current = label;
+    balanceRef.current = balance;
     const source = loadedRef.current
       ? mapRef.current?.getSource<GeoJSONSource>(STATIONS_SOURCE)
       : undefined;
-    if (source !== undefined) void source.setData(toFeatureCollection(stations, label));
-  }, [stations, label]);
+    if (source !== undefined) void source.setData(toFeatureCollection(stations, label, balance));
+  }, [stations, label, balance]);
 
   // Variante de los marcadores: solo cambia el dibujo de la capa.
   useEffect(() => {
@@ -613,6 +720,9 @@ export function StationMap({
     map.setLayoutProperty(MARKERS_LAYER, 'icon-image', MARKER_IMAGE[variant]);
     map.setLayoutProperty(MARKERS_LAYER, 'icon-size', MARKER_SIZE[variant]);
     map.setLayoutProperty(MARKERS_LAYER, 'text-field', MARKER_TEXT[variant]);
+    map.setLayoutProperty(MARKERS_LAYER, 'symbol-sort-key', MARKER_SORT[variant]);
+    map.setPaintProperty(MARKERS_LAYER, 'text-color', MARKER_TEXT_COLOR[variant]);
+    map.setPaintProperty(MARKERS_LAYER, 'text-halo-width', MARKER_TEXT_HALO[variant]);
   }, [variant, mapReady]);
 
   // Edificios en 3D y carriles bici: se ocultan sin quitar la capa (la cobertura se dibuja debajo

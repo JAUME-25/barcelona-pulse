@@ -182,3 +182,38 @@ test('en catalán por la URL y en inglés con el selector, sin perder la estaci�
   expect(url.searchParams.get('idioma')).toBe('en');
   expect(url.searchParams.get('estacion')).toBe('demo-024');
 });
+
+test('balance entre dos horas con la demo: de 07:00 a 10:00, totales, clave y la partida en la URL', async ({
+  page,
+}) => {
+  await openWithoutBasemap(page, '&modo=balance');
+
+  await expect(page.getByRole('button', { name: 'Balance' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(page.locator('.balance-key__title')).toHaveText('Balance de 07:00 a 10:00');
+  // La demo: las residenciales pierden bicis por la mañana y el centro las gana.
+  await expect(page.locator('.balance__total--gain .balance__big')).toHaveText(/^\+[1-9]\d*$/);
+  await expect(page.locator('.balance__total--loss .balance__big')).toHaveText(/^−[1-9]\d*$/);
+  // Las cuatro clases suman las 46 estaciones de la demo.
+  await expect(page.locator('.balance-key__count').last()).not.toHaveText('…');
+  const counts = (await page.locator('.balance-key__count').allTextContents()).map(Number);
+  expect(counts.reduce((a, b) => a + b, 0)).toBe(46);
+
+  // Las dos horas van a la URL: la de partida con su parámetro y la de llegada como el momento.
+  await page.locator('.balance__from').selectOption('08:00');
+  await expect(page.locator('.balance-key__title')).toHaveText('Balance de 08:00 a 10:00');
+  await expect.poll(() => new URL(page.url()).searchParams.get('desde')).toBe('08:00');
+  await page.locator('.balance__to').selectOption('09:30');
+  await expect(page.locator('.balance-key__title')).toHaveText('Balance de 08:00 a 09:30');
+  expect(new URL(page.url()).searchParams.get('hora')).toBe('09:30');
+  expect(new URL(page.url()).searchParams.get('dia')).toBe('2026-03-10');
+
+  // Una estación de la lista abre su ficha; Atrás devuelve el balance.
+  await page.locator('.balance .station-list__item').first().click();
+  await expect(page.getByRole('article')).toBeVisible();
+  await page.goBack();
+  await expect(page.locator('.balance-key__title')).toBeVisible();
+  await expect(page.locator('.balance__totals')).toBeVisible();
+});

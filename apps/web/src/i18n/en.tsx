@@ -71,7 +71,50 @@ const COVERAGE_ASSUMPTIONS = [
 export const en: Messages = {
   languages: { label: 'Language' },
   brand: { tagline: 'Bicing stations on the map' },
-  modes: { label: 'Mode', explore: 'Explore', replay: 'Replay', experiment: 'Experiment' },
+  modes: {
+    label: 'Mode',
+    explore: 'Explore',
+    replay: 'Replay',
+    experiment: 'Experiment',
+    balance: 'Balance',
+  },
+
+  balance: {
+    title: 'Balance between two hours',
+    day: 'Day',
+    from: 'From',
+    to: 'to',
+    hint: (from: string, to: string) =>
+      `Bikes docked at each station at ${to} minus those docked at ${from}. Two states, not trips: what comes and goes in between is not seen.`,
+    gained: (stations: number) => `more bikes, at ${count(stations, 'station', 'stations')}`,
+    lost: (stations: number) => `fewer bikes, at ${count(stations, 'station', 'stations')}`,
+    rest: (same: number, nodata: number, known: number, before: number, after: number) =>
+      `${String(same)} unchanged · ${String(nodata)} with no data at one of the two moments · at the ${String(known)} with data at both, from ${String(before)} to ${String(after)} docked bikes.`,
+    story: (gainers: readonly string[], losers: readonly string[]) => {
+      const win = gainers.length === 0 ? 'No district gains bikes' : `${list(gainers)} gain bikes`;
+      const lose = losers.length === 0 ? 'none loses any' : `${list(losers)} lose them`;
+      return `${win}; ${lose}.`;
+    },
+    byDistrict: 'By district',
+    perStation: (value: string) => `${value} per station`,
+    districtMeta: (stations: number, net: string) => `${String(stations)} stations · ${net} bikes`,
+    topGain: 'Filling up the most',
+    topLoss: 'Emptying the most',
+    place: (before: number, after: number, capacity: number | null) =>
+      `${String(before)} → ${String(after)}${capacity === null ? '' : ` of ${String(capacity)}`}`,
+    unit: 'bikes',
+    loading: 'Working out the balance…',
+    failed: 'The starting moment could not be loaded.',
+    none: 'No station has data at both moments.',
+    key: {
+      title: (from: string, to: string) => `Balance from ${from} to ${to}`,
+      gain: 'Gain bikes',
+      loss: 'Lose bikes',
+      same: 'Unchanged',
+      nodata: 'No data at one of the two moments',
+      hint: 'Size shows how many bikes change. At street scale, the number: “+39” or “−23”.',
+    },
+  },
 
   format: {
     duration,

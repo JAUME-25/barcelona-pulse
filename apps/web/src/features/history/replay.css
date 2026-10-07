@@ -30,6 +30,22 @@
   color: var(--panel-solid);
 }
 
+/* En móvil, con cuatro modos: a 375 px caben en una fila algo más prietos; a 320, el último
+   pasa a una segunda fila y la llena, en vez de cortarse. */
+@media (max-width: 767px) {
+  .mode-switch {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .mode-switch button {
+    flex: 1 1 auto;
+    padding: 0 9px;
+    font-size: 0.9375rem;
+  }
+}
+
 /* Controles */
 .play-button {
   display: inline-grid;

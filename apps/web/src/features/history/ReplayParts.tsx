@@ -7,9 +7,9 @@ import { formatLocalDay, localClock } from './time';
 import { DAY_STEP_MINUTES, SPEEDS, type Replay, type Speed } from './useReplay';
 import './replay.css';
 
-export type Mode = 'explore' | 'replay' | 'experiment';
+export type Mode = 'explore' | 'replay' | 'experiment' | 'balance';
 
-const MODES: readonly Mode[] = ['explore', 'replay', 'experiment'];
+const MODES: readonly Mode[] = ['explore', 'replay', 'experiment', 'balance'];
 
 export function ModeSwitch({ mode, onChange }: { mode: Mode; onChange: (mode: Mode) => void }) {
   const m = t().modes;
