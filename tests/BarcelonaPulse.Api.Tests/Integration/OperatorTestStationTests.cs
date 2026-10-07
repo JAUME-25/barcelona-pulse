@@ -15,6 +15,7 @@ namespace BarcelonaPulse.Api.Tests.Integration;
 public sealed class OperatorTestStationTests(PostgisDatabase database) : IClassFixture<PostgisDatabase>
 {
     private const string MigrationBefore = "20261006082342_StudyAreas";
+    private const string MigrationUnderTest = "20261007091011_RemoveOperatorTestStation";
 
     [Fact]
     public async Task The_migration_removes_the_operator_test_station_and_its_observations()
@@ -24,6 +25,10 @@ public sealed class OperatorTestStationTests(PostgisDatabase database) : IClassF
         await using (var db = database.CreateContext())
         {
             await db.GetService<IMigrator>().MigrateAsync(MigrationBefore, ct);
+            // El modelo de hoy ya tiene purge_generation (ADR 0014) y la ingesta lee data_sources con
+            // él: se añade a mano, como lo haría su migración, que aquí no se aplica.
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE data_sources ADD COLUMN purge_generation integer NOT NULL DEFAULT 0", ct);
         }
 
         // Como estaba en mayo de 2026: la 536 entre las demás, con sus observaciones.
@@ -45,7 +50,7 @@ public sealed class OperatorTestStationTests(PostgisDatabase database) : IClassF
 
         await using (var db = database.CreateContext())
         {
-            await db.Database.MigrateAsync(ct);
+            await db.GetService<IMigrator>().MigrateAsync(MigrationUnderTest, ct);
         }
 
         await using (var db = database.CreateContext())

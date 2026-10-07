@@ -360,7 +360,22 @@ honesta de lo hecho.
     «Ver toda la lista»), humo 20/20 y `e2e/lista-mapa.capture.ts` con el mapa real en escritorio
     y 375 px (15 de 548 a nivel de calle, cambia al mover el mapa y entran más al alejarse). El
     navegador integrado de Claude en modo móvil no pinta el mapa: allí la lista sale entera, que
-    es lo previsto mientras el mapa no carga.
+    es lo previsto mientras el mapa no carga. En `ef28ceb`.
+18. **Hecho** en local (7-10-2026, sin commit). La versión de los datos por rango y los
+    validadores HTTP (ADR 0014), la deuda B2 de la propuesta:
+    - `DataVersion.ForRangeAsync`: la última ingesta terminada que toca el rango (por el periodo
+      cubierto o el de sus observaciones, con la tolerancia hacia atrás) y cuántas purgas ha
+      habido (`data_sources.purge_generation`, migración `PurgeGeneration`, que `purge` sube en
+      su transacción). La clave de la caché de la línea temporal pasa a ser el rango, el paso y
+      esa versión: importar un día solo invalida sus semanas; antes, todas, y el
+      precalentamiento las recalculaba todas.
+    - ETag débil y `Cache-Control: private, no-cache` en estado (con `at` o fuente sintética),
+      detalle, patrón, línea temporal y fotogramas; con `If-None-Match`, 304 antes de calcular.
+      «Ahora» no se valida.
+    - Pruebas: 4 nuevas contra PostGIS (una ingesta cambia solo los días que toca y una purga
+      todos; el archivo de un día que trae observaciones del anterior cambia también el
+      anterior; ETag y 304 en estado, línea temporal, fotogramas, detalle y patrón, y que el
+      patrón cambia con otro día mientras el estado del 19 sigue en 304; «ahora» sin ETag).
 
 ## Siguiente
 

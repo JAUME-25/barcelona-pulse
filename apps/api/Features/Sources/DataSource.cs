@@ -28,6 +28,13 @@ public sealed class DataSource
     /// misma transacción: así /api/sources no las cuenta en cada petición (ADR 0012).
     /// </summary>
     public long ObservationCount { get; set; }
+
+    /// <summary>
+    /// Cuántas purgas ha habido (ADR 0014). Una purga borra observaciones sin dejar ingesta
+    /// nueva: este contador hace que cambie la versión de los datos de cualquier rango, y con
+    /// ella las cachés y los ETag.
+    /// </summary>
+    public int PurgeGeneration { get; set; }
 }
 
 public enum SourceKind

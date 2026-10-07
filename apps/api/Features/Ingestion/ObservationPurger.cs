@@ -71,8 +71,11 @@ public sealed class ObservationPurger(PulseDbContext db, TimeProvider clock, ILo
         long deleted = await observations.ExecuteDeleteAsync(ct);
         var now = clock.GetUtcNow();
         var marked = await ingestions.ExecuteUpdateAsync(s => s.SetProperty(r => r.PurgedAt, now), ct);
+        // El recuento (ADR 0012) y la generación de purgas (ADR 0014): la versión de los datos de
+        // cualquier rango cambia, aunque el día quitado no tuviera ingesta propia.
         await db.DataSources.Where(s => s.Id == sourceId).ExecuteUpdateAsync(s => s
-            .SetProperty(x => x.ObservationCount, x => x.ObservationCount - deleted), ct);
+            .SetProperty(x => x.ObservationCount, x => x.ObservationCount - deleted)
+            .SetProperty(x => x.PurgeGeneration, x => x.PurgeGeneration + 1), ct);
         await tx.CommitAsync(ct);
 
         logger.LogInformation(

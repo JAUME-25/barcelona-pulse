@@ -90,6 +90,10 @@ Puntos de entrada, por línea de comandos (no hay endpoint HTTP de importación)
 - Enums en `snake_case`, números estrictos y campos requeridos según los constructores.
 - Errores como `application/problem+json` (RFC 9457): 400 con `errors` por parámetro, 404 y
   429.
+- Validadores (ADR 0014): el estado en un instante pedido, el detalle y el patrón de una
+  estación, la línea temporal y los fotogramas llevan un ETag débil con la versión de los datos
+  de su rango y `Cache-Control: private, no-cache`; con `If-None-Match` responden 304 sin
+  calcular nada. «Ahora» de una fuente observada no se valida.
 
 ## Seguridad y operación
 
@@ -104,6 +108,8 @@ Puntos de entrada, por línea de comandos (no hay endpoint HTTP de importación)
   máxima de 1° y un máximo de 1 000 estaciones por respuesta (`truncated` lo indica).
 - La línea temporal calcula como mucho dos rangos a la vez; los demás esperan y, si mientras
   tanto otro ha calculado el mismo, lo toman de la caché. Lo que ya está en la caché no espera.
+  La clave de la caché lleva la versión de los datos del rango (ADR 0014): importar un día solo
+  invalida las semanas que lo tocan; una purga, todas.
   Cada cálculo tiene 20 s de tope y va sin JIT, que con la estimación del `generate_series` se
   activaba siempre y añadía un 50 %. Medido en local el 7-10-2026: 12 semanas distintas a la vez,
   nunca más de 2 consultas en PostgreSQL y todas servidas en 5,6 s.

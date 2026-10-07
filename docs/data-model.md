@@ -7,7 +7,7 @@ Esquema en `apps/api/Infrastructure/Migrations`.
 
 | Tabla | Qué guarda | Clave natural |
 | --- | --- | --- |
-| `data_sources` | Fuente: `kind` (`observed` o `synthetic`), nombre, atribución, licencia, tolerancia de frescura y recuento de observaciones (lo llevan ingesta y purga). | `id` (texto: `demo`, …) |
+| `data_sources` | Fuente: `kind` (`observed` o `synthetic`), nombre, atribución, licencia, tolerancia de frescura, recuento de observaciones (lo llevan ingesta y purga) y cuántas purgas ha habido (`purge_generation`, para la versión de los datos de la ADR 0014). | `id` (texto: `demo`, …) |
 | `stations` | Identidad estable de una estación dentro de su fuente. | `(source_id, source_station_id)` |
 | `station_versions` | Nombre, dirección, distrito, barrio, ubicación (`geometry(Point,4326)`) y capacidad durante un intervalo. | una vigente por estación |
 | `station_observations` | Estado publicado en un instante: estado, bicis (total, mecánicas, eléctricas), anclajes libres, deshabilitados, si presta y si admite devoluciones, y marcas de calidad. | `(station_id, observed_at)` |

@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using BarcelonaPulse.Api.Features.Sources;
 using BarcelonaPulse.Api.Infrastructure;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
@@ -23,12 +24,16 @@ public static class StationsEndpoints
             .WithSummary("Estaciones de una fuente y su estado en un instante")
             .WithDescription(
                 "Devuelve la versión vigente de cada estación y su última observación anterior o igual a `at`. " +
-                "Fuera de la tolerancia de la fuente el estado es `unknown` y los recuentos son nulos.")
+                "Fuera de la tolerancia de la fuente el estado es `unknown` y los recuentos son nulos. " +
+                "Con `at` (o una fuente sintética) lleva ETag: con If-None-Match responde 304 mientras no " +
+                "entren ni salgan datos de ese momento.")
+            .Produces(StatusCodes.Status304NotModified)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapGet("/{id:long}", GetStation)
             .WithName("GetStation")
             .WithSummary("Una estación, su estado en un instante y sus versiones")
+            .Produces(StatusCodes.Status304NotModified)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapGet("/{id:long}/pattern", GetStationPattern)
@@ -37,15 +42,17 @@ public static class StationsEndpoints
             .WithDescription(
                 "Su estado cada 15 minutos de cada día importado de su fuente, con la misma regla que el mapa, " +
                 "contado por hora (de Barcelona) en laborables y en fines de semana. Es lo que pasó, no una " +
-                "previsión; los pasos sin dato van en `unknown`, no como cero.")
+                "previsión; los pasos sin dato van en `unknown`, no como cero. Lleva ETag: con If-None-Match " +
+                "responde 304 mientras la fuente no cambie.")
+            .Produces(StatusCodes.Status304NotModified)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         return api;
     }
 
-    private static async Task<Results<Ok<StationPatternResponse>, ProblemHttpResult>> GetStationPattern(
+    private static async Task<Results<Ok<StationPatternResponse>, StatusCodeHttpResult, ProblemHttpResult>> GetStationPattern(
         [Description("Identificador interno de la estación.")] long id,
-        PulseDbContext db, CancellationToken ct)
+        HttpContext http, PulseDbContext db, CancellationToken ct)
     {
         var station = await db.Stations.AsNoTracking()
             .Include(s => s.Source)
@@ -56,14 +63,38 @@ public static class StationsEndpoints
                 title: "Estación no encontrada", detail: $"No existe la estación {id}.");
         }
 
+        // El patrón mira todos los días importados: la versión de toda la fuente.
+        var version = await DataVersion.ForAllAsync(db, station.Source, ct);
+        if (HttpValidators.ClientHas(http, $"pattern:{id}:{version}"))
+        {
+            return HttpValidators.NotModified();
+        }
+
         return TypedResults.Ok(await StationPattern.ComputeAsync(db, station, ct));
     }
 
-    private static async Task<Results<Ok<StationsResponse>, ValidationProblem, ProblemHttpResult>> ListStations(
+    /// <summary>
+    /// Un estado en un instante pedido (o el final de los datos de una fuente sintética) solo
+    /// depende de los datos: lleva ETag. «Ahora» cambia con el reloj y no se valida.
+    /// </summary>
+    private static async Task<bool> ClientHasStateAsync(
+        HttpContext http, PulseDbContext db, DataSource source, DateTimeOffset instant, InstantBasis basis,
+        string what, CancellationToken ct)
+    {
+        if (basis == InstantBasis.Now)
+        {
+            return false;
+        }
+
+        var version = await DataVersion.ForRangeAsync(db, source, instant, instant, ct);
+        return HttpValidators.ClientHas(http, $"{what}:{instant:O}:{version}");
+    }
+
+    private static async Task<Results<Ok<StationsResponse>, StatusCodeHttpResult, ValidationProblem, ProblemHttpResult>> ListStations(
         [Description("Obligatorio. Identificador de la fuente (ver GET /api/sources).")] string? source,
         [Description(BboxDescription)] string? bbox,
         [Description(AtDescription)] string? at,
-        PulseDbContext db, TimeProvider clock, CancellationToken ct)
+        HttpContext http, PulseDbContext db, TimeProvider clock, CancellationToken ct)
     {
         var now = clock.GetUtcNow();
         var errors = new Dictionary<string, string[]>();
@@ -94,6 +125,11 @@ public static class StationsEndpoints
         }
 
         var (instant, basis) = await StationQueries.ResolveInstantAsync(db, dataSource, requested, now, ct);
+        if (await ClientHasStateAsync(http, db, dataSource, instant, basis, "stations", ct))
+        {
+            return HttpValidators.NotModified();
+        }
+
         var items = await StationQueries.StatesAtAsync(db, dataSource, instant, box, stationId: null, StationQueries.MaxStations, ct);
         var truncated = items.Count > StationQueries.MaxStations;
         if (truncated)
@@ -106,10 +142,10 @@ public static class StationsEndpoints
             items.Count, truncated, items));
     }
 
-    private static async Task<Results<Ok<StationDetailResponse>, ValidationProblem, ProblemHttpResult>> GetStation(
+    private static async Task<Results<Ok<StationDetailResponse>, StatusCodeHttpResult, ValidationProblem, ProblemHttpResult>> GetStation(
         [Description("Identificador interno de la estación.")] long id,
         [Description(AtDescription)] string? at,
-        PulseDbContext db, TimeProvider clock, CancellationToken ct)
+        HttpContext http, PulseDbContext db, TimeProvider clock, CancellationToken ct)
     {
         var now = clock.GetUtcNow();
         if (!QueryParsing.TryParseInstant(at, now, out var requested, out var atError))
@@ -128,6 +164,11 @@ public static class StationsEndpoints
         }
 
         var (instant, basis) = await StationQueries.ResolveInstantAsync(db, station.Source, requested, now, ct);
+        if (await ClientHasStateAsync(http, db, station.Source, instant, basis, $"station:{id}", ct))
+        {
+            return HttpValidators.NotModified();
+        }
+
         var items = await StationQueries.StatesAtAsync(db, station.Source, instant, bbox: null, station.Id, limit: 1, ct);
         var item = items.FirstOrDefault();
         if (item is null)

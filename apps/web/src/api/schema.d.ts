@@ -50,7 +50,7 @@ export interface paths {
     };
     /**
      * Línea temporal de una fuente: estaciones con dato y totales en cada paso
-     * @description Aplica en cada paso la misma regla que GET /api/stations: última observación ≤ instante dentro de la tolerancia. Los huecos se ven como pasos con menos estaciones con dato. Máximo 7 días por petición.
+     * @description Aplica en cada paso la misma regla que GET /api/stations: última observación ≤ instante dentro de la tolerancia. Los huecos se ven como pasos con menos estaciones con dato. Máximo 7 días por petición. Lleva ETag: con If-None-Match responde 304 mientras no entren ni salgan datos del rango.
      */
     get: operations['GetTimeline'];
     put?: never;
@@ -70,7 +70,7 @@ export interface paths {
     };
     /**
      * Fotogramas: el estado de todas las estaciones en 12 pasos seguidos
-     * @description Cada paso aplica la misma regla que GET /api/stations?at=…. Con el paso de 5 min, una hora por petición: sirve para reproducir sin una petición por paso.
+     * @description Cada paso aplica la misma regla que GET /api/stations?at=…. Con el paso de 5 min, una hora por petición: sirve para reproducir sin una petición por paso. Lleva ETag: con If-None-Match responde 304 mientras no entren ni salgan datos de esa hora.
      */
     get: operations['GetFrames'];
     put?: never;
@@ -127,7 +127,7 @@ export interface paths {
     };
     /**
      * Estaciones de una fuente y su estado en un instante
-     * @description Devuelve la versión vigente de cada estación y su última observación anterior o igual a `at`. Fuera de la tolerancia de la fuente el estado es `unknown` y los recuentos son nulos.
+     * @description Devuelve la versión vigente de cada estación y su última observación anterior o igual a `at`. Fuera de la tolerancia de la fuente el estado es `unknown` y los recuentos son nulos. Con `at` (o una fuente sintética) lleva ETag: con If-None-Match responde 304 mientras no entren ni salgan datos de ese momento.
      */
     get: operations['ListStations'];
     put?: never;
@@ -164,7 +164,7 @@ export interface paths {
     };
     /**
      * Cómo estuvo una estación a cada hora en los días importados
-     * @description Su estado cada 15 minutos de cada día importado de su fuente, con la misma regla que el mapa, contado por hora (de Barcelona) en laborables y en fines de semana. Es lo que pasó, no una previsión; los pasos sin dato van en `unknown`, no como cero.
+     * @description Su estado cada 15 minutos de cada día importado de su fuente, con la misma regla que el mapa, contado por hora (de Barcelona) en laborables y en fines de semana. Es lo que pasó, no una previsión; los pasos sin dato van en `unknown`, no como cero. Lleva ETag: con If-None-Match responde 304 mientras la fuente no cambie.
      */
     get: operations['GetStationPattern'];
     put?: never;
@@ -944,6 +944,13 @@ export interface operations {
           'application/json': components['schemas']['TimelineResponse'];
         };
       };
+      /** @description Not Modified */
+      304: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
       /** @description Bad Request */
       400: {
         headers: {
@@ -989,6 +996,13 @@ export interface operations {
         content: {
           'application/json': components['schemas']['FramesResponse'];
         };
+      };
+      /** @description Not Modified */
+      304: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       /** @description Bad Request */
       400: {
@@ -1097,6 +1111,13 @@ export interface operations {
           'application/json': components['schemas']['StationsResponse'];
         };
       };
+      /** @description Not Modified */
+      304: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
       /** @description Bad Request */
       400: {
         headers: {
@@ -1141,6 +1162,13 @@ export interface operations {
           'application/json': components['schemas']['StationDetailResponse'];
         };
       };
+      /** @description Not Modified */
+      304: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
       /** @description Bad Request */
       400: {
         headers: {
@@ -1181,6 +1209,13 @@ export interface operations {
         content: {
           'application/json': components['schemas']['StationPatternResponse'];
         };
+      };
+      /** @description Not Modified */
+      304: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       /** @description Not Found */
       404: {

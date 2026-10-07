@@ -16,16 +16,18 @@ public static class FramesEndpoints
             .WithSummary("Fotogramas: el estado de todas las estaciones en 12 pasos seguidos")
             .WithDescription(
                 "Cada paso aplica la misma regla que GET /api/stations?at=…. Con el paso de 5 min, " +
-                "una hora por petición: sirve para reproducir sin una petición por paso.")
+                "una hora por petición: sirve para reproducir sin una petición por paso. Lleva ETag: con " +
+                "If-None-Match responde 304 mientras no entren ni salgan datos de esa hora.")
+            .Produces(StatusCodes.Status304NotModified)
             .ProducesProblem(StatusCodes.Status404NotFound);
         return api;
     }
 
-    private static async Task<Results<Ok<FramesResponse>, ValidationProblem, ProblemHttpResult>> GetFrames(
+    private static async Task<Results<Ok<FramesResponse>, StatusCodeHttpResult, ValidationProblem, ProblemHttpResult>> GetFrames(
         [Description("Identificador de la fuente.")] string id,
         [Description("Primer paso, ISO 8601 con zona. Se alinea hacia atrás a la rejilla del paso.")] string? from,
         [Description("Paso en minutos: 5, 10, 15, 30 o 60. Por defecto, 5.")] int? step,
-        PulseDbContext db, TimeProvider clock, CancellationToken ct)
+        HttpContext http, PulseDbContext db, TimeProvider clock, CancellationToken ct)
     {
         var errors = new Dictionary<string, string[]>();
         var stepMinutes = step ?? 5;
@@ -56,6 +58,14 @@ public static class FramesEndpoints
 
         var stepSpan = TimeSpan.FromMinutes(stepMinutes);
         var (alignedFrom, _, _) = TimelineGrid.Align(start, start, stepSpan);
+        // El último paso de la respuesta, incluido: el siguiente ya es de otra hora.
+        var version = await DataVersion.ForRangeAsync(
+            db, source, alignedFrom, alignedFrom + stepSpan * (FramesQuery.FramesPerResponse - 1), ct);
+        if (HttpValidators.ClientHas(http, $"frames:{version}"))
+        {
+            return HttpValidators.NotModified();
+        }
+
         return TypedResults.Ok(await FramesQuery.GetAsync(db, source, alignedFrom, stepSpan, ct));
     }
 }

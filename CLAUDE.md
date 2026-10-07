@@ -80,6 +80,10 @@ Jaume ejecuta los comandos en Forge y pega la salida.
   llenas. Si cambia una, cambian las otras; la prueba `Every_step_matches_the_map_at_that_instant`
   lo vigila. El patrón de la estación (`Features/Stations/StationPattern.cs`) las repite también,
   con el umbral de «pocas» (`FEW_BIKES_MAX`, 3), y necesita el JIT apagado (0,9 s en vez de 28 ms).
+- Las respuestas de estado, detalle, patrón, línea temporal y fotogramas llevan ETag con la
+  versión de los datos de su rango (`Infrastructure/DataVersion.cs`, ADR 0014), y la caché de
+  la línea temporal usa la misma versión. Si una consulta nueva depende de datos de otros días,
+  su versión tiene que cubrirlos, o servirá un 304 (o una caché) viejo. «Ahora» no se valida.
 - Un `MAX(observed_at)` sobre el join de observaciones y estaciones recorre todo el histórico
   (~100 ms con una semana): usa `StationQueries.LatestObservationAsync`, que va por estación.
 - «Reproducir» pide fotogramas de una hora (`/api/sources/{id}/frames`, ADR 0010), no
