@@ -5,12 +5,16 @@ import { availabilityLabel, availabilityOf, type Availability } from './availabi
 import { stationName } from './names';
 import { OctagonGlyph } from './OctagonGlyph';
 
+/** La cifra grande de cada fila, junto a los anclajes libres: todas las bicis o las eléctricas. */
+export type ListFigures = 'bikes' | 'ebikes';
+
 interface StationListProps {
   stations: readonly StationItem[];
   /** Momento mostrado: para decir desde cuándo no hay dato. */
   at: string;
   selectedId: number | null;
   onSelect: (id: number) => void;
+  figures?: ListFigures;
 }
 
 function summary(station: StationItem, at: string): string {
@@ -45,7 +49,9 @@ interface StationRowProps {
   category: Availability;
   summaryText: string;
   bikes: number | null;
+  ebikes: number | null;
   docks: number | null;
+  figures: ListFigures;
   current: boolean;
   onSelect: (id: number) => void;
 }
@@ -61,7 +67,9 @@ const StationRow = memo(function StationRow({
   category,
   summaryText,
   bikes,
+  ebikes,
   docks,
+  figures,
   current,
   onSelect,
 }: StationRowProps) {
@@ -92,7 +100,11 @@ const StationRow = memo(function StationRow({
           </span>
         </span>
         <span className="station-list__figures" aria-hidden="true">
-          <Figure value={bikes} unit={m.unitBikes(bikes ?? 0)} />
+          {figures === 'ebikes' ? (
+            <Figure value={ebikes} unit={m.unitEbikes} />
+          ) : (
+            <Figure value={bikes} unit={m.unitBikes(bikes ?? 0)} />
+          )}
           <Figure value={docks} unit={m.unitDocks} />
         </span>
       </button>
@@ -101,7 +113,13 @@ const StationRow = memo(function StationRow({
 });
 
 /** Alternativa accesible al mapa: cada estación es un botón con su estado en texto. */
-export function StationList({ stations, at, selectedId, onSelect }: StationListProps) {
+export function StationList({
+  stations,
+  at,
+  selectedId,
+  onSelect,
+  figures = 'bikes',
+}: StationListProps) {
   // La función que llega cambia con los datos; las filas reciben siempre la misma.
   const onSelectRef = useRef(onSelect);
   useEffect(() => {
@@ -126,7 +144,9 @@ export function StationList({ stations, at, selectedId, onSelect }: StationListP
             category={category}
             summaryText={summary(station, at)}
             bikes={known ? station.state.bikesAvailable : null}
+            ebikes={known ? station.state.ebikesAvailable : null}
             docks={known ? station.state.docksAvailable : null}
+            figures={figures}
             current={station.id === selectedId}
             onSelect={select}
           />

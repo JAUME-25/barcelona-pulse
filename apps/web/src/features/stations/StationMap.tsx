@@ -15,7 +15,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { StationItem } from '../../api/client';
 import { THEME } from '../../app/theme';
 import { t } from '../../i18n';
-import { AVAILABILITY_ORDER, availabilityOf, type Availability } from './availability';
+import { AVAILABILITY_ORDER, availabilityOf, lacksEbikes, type Availability } from './availability';
 import { loadNightStyle } from './basemap';
 import {
   BIKE_LANES_LAYER,
@@ -77,6 +77,8 @@ interface StationMapProps {
    * para cuando lo que importa es dónde están (escenarios de cobertura).
    */
   variant?: MarkerVariant;
+  /** Qué número lleva el marcador: todas las bicis o solo las eléctricas. */
+  label?: MarkerLabel;
   /** Edificios en 3D y carriles bici. Al experimentar no: taparían la cobertura o se confundirían con ella. */
   buildings?: boolean;
   onSelect: (id: number) => void;
@@ -86,6 +88,7 @@ interface StationMapProps {
 }
 
 export type MarkerVariant = 'availability' | 'network';
+export type MarkerLabel = 'bikes' | 'ebikes';
 
 const CAMERA_HASH = 'mapa';
 const BARCELONA: [number, number] = [2.165, 41.395];
@@ -132,6 +135,8 @@ const NETWORK_ICON_SIZE: ExpressionSpecification = [
 ];
 
 const MAX_FIT_ZOOM = 14;
+/** Opacidad de las estaciones atenuadas (sin eléctricas, con ese número elegido). */
+const DIM_OPACITY = 0.3;
 
 interface Padding {
   top: number;
@@ -205,18 +210,27 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-/** Texto dentro del marcador: bicis disponibles, «0» si está vacía y «?» si no hay dato. */
-function markerLabel(category: Availability, station: StationItem): string {
+/**
+ * Texto dentro del marcador: bicis disponibles (o solo las eléctricas), «0» si no hay y «?» si no
+ * hay dato. Sin la cifra pedida (una fuente sin desglose), nada: no se dice cero.
+ */
+function markerLabel(category: Availability, station: StationItem, label: MarkerLabel): string {
   if (category === 'unknown') return '?';
-  if (category === 'outOfService' || station.state.bikesAvailable === null) return '';
-  return String(station.state.bikesAvailable);
+  const value = label === 'ebikes' ? station.state.ebikesAvailable : station.state.bikesAvailable;
+  if (category === 'outOfService' || value === null) return '';
+  return String(value);
 }
 
-function toFeatureCollection(stations: readonly StationItem[]): GeoJSON.FeatureCollection {
+function toFeatureCollection(
+  stations: readonly StationItem[],
+  label: MarkerLabel,
+): GeoJSON.FeatureCollection {
   return {
     type: 'FeatureCollection',
     features: stations.map((s) => {
       const category = availabilityOf(s.state);
+      // Con el número de eléctricas, las que no tienen ninguna se atenúan y van debajo.
+      const dim = label === 'ebikes' && lacksEbikes(s);
       return {
         type: 'Feature',
         id: s.id,
@@ -224,9 +238,10 @@ function toFeatureCollection(stations: readonly StationItem[]): GeoJSON.FeatureC
         properties: {
           id: s.id,
           cat: category,
+          dim,
           // Las desconocidas debajo: no deben tapar a las que tienen dato.
-          sort: category === 'unknown' ? 0 : 1,
-          label: markerLabel(category, s),
+          sort: category === 'unknown' ? 0 : dim ? 0.5 : 1,
+          label: markerLabel(category, s, label),
         },
       };
     }),
@@ -258,6 +273,7 @@ function addLayers(
   stations: readonly StationItem[],
   selectedId: number | null,
   variant: MarkerVariant,
+  label: MarkerLabel,
   buildings: boolean,
 ) {
   for (const category of AVAILABILITY_ORDER) {
@@ -301,7 +317,10 @@ function addLayers(
     );
   }
 
-  map.addSource(STATIONS_SOURCE, { type: 'geojson', data: toFeatureCollection(stations) });
+  map.addSource(STATIONS_SOURCE, {
+    type: 'geojson',
+    data: toFeatureCollection(stations, label),
+  });
   map.addLayer({
     id: HALO_LAYER,
     type: 'symbol',
@@ -331,6 +350,9 @@ function addLayers(
       'text-ignore-placement': true,
     },
     paint: {
+      // Atenuadas: con el número de eléctricas, las estaciones que no tienen ninguna.
+      'icon-opacity': ['case', ['get', 'dim'], DIM_OPACITY, 1],
+      'text-opacity': ['case', ['get', 'dim'], DIM_OPACITY, 1],
       'text-color': byCategory((c) => THEME.markers[c].text),
       'text-halo-color': THEME.night,
       'text-halo-width': byCategory((c) => (THEME.markers[c].textHalo === true ? 1.2 : 0)),
@@ -352,6 +374,7 @@ export function StationMap({
   selectedId,
   zoomOnSelect = false,
   variant = 'availability',
+  label = 'bikes',
   buildings = true,
   onSelect,
   onStatusChange,
@@ -367,6 +390,7 @@ export function StationMap({
   const stationsRef = useRef(stations);
   const selectedRef = useRef(selectedId);
   const variantRef = useRef(variant);
+  const labelRef = useRef(label);
   const buildingsRef = useRef(buildings);
   const onSelectRef = useRef(onSelect);
   const onStatusRef = useRef(onStatusChange);
@@ -466,6 +490,7 @@ export function StationMap({
           stationsRef.current,
           selectedRef.current,
           variantRef.current,
+          labelRef.current,
           buildingsRef.current,
         );
         setMapReady(true);
@@ -535,11 +560,12 @@ export function StationMap({
   // Datos: se sustituyen en la fuente existente.
   useEffect(() => {
     stationsRef.current = stations;
+    labelRef.current = label;
     const source = loadedRef.current
       ? mapRef.current?.getSource<GeoJSONSource>(STATIONS_SOURCE)
       : undefined;
-    if (source !== undefined) void source.setData(toFeatureCollection(stations));
-  }, [stations]);
+    if (source !== undefined) void source.setData(toFeatureCollection(stations, label));
+  }, [stations, label]);
 
   // Variante de los marcadores: solo cambia el dibujo de la capa.
   useEffect(() => {

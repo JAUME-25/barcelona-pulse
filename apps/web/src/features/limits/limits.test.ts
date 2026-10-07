@@ -109,6 +109,8 @@ describe('huecos de un día', () => {
       stationsFull: 0,
       bikesAvailable: null,
       docksAvailable: null,
+      stationsCountedEbikes: 0,
+      ebikesAvailable: null,
     }));
   }
   const at = (h: number, m: number) => h * 60 + m;

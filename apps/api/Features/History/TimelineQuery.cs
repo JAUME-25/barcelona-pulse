@@ -21,6 +21,8 @@ namespace BarcelonaPulse.Api.Features.History;
 /// <param name="StationsFull">Operativas con bicis y sin anclajes libres.</param>
 /// <param name="BikesAvailable">Bicis disponibles en las estaciones contadas; nula si no se cuenta ninguna.</param>
 /// <param name="DocksAvailable">Anclajes libres en las estaciones contadas; nula si no se cuenta ninguna.</param>
+/// <param name="StationsCountedEbikes">De las contadas, las que publican cuántas eléctricas tienen: las que suman en EbikesAvailable.</param>
+/// <param name="EbikesAvailable">Bicis eléctricas en esas estaciones; nula si ninguna lo publica. Si no son todas las contadas, no es el total de la red.</param>
 public sealed record TimelinePoint(
     DateTimeOffset At,
     int StationsKnown,
@@ -29,7 +31,9 @@ public sealed record TimelinePoint(
     int StationsEmpty,
     int StationsFull,
     int? BikesAvailable,
-    int? DocksAvailable);
+    int? DocksAvailable,
+    int StationsCountedEbikes,
+    int? EbikesAvailable);
 
 /// <summary>Línea temporal de una fuente.</summary>
 /// <param name="Source">Fuente consultada, con su tipo.</param>
@@ -89,8 +93,8 @@ public static class TimelineQuery
             SELECT generate_series(@from, @to, @step) AS at
         ),
         obs AS (
-            SELECT o.station_id, o.observed_at, o.status, o.bikes_available, o.docks_available,
-                   o.is_renting, o.is_returning,
+            SELECT o.station_id, o.observed_at, o.status, o.bikes_available, o.ebikes_available,
+                   o.docks_available, o.is_renting, o.is_returning,
                    lead(o.observed_at) OVER (PARTITION BY o.station_id ORDER BY o.observed_at) AS next_at
             FROM station_observations o
             JOIN stations s ON s.id = o.station_id
@@ -99,7 +103,7 @@ public static class TimelineQuery
               AND o.observed_at <= @to
         ),
         covered AS (
-            SELECT g.at, obs.bikes_available, obs.docks_available,
+            SELECT g.at, obs.bikes_available, obs.ebikes_available, obs.docks_available,
                    obs.status = 'in_service' AND NOT (obs.is_renting IS FALSE AND obs.is_returning IS FALSE) AS operating
             FROM obs,
             LATERAL generate_series(
@@ -108,7 +112,7 @@ public static class TimelineQuery
                 @step) AS g(at)
         ),
         counted AS (
-            SELECT at, operating, bikes_available, docks_available,
+            SELECT at, operating, bikes_available, ebikes_available, docks_available,
                    operating AND bikes_available IS NOT NULL AND docks_available IS NOT NULL AS counted
             FROM covered
         ),
@@ -119,7 +123,10 @@ public static class TimelineQuery
                    count(*) FILTER (WHERE operating AND bikes_available = 0) AS empty,
                    count(*) FILTER (WHERE operating AND bikes_available > 0 AND docks_available = 0) AS full,
                    sum(bikes_available) FILTER (WHERE counted) AS bikes,
-                   sum(docks_available) FILTER (WHERE counted) AS docks
+                   sum(docks_available) FILTER (WHERE counted) AS docks,
+                   -- Las eléctricas solo de quien publica el desglose: una fuente sin él no suma cero.
+                   count(*) FILTER (WHERE counted AND ebikes_available IS NOT NULL) AS ebikes_counted,
+                   sum(ebikes_available) FILTER (WHERE counted AND ebikes_available IS NOT NULL) AS ebikes
             FROM counted
             GROUP BY at
         ),
@@ -132,7 +139,8 @@ public static class TimelineQuery
             GROUP BY st.at
         )
         SELECT st.at, coalesce(k.stations_known, 0), coalesce(a.with_data, 0), coalesce(a.counted, 0),
-               coalesce(a.empty, 0), coalesce(a.full, 0), a.bikes, a.docks
+               coalesce(a.empty, 0), coalesce(a.full, 0), a.bikes, a.docks,
+               coalesce(a.ebikes_counted, 0), a.ebikes
         FROM steps st
         LEFT JOIN known k ON k.at = st.at
         LEFT JOIN aggregated a ON a.at = st.at
@@ -233,7 +241,9 @@ public static class TimelineQuery
                     (int)reader.GetInt64(4),
                     (int)reader.GetInt64(5),
                     reader.IsDBNull(6) ? null : (int)reader.GetInt64(6),
-                    reader.IsDBNull(7) ? null : (int)reader.GetInt64(7)));
+                    reader.IsDBNull(7) ? null : (int)reader.GetInt64(7),
+                    (int)reader.GetInt64(8),
+                    reader.IsDBNull(9) ? null : (int)reader.GetInt64(9)));
             }
 
             return points;

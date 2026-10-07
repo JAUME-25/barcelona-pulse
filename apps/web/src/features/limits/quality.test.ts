@@ -14,6 +14,8 @@ function steps(count: number, withData: (i: number) => number, start = '2026-05-
     stationsFull: 0,
     bikesAvailable: null,
     docksAvailable: null,
+    stationsCountedEbikes: 0,
+    ebikesAvailable: null,
   }));
 }
 

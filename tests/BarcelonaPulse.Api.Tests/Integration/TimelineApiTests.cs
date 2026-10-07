@@ -61,6 +61,10 @@ public sealed class TimelineApiTests(DemoApiFixture fixture) : IClassFixture<Dem
             Assert.Equal(operating.Count(s => s.State is { BikesAvailable: > 0, DocksAvailable: 0 }), point.StationsFull);
             Assert.Equal(counted.Count == 0 ? null : counted.Sum(s => s.State.BikesAvailable), point.BikesAvailable);
             Assert.Equal(counted.Count == 0 ? null : counted.Sum(s => s.State.DocksAvailable), point.DocksAvailable);
+            // Las eléctricas, solo de las que publican el desglose (demo-042 no lo publica).
+            var withEbikes = counted.Where(s => s.State.EbikesAvailable is not null).ToList();
+            Assert.Equal(withEbikes.Count, point.StationsCountedEbikes);
+            Assert.Equal(withEbikes.Count == 0 ? null : withEbikes.Sum(s => s.State.EbikesAvailable), point.EbikesAvailable);
         }
     }
 
@@ -94,7 +98,8 @@ public sealed class TimelineApiTests(DemoApiFixture fixture) : IClassFixture<Dem
                     TestData.Observation("blind", TestData.T0, bikes: null),
                     // En servicio, pero no presta ni admite devoluciones: no opera.
                     TestData.Observation("stuck", TestData.T0, bikes: 0) with { IsRenting = false, IsReturning = false },
-                    TestData.Observation("blind", TestData.T0.AddMinutes(15), bikes: 3, docks: 7),
+                    // Solo «blind» publica cuántas son eléctricas: las de «full» no cuentan como cero.
+                    TestData.Observation("blind", TestData.T0.AddMinutes(15), bikes: 3, docks: 7, ebike: 1),
                     TestData.Observation("full", TestData.T0.AddMinutes(15), bikes: 20, docks: 0),
                 ],
                 source: TestData.Source("timeline-closed")), "test", ct);
@@ -113,6 +118,8 @@ public sealed class TimelineApiTests(DemoApiFixture fixture) : IClassFixture<Dem
                 Assert.Equal(0, p.StationsFull);
                 Assert.Null(p.BikesAvailable);
                 Assert.Null(p.DocksAvailable);
+                Assert.Equal(0, p.StationsCountedEbikes);
+                Assert.Null(p.EbikesAvailable);
             },
             p =>
             {
@@ -122,6 +129,8 @@ public sealed class TimelineApiTests(DemoApiFixture fixture) : IClassFixture<Dem
                 Assert.Equal(1, p.StationsFull);
                 Assert.Equal(23, p.BikesAvailable);
                 Assert.Equal(7, p.DocksAvailable);
+                Assert.Equal(1, p.StationsCountedEbikes);
+                Assert.Equal(1, p.EbikesAvailable);
             });
     }
 

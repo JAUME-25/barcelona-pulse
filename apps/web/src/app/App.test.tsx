@@ -30,6 +30,7 @@ vi.mock('../features/stations/StationMap', () => ({
   StationMap: function FakeMap(props: {
     stations: readonly StationItem[];
     selectedId: number | null;
+    label?: 'bikes' | 'ebikes';
     onSelect: (id: number) => void;
     onStatusChange: (s: { kind: 'ready' }) => void;
   }) {
@@ -38,7 +39,7 @@ vi.mock('../features/stations/StationMap', () => ({
       onStatusChange({ kind: 'ready' });
     }, [onStatusChange]);
     return (
-      <div role="region" aria-label="Mapa de estaciones">
+      <div role="region" aria-label="Mapa de estaciones" data-label={props.label ?? 'bikes'}>
         {props.stations.map((s) => (
           <button
             key={s.id}
@@ -135,6 +136,8 @@ function timelineFor(url: URL): TimelineResponse {
       stationsFull: 0,
       bikesAvailable: withData ? 20 : null,
       docksAvailable: withData ? 30 : null,
+      stationsCountedEbikes: withData ? 2 : 0,
+      ebikesAvailable: withData ? 8 : null,
     });
   }
   return {
@@ -511,6 +514,36 @@ describe('App', () => {
     expect(new URLSearchParams(window.location.search).get('estacion')).toBe('32');
   });
 
+  it('con «Eléctricas», el número del mapa y la cifra de la lista pasan a eléctricas', async () => {
+    mockApi((path) => json(path === '/api/sources' ? [demoSource] : stationsResponse(stations)));
+    const user = userEvent.setup();
+    window.history.replaceState(null, '', '/?fuente=demo');
+    renderApp();
+
+    const catalunya = () => screen.getByRole('button', { name: /^Pl\. de Catalunya/ });
+    await screen.findByText('3 estaciones');
+    // Por defecto, todas las bicis: 10 bicis y 15 anclajes libres.
+    expect(within(catalunya()).getByText('bicis')).toBeTruthy();
+    expect(within(catalunya()).getByText('10')).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Mapa de estaciones' }).dataset['label']).toBe(
+      'bikes',
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Eléctricas' }));
+    expect(within(catalunya()).getByText('eléc.')).toBeTruthy();
+    expect(within(catalunya()).getByText('4')).toBeTruthy();
+    expect(within(catalunya()).getByText('15')).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Mapa de estaciones' }).dataset['label']).toBe(
+      'ebikes',
+    );
+    expect(screen.getByText(/Las que no tienen ninguna se atenúan/)).toBeTruthy();
+    // Las categorías no cambian: la leyenda sigue contando con bicis sobre el total.
+    expect(screen.getByRole('button', { name: /^Con bicis/ }).textContent).toContain('1');
+
+    await user.click(screen.getByRole('button', { name: 'Bicis' }));
+    expect(within(catalunya()).getByText('bicis')).toBeTruthy();
+  });
+
   it('«Cambiar momento» lleva a Reproducir en ese momento y, al volver, se queda el elegido', async () => {
     mockApi((path, url) => {
       if (path === '/api/sources') return json([observedSource]);
@@ -800,8 +833,8 @@ describe('App', () => {
 
     // Las bicis y los anclajes sumados del paso, con en cuántas estaciones; y su línea en la
     // pista, que es un solo tramo (07:00 a 10:30) porque fuera no hay recuento.
-    expect(screen.getByText(/bicis y/).textContent).toBe(
-      '20 bicis y 30 anclajes libres en 2 estaciones',
+    expect(document.querySelector('.replay-counts__totals')?.textContent).toBe(
+      '20 bicis (8 eléctricas) y 30 anclajes libres en 2 estaciones',
     );
     const bikesLine = document.querySelector('.replay-deck__bikes')?.getAttribute('d') ?? '';
     expect(bikesLine.match(/M/g)).toHaveLength(1);

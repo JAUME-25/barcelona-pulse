@@ -14,6 +14,8 @@ const point: TimelinePoint = {
   stationsFull: 7,
   bikesAvailable: 4650,
   docksAvailable: 8833,
+  stationsCountedEbikes: 540,
+  ebikesAvailable: 2100,
 };
 
 afterEach(() => {
@@ -22,7 +24,7 @@ afterEach(() => {
 });
 
 describe('recuentos del momento', () => {
-  it('dice las bicis y los anclajes libres sumados y en cuántas estaciones', async () => {
+  it('dice las bicis (y las eléctricas) y los anclajes libres sumados y en cuántas estaciones', async () => {
     const user = userEvent.setup();
     render(<Counts point={point} toleranceMinutes={15} />);
 
@@ -30,7 +32,7 @@ describe('recuentos del momento', () => {
     expect(items).toEqual([
       '49 sin bicis',
       '7 llenas',
-      '4650 bicis y 8833 anclajes libres en 540 estaciones',
+      '4650 bicis (2100 eléctricas) y 8833 anclajes libres en 540 estaciones',
       '542 de 548 con dato',
     ]);
 
@@ -39,6 +41,15 @@ describe('recuentos del momento', () => {
     expect(screen.getByRole('note').textContent).toBe(
       'Las operativas que publican bicis y anclajes. Las demás no suman.',
     );
+  });
+
+  it('si alguna estación contada no publica el desglose, no dice cuántas eléctricas hay', () => {
+    // La demo tiene una estación que solo publica el total: sumar las demás no sería la red.
+    render(<Counts point={{ ...point, stationsCountedEbikes: 539 }} toleranceMinutes={15} />);
+    expect(screen.getByText(/bicis y/).textContent).toBe(
+      '4650 bicis y 8833 anclajes libres en 540 estaciones',
+    );
+    expect(screen.queryByText(/eléctricas/)).toBeNull();
   });
 
   it('sin recuento de bicis no dice cero: no sale', () => {
@@ -56,8 +67,8 @@ describe('recuentos del momento', () => {
   it('en inglés, con las cifras a la inglesa', () => {
     setLang('en');
     render(<Counts point={{ ...point, bikesAvailable: 12_345 }} toleranceMinutes={15} />);
-    expect(screen.getByText(/bikes and/).textContent).toBe(
-      '12,345 bikes and 8,833 free docks in 540 stations',
+    expect(screen.getByText(/free docks/).textContent).toBe(
+      '12,345 bikes (2,100 e-bikes) and 8,833 free docks in 540 stations',
     );
   });
 });

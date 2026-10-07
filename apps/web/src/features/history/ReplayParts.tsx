@@ -159,6 +159,12 @@ export function Counts({
             point.docksAvailable === null ? null : (
               <strong>{formatWhole(point.docksAvailable)}</strong>
             ),
+            // Las eléctricas solo si todas las contadas publican el desglose: si no, la suma no
+            // sería la de la red (una fuente sin desglose no suma cero).
+            point.ebikesAvailable === null ||
+              point.stationsCountedEbikes !== point.stationsCounted ? null : (
+              <strong>{formatWhole(point.ebikesAvailable)}</strong>
+            ),
           )}{' '}
           <Term note={m.countedNote}>{m.counted(point.stationsCounted)}</Term>
         </li>

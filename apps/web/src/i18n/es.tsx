@@ -189,6 +189,11 @@ export const es = {
     } as Record<string, string>,
     legend: 'Qué significa cada marcador',
     legendHelp: 'Pulsa una categoría para ocultarla o mostrarla.',
+    numberLabel: 'Número en el mapa y la lista',
+    numberBikes: 'Bicis',
+    numberEbikes: 'Eléctricas',
+    numberEbikesHelp:
+      'Cuántas eléctricas hay en cada estación. Las que no tienen ninguna se atenúan; el color sigue diciendo si hay bicis.',
     mapKey: 'También en el mapa',
     bikeLane: 'Carril bici (OSM, no todos)',
     transit: 'Metro, tren y tranvía',
@@ -216,6 +221,7 @@ export const es = {
     srDocks: (n: number) => (n === 1 ? '1 anclaje libre' : `${String(n)} anclajes libres`),
     unitBikes: (n: number): string => (n === 1 ? 'bici' : 'bicis'),
     unitDocks: 'libres',
+    unitEbikes: 'eléc.',
   },
 
   pattern: {
@@ -309,17 +315,31 @@ export const es = {
     noData: 'Sin datos en este momento: ninguna estación había informado.',
     countEmpty: (n: ReactNode): ReactNode => <>{n} sin bicis</>,
     countFull: (n: ReactNode): ReactNode => <>{n} llenas</>,
-    /** Bicis y anclajes libres sumados; cada total puede faltar (ninguna estación lo publicaba). */
-    countTotals: (bikes: ReactNode | null, docks: ReactNode | null): ReactNode =>
-      bikes !== null && docks !== null ? (
+    /**
+     * Bicis (con las eléctricas, si todas las contadas publican el desglose) y anclajes libres
+     * sumados; cada total puede faltar (ninguna estación lo publicaba).
+     */
+    countTotals: (
+      bikes: ReactNode | null,
+      docks: ReactNode | null,
+      ebikes: ReactNode | null,
+    ): ReactNode => {
+      const bikesPart =
+        bikes === null ? null : (
+          <>
+            {bikes} bicis{ebikes !== null && <> ({ebikes} eléctricas)</>}
+          </>
+        );
+      return bikesPart !== null && docks !== null ? (
         <>
-          {bikes} bicis y {docks} anclajes libres
+          {bikesPart} y {docks} anclajes libres
         </>
-      ) : bikes !== null ? (
-        <>{bikes} bicis</>
+      ) : bikesPart !== null ? (
+        bikesPart
       ) : (
         <>{docks} anclajes libres</>
-      ),
+      );
+    },
     counted: (n: number) => `en ${String(n)} estaciones`,
     countedNote: 'Las operativas que publican bicis y anclajes. Las demás no suman.',
     /** Escala de la línea de bicis en la pista: «bicis en las estaciones: de 0 a 6000». */

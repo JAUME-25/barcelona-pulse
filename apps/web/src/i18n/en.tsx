@@ -192,6 +192,11 @@ export const en: Messages = {
     },
     legend: 'What each marker means',
     legendHelp: 'Tap a category to hide or show it.',
+    numberLabel: 'Number on the map and in the list',
+    numberBikes: 'Bikes',
+    numberEbikes: 'E-bikes',
+    numberEbikesHelp:
+      'How many e-bikes each station has. Stations with none are dimmed; the colour still says whether there are bikes.',
     mapKey: 'Also on the map',
     bikeLane: 'Bike lane (OSM, not all)',
     transit: 'Metro, train and tram',
@@ -218,6 +223,7 @@ export const en: Messages = {
     srDocks: (n) => (n === 1 ? '1 free dock' : `${String(n)} free docks`),
     unitBikes: (n) => (n === 1 ? 'bike' : 'bikes'),
     unitDocks: 'free',
+    unitEbikes: 'elec.',
   },
 
   pattern: {
@@ -301,16 +307,23 @@ export const en: Messages = {
     noData: 'No data at this moment: no station had reported.',
     countEmpty: (n) => <>{n} with no bikes</>,
     countFull: (n) => <>{n} full</>,
-    countTotals: (bikes, docks) =>
-      bikes !== null && docks !== null ? (
+    countTotals: (bikes, docks, ebikes) => {
+      const bikesPart =
+        bikes === null ? null : (
+          <>
+            {bikes} bikes{ebikes !== null && <> ({ebikes} e-bikes)</>}
+          </>
+        );
+      return bikesPart !== null && docks !== null ? (
         <>
-          {bikes} bikes and {docks} free docks
+          {bikesPart} and {docks} free docks
         </>
-      ) : bikes !== null ? (
-        <>{bikes} bikes</>
+      ) : bikesPart !== null ? (
+        bikesPart
       ) : (
         <>{docks} free docks</>
-      ),
+      );
+    },
     counted: (n) => `in ${String(n)} stations`,
     countedNote: 'Those in service that publish bikes and docks. The rest are not added up.',
     bikesScale: (max) => `bikes at the stations: 0 to ${max}`,

@@ -209,6 +209,11 @@ export const ca: Messages = {
     },
     legend: 'Què vol dir cada marcador',
     legendHelp: 'Prem una categoria per amagar-la o mostrar-la.',
+    numberLabel: 'Número al mapa i a la llista',
+    numberBikes: 'Bicis',
+    numberEbikes: 'Elèctriques',
+    numberEbikesHelp:
+      'Quantes elèctriques hi ha a cada estació. Les que no en tenen cap s’atenuen; el color continua dient si hi ha bicis.',
     mapKey: 'També al mapa',
     bikeLane: 'Carril bici (OSM, no tots)',
     transit: 'Metro, tren i tramvia',
@@ -235,6 +240,7 @@ export const ca: Messages = {
     srDocks: (n) => (n === 1 ? '1 ancoratge lliure' : `${String(n)} ancoratges lliures`),
     unitBikes: (n) => (n === 1 ? 'bici' : 'bicis'),
     unitDocks: 'lliures',
+    unitEbikes: 'elèc.',
   },
 
   pattern: {
@@ -320,16 +326,23 @@ export const ca: Messages = {
     noData: 'Sense dades en aquest moment: cap estació no havia informat.',
     countEmpty: (n) => <>{n} sense bicis</>,
     countFull: (n) => <>{n} plenes</>,
-    countTotals: (bikes, docks) =>
-      bikes !== null && docks !== null ? (
+    countTotals: (bikes, docks, ebikes) => {
+      const bikesPart =
+        bikes === null ? null : (
+          <>
+            {bikes} bicis{ebikes !== null && <> ({ebikes} elèctriques)</>}
+          </>
+        );
+      return bikesPart !== null && docks !== null ? (
         <>
-          {bikes} bicis i {docks} ancoratges lliures
+          {bikesPart} i {docks} ancoratges lliures
         </>
-      ) : bikes !== null ? (
-        <>{bikes} bicis</>
+      ) : bikesPart !== null ? (
+        bikesPart
       ) : (
         <>{docks} ancoratges lliures</>
-      ),
+      );
+    },
     counted: (n) => `a ${String(n)} estacions`,
     countedNote: 'Les operatives que publiquen bicis i ancoratges. Les altres no sumen.',
     bikesScale: (max) => `bicis a les estacions: de 0 a ${max}`,

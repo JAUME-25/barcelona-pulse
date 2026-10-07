@@ -61,6 +61,21 @@ export function TransitGlyph({ size = 16 }: { size?: number }) {
   );
 }
 
+/** Rayo: bicis eléctricas. En el ámbar de «con bicis», con el contorno oscuro de los marcadores. */
+export function BoltGlyph({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+      <path
+        d="M10.4 1.5 4.2 10.2h4.1L7.4 16.5l6.4-8.9H9.7z"
+        fill={THEME.markers.available.color}
+        stroke={THEME.night}
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 /** Marca de la aplicación: una manzana con chaflanes y un pulso. */
 export function BrandMark() {
   return (

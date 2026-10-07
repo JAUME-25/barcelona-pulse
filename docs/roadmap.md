@@ -305,7 +305,22 @@ honesta de lo hecho.
       barrio e Intro). Usado en el navegador con la red real: «gràcia» da 31 de 548 y el mapa se
       va a Gràcia; «Más bicis» pone primero la de 18; Intro abre la primera y el mapa pasa de
       z12,5 a z14 sobre ella; recuento y «Orden» en una línea a 375 px y en dos a 320 px, sin
-      desbordes, en los tres idiomas y sin errores en la consola.
+      desbordes, en los tres idiomas y sin errores en la consola. En `2c76b73`.
+14. **Hecho** en local (7-10-2026, sin commit). Las eléctricas como dato de primera, tercer
+    bloque de la propuesta (`docs/design.md`, «Eléctricas»):
+    - API: la línea temporal suma las eléctricas de cada paso (`ebikesAvailable`) y dice en
+      cuántas estaciones se contaron (`stationsCountedEbikes`): solo las que publican el
+      desglose, una fuente sin él no suma cero. OpenAPI y tipos del cliente regenerados.
+      Reproducir lo enseña («5 056 bicis (2 301 eléctricas) y 8 579 anclajes libres en 542
+      estaciones») solo si todas las contadas publican el desglose.
+    - Web: interruptor «Número en el mapa y la lista: Bicis · Eléctricas» arriba de la leyenda,
+      elegido por mí a petición de Jaume entre tres direcciones con capturas (`e2e/
+      electricas.capture.ts`). Con «Eléctricas», marcadores y lista pasan a eléctricas y las
+      estaciones sin ninguna se atenúan (`icon-opacity` 0,3, debajo de las demás); las
+      categorías no cambian. No va en la URL (bloque de compartir).
+    - Pruebas: 199 de backend (la regla contra el mapa comprueba también las eléctricas y una
+      estación sin desglose) y 175 de la web (recuentos con y sin desglose completo, el
+      interruptor en la app). Formato de .NET y web, lint y tipos en verde.
 
 ## Siguiente
 

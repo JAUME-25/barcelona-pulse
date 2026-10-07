@@ -1986,7 +1986,9 @@
           "stationsEmpty",
           "stationsFull",
           "bikesAvailable",
-          "docksAvailable"
+          "docksAvailable",
+          "stationsCountedEbikes",
+          "ebikesAvailable"
         ],
         "type": "object",
         "properties": {
@@ -2034,6 +2036,19 @@
               "integer"
             ],
             "description": "Anclajes libres en las estaciones contadas; nula si no se cuenta ninguna.",
+            "format": "int32"
+          },
+          "stationsCountedEbikes": {
+            "type": "integer",
+            "description": "De las contadas, las que publican cuántas eléctricas tienen: las que suman en EbikesAvailable.",
+            "format": "int32"
+          },
+          "ebikesAvailable": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "description": "Bicis eléctricas en esas estaciones; nula si ninguna lo publica. Si no son todas las contadas, no es el total de la red.",
             "format": "int32"
           }
         },

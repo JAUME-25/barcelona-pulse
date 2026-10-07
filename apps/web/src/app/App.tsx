@@ -28,7 +28,7 @@ import { ScenarioLayers } from '../features/scenarios/ScenarioLayers';
 import { CoverageLegend } from '../features/scenarios/ScenarioParts';
 import type { Tool } from '../features/scenarios/scenarioView';
 import { useScenario, useStudyAreas } from '../features/scenarios/useScenario';
-import { AvailabilityFilter } from '../features/stations/AvailabilityFilter';
+import { AvailabilityFilter, type NumberMode } from '../features/stations/AvailabilityFilter';
 import {
   AVAILABILITY_ORDER,
   countByAvailability,
@@ -266,6 +266,9 @@ export function App() {
     [all, activeDistrict],
   );
   const counts = useMemo(() => countByAvailability(inDistrict), [inDistrict]);
+  // Qué número llevan marcadores y lista: todas las bicis o las eléctricas, que mucha gente
+  // prefiere. Las categorías no cambian.
+  const [numberMode, setNumberMode] = useState<NumberMode>('bikes');
   const filtered = useMemo(
     () => filterStations(all, query, visible, activeDistrict),
     [all, query, visible, activeDistrict],
@@ -557,6 +560,7 @@ export function App() {
             <StationList
               stations={listed}
               at={response.at}
+              figures={numberMode}
               selectedId={selectedId}
               onSelect={select}
             />
@@ -636,6 +640,7 @@ export function App() {
               selectedId={experimenting ? null : selectedId}
               zoomOnSelect={selectedByUser}
               variant={experimenting ? 'network' : 'availability'}
+              label={numberMode}
               buildings={!experimenting}
               onSelect={experimenting ? tapStation : select}
               onStatusChange={setMapStatus}
@@ -676,7 +681,13 @@ export function App() {
             {experimenting ? (
               <CoverageLegend />
             ) : (
-              <AvailabilityFilter counts={counts} visible={visible} onToggle={toggleCategory} />
+              <AvailabilityFilter
+                counts={counts}
+                visible={visible}
+                onToggle={toggleCategory}
+                numberMode={numberMode}
+                onNumberMode={setNumberMode}
+              />
             )}
           </div>
         )}

@@ -21,6 +21,8 @@ function point(at: string, withData: number, empty = 0, full = 0, known = 46): T
     stationsFull: full,
     bikesAvailable: withData === 0 ? null : 100,
     docksAvailable: withData === 0 ? null : 100,
+    stationsCountedEbikes: withData,
+    ebikesAvailable: withData === 0 ? null : 40,
   };
 }
 

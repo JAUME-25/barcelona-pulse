@@ -118,6 +118,16 @@ export function filterStations(
   );
 }
 
+/**
+ * Operativa, con dato y sin ninguna eléctrica publicada: la que se atenúa en el mapa cuando el
+ * número es el de eléctricas. Sin desglose (null) no se sabe, y no se atenúa.
+ */
+export function lacksEbikes(station: StationItem): boolean {
+  const category = availabilityOf(station.state);
+  if (category === 'unknown' || category === 'outOfService') return false;
+  return station.state.ebikesAvailable === 0;
+}
+
 /** Orden de la lista: por nombre o, de más a menos, por bicis, anclajes libres o eléctricas. */
 export type ListOrder = 'name' | 'bikes' | 'docks' | 'ebikes';
 export const LIST_ORDERS: readonly ListOrder[] = ['name', 'bikes', 'docks', 'ebikes'];

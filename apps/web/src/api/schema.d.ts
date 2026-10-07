@@ -817,6 +817,16 @@ export interface components {
        * @description Anclajes libres en las estaciones contadas; nula si no se cuenta ninguna.
        */
       docksAvailable: null | number;
+      /**
+       * Format: int32
+       * @description De las contadas, las que publican cuántas eléctricas tienen: las que suman en EbikesAvailable.
+       */
+      stationsCountedEbikes: number;
+      /**
+       * Format: int32
+       * @description Bicis eléctricas en esas estaciones; nula si ninguna lo publica. Si no son todas las contadas, no es el total de la red.
+       */
+      ebikesAvailable: null | number;
     };
     /** @description Línea temporal de una fuente. */
     TimelineResponse: {

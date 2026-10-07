@@ -20,6 +20,20 @@ las 23:55, el rato más tranquilo de la semana, y no decía nada de cómo se usa
 momento», junto a la hora, lleva a Reproducir parado en ese instante; el momento que se deja allí
 sigue en Explorar y Experimentar y va en la URL. Los festivos cuentan como laborables.
 
+## Eléctricas
+
+Mucha gente prefiere una eléctrica, y quien la busca mira el mapa. Elegido el 7-10-2026 entre tres
+direcciones con capturas (desglose de tres cifras en cada fila, interruptor del número, y texto
+discreto en la línea del estado), por encargo de Jaume («la mejor para los usuarios»): el
+**interruptor**, con una mezcla. Arriba de la leyenda, «Número en el mapa y la lista: Bicis ·
+Eléctricas». Con «Eléctricas», el número del marcador y la cifra grande de la lista pasan a ser las
+eléctricas («eléc.»), y las estaciones sin ninguna se atenúan en el mapa (siguen ahí y se pueden
+tocar): es lo que hacía el filtro de las otras direcciones sin quitar el contexto. Forma y color no
+cambian: siguen diciendo si hay bicis, con la misma regla que la API, así que una estación ámbar
+con «0» es «tiene bicis, ninguna eléctrica». Sin desglose publicado no se atenúa ni se dice cero.
+Reproducir suma las eléctricas de cada paso junto a las bicis, solo si todas las estaciones
+contadas publican el desglose.
+
 ## Estados de estación
 
 El marcador es una manzana del Eixample (cuadrado con chaflanes) y funciona como un depósito: la
