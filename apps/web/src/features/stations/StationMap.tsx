@@ -16,6 +16,7 @@ import type { StationItem } from '../../api/client';
 import { THEME } from '../../app/theme';
 import { t } from '../../i18n';
 import { AVAILABILITY_ORDER, availabilityOf, lacksEbikes, type Availability } from './availability';
+import type { MapBounds } from './mapBounds';
 import { loadNightStyle } from './basemap';
 import {
   BIKE_LANES_LAYER,
@@ -85,6 +86,13 @@ interface StationMapProps {
   onStatusChange: (status: MapStatus) => void;
   /** El mapa ya cargado, para quien dibuje sus propias capas encima; null al desmontarse. */
   onMapReady?: ((map: MapLibreMap | null) => void) | undefined;
+  /** La parte del mapa que se ve, al cargar y después de cada movimiento; null si se pierde el mapa. */
+  onBoundsChange?: ((bounds: MapBounds | null) => void) | undefined;
+}
+
+function boundsOf(map: MapLibreMap): MapBounds {
+  const b = map.getBounds();
+  return { west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() };
 }
 
 export type MarkerVariant = 'availability' | 'network';
@@ -379,6 +387,7 @@ export function StationMap({
   onSelect,
   onStatusChange,
   onMapReady,
+  onBoundsChange,
 }: StationMapProps) {
   const padTop = framePadding?.top ?? 48;
   const padRight = framePadding?.right ?? 48;
@@ -395,6 +404,7 @@ export function StationMap({
   const onSelectRef = useRef(onSelect);
   const onStatusRef = useRef(onStatusChange);
   const onMapReadyRef = useRef(onMapReady);
+  const onBoundsRef = useRef(onBoundsChange);
   const zoomOnSelectRef = useRef(zoomOnSelect);
   const fittedKeyRef = useRef<string | null>(null);
   const fittedModeRef = useRef<string | null>(null);
@@ -413,6 +423,7 @@ export function StationMap({
     onSelectRef.current = onSelect;
     onStatusRef.current = onStatusChange;
     onMapReadyRef.current = onMapReady;
+    onBoundsRef.current = onBoundsChange;
     zoomOnSelectRef.current = zoomOnSelect;
   });
 
@@ -496,6 +507,10 @@ export function StationMap({
         setMapReady(true);
         onStatusRef.current({ kind: degraded ? 'degraded' : 'ready' });
         onMapReadyRef.current?.(instance);
+        onBoundsRef.current?.(boundsOf(instance));
+      });
+      instance.on('moveend', () => {
+        if (loadedRef.current) onBoundsRef.current?.(boundsOf(instance));
       });
       instance.on('click', MARKERS_LAYER, (e: MapLayerMouseEvent) => {
         const id: unknown = e.features?.[0]?.properties.id;
@@ -529,7 +544,10 @@ export function StationMap({
       });
       // MapLibre destruye el estilo al perder el contexto: hasta que vuelva, nadie toca el mapa.
       instance.on('webglcontextlost', () => {
-        if (loadedRef.current) onMapReadyRef.current?.(null);
+        if (loadedRef.current) {
+          onMapReadyRef.current?.(null);
+          onBoundsRef.current?.(null);
+        }
         loadedRef.current = false;
         mapRef.current = null;
         setMapReady(false);

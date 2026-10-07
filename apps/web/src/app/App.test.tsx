@@ -33,11 +33,14 @@ vi.mock('../features/stations/StationMap', () => ({
     label?: 'bikes' | 'ebikes';
     onSelect: (id: number) => void;
     onStatusChange: (s: { kind: 'ready' }) => void;
+    onBoundsChange?: (b: { west: number; south: number; east: number; north: number }) => void;
   }) {
-    const { onStatusChange } = props;
+    const { onStatusChange, onBoundsChange } = props;
     useEffect(() => {
       onStatusChange({ kind: 'ready' });
-    }, [onStatusChange]);
+      // Lo que «se ve»: la mitad oeste de la ciudad (hasta 2,17° de longitud).
+      onBoundsChange?.({ west: 2.0, south: 41.3, east: 2.17, north: 41.5 });
+    }, [onStatusChange, onBoundsChange]);
     return (
       <div role="region" aria-label="Mapa de estaciones" data-label={props.label ?? 'bikes'}>
         {props.stations.map((s) => (
@@ -635,6 +638,37 @@ describe('App', () => {
       expect(params.get('numero')).toBeNull();
     });
     expect(screen.getByText('1 de 3 estaciones')).toBeTruthy();
+  });
+
+  it('«Solo las del mapa» deja en la lista las estaciones de la parte del mapa que se ve', async () => {
+    const real = [
+      stationFixture({ id: 41, sourceStationId: '41', name: 'PONENT', longitude: 2.12 }),
+      stationFixture({ id: 42, sourceStationId: '42', name: 'CENTRE', longitude: 2.16 }),
+      stationFixture({ id: 43, sourceStationId: '43', name: 'LLEVANT', longitude: 2.2 }),
+    ];
+    mockApi((path) => json(path === '/api/sources' ? [observedSource] : observedResponse(real)));
+    const user = userEvent.setup();
+    window.history.replaceState(null, '', '/');
+    renderApp();
+
+    await screen.findByText('3 estaciones');
+    const names = () =>
+      [...document.querySelectorAll('.station-list__name')].map((n) => n.textContent);
+    expect(names()).toEqual(['Centre', 'Llevant', 'Ponent']);
+
+    await user.click(screen.getByRole('checkbox', { name: 'Solo las del mapa' }));
+    expect(names()).toEqual(['Centre', 'Ponent']);
+    expect(screen.getByText('2 de 3 estaciones')).toBeTruthy();
+    expect(new URLSearchParams(window.location.search).get('lista')).toBe('mapa');
+    // El mapa no cambia: sigue con las tres.
+    expect(screen.getAllByRole('button', { name: /^Marcador/ })).toHaveLength(3);
+
+    // Si no queda ninguna a la vista, lo dice y deja ver toda la lista.
+    await user.type(screen.getByLabelText('Buscar estación'), 'llevant');
+    expect(screen.getByText(/Ninguna estación en la parte del mapa que se ve/)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Ver toda la lista' }));
+    expect(names()).toEqual(['Llevant']);
+    expect(new URLSearchParams(window.location.search).get('lista')).toBeNull();
   });
 
   it('«Copiar enlace» copia la URL de la vista y lo dice', async () => {

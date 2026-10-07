@@ -349,9 +349,33 @@
   font: inherit;
 }
 
-.list-title {
+/* Título de la lista y, a la derecha, «Solo las del mapa». */
+.list-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  align-items: baseline;
+  justify-content: space-between;
   margin: 20px 0 4px;
+}
+.list-title {
+  margin: 0;
   font-size: 1.25rem;
+}
+.list-scope {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 32px;
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+.list-scope input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent);
 }
 
 /* Leyenda y filtros */

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { AVAILABILITY_ORDER } from './availability';
 import {
   hiddenParam,
+  listFollowsMapFromParam,
+  listFollowsMapParam,
   numberModeFromParam,
   numberModeParam,
   orderFromParam,
@@ -39,5 +41,12 @@ describe('la vista en la URL', () => {
   it('la búsqueda vacía no va en la URL', () => {
     expect(searchParam('')).toBeNull();
     expect(searchParam('gràcia')).toBe('gràcia');
+  });
+
+  it('la lista que sigue al mapa', () => {
+    expect(listFollowsMapFromParam('mapa')).toBe(true);
+    expect(listFollowsMapFromParam(null)).toBe(false);
+    expect(listFollowsMapParam(true)).toBe('mapa');
+    expect(listFollowsMapParam(false)).toBeNull();
   });
 });

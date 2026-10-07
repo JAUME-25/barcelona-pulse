@@ -45,6 +45,7 @@ import { BrandMark } from '../features/stations/OctagonGlyph';
 import { SourceNotice } from '../features/stations/SourceNotice';
 import { StationDetail } from '../features/stations/StationDetail';
 import { StationList } from '../features/stations/StationList';
+import { inBounds, type MapBounds } from '../features/stations/mapBounds';
 import type { MapStatus } from '../features/stations/StationMap';
 import {
   instantFor,
@@ -61,6 +62,9 @@ import {
   DISTRICT_PARAM,
   HIDE_PARAM,
   hiddenParam,
+  LIST_PARAM,
+  listFollowsMapFromParam,
+  listFollowsMapParam,
   NUMBER_PARAM,
   numberModeFromParam,
   numberModeParam,
@@ -294,7 +298,18 @@ export function App() {
   );
   // Orden de la lista (el mapa no lo necesita): por nombre o por cifras, de más a menos.
   const [order, setOrder] = useState<ListOrder>(() => orderFromParam(readParam(ORDER_PARAM)));
-  const listed = useMemo(() => sortStations(filtered, order), [filtered, order]);
+  // «Solo las del mapa»: la lista sigue a la parte del mapa que se ve (al cargar y tras cada
+  // movimiento). El mapa no cambia: es él quien acota.
+  const [listFollowsMap, setListFollowsMap] = useState(() =>
+    listFollowsMapFromParam(readParam(LIST_PARAM)),
+  );
+  const [bounds, setBounds] = useState<MapBounds | null>(null);
+  const onMap = useMemo(
+    () =>
+      listFollowsMap && bounds !== null ? filtered.filter((s) => inBounds(s, bounds)) : filtered,
+    [filtered, listFollowsMap, bounds],
+  );
+  const listed = useMemo(() => sortStations(onMap, order), [onMap, order]);
   // Mientras se busca, el mapa encuadra los resultados, aunque se haya movido antes.
   const searching = normalizeForSearch(query.trim());
   const selected =
@@ -399,6 +414,9 @@ export function App() {
   useEffect(() => {
     syncParam(NUMBER_PARAM, numberModeParam(numberMode));
   }, [numberMode]);
+  useEffect(() => {
+    syncParam(LIST_PARAM, listFollowsMapParam(listFollowsMap));
+  }, [listFollowsMap]);
   const pendingQueryRef = useRef<string | null>(null);
   useEffect(() => {
     pendingQueryRef.current = query;
@@ -469,6 +487,7 @@ export function App() {
       setDistrict(readParam(DISTRICT_PARAM));
       setOrder(orderFromParam(readParam(ORDER_PARAM)));
       setNumberMode(numberModeFromParam(readParam(NUMBER_PARAM)));
+      setListFollowsMap(listFollowsMapFromParam(readParam(LIST_PARAM)));
     };
     window.addEventListener('popstate', onPopState);
     return () => {
@@ -628,7 +647,7 @@ export function App() {
           <div className="panel-tools__row">
             {/* Al reproducir cambia en cada paso: anunciarlo no dejaría oír nada más. */}
             <p className="panel-tools__count" aria-live={replaying ? 'off' : 'polite'}>
-              {m.count(filtered.length, inDistrict.length)}
+              {m.count(listed.length, inDistrict.length)}
             </p>
             {selected === undefined && (
               <label className="list-order">
@@ -669,14 +688,43 @@ export function App() {
             {districtRows.length > 0 && (
               <DistrictSummary rows={districtRows} active={activeDistrict} onPick={pickDistrict} />
             )}
-            <h2 className="list-title">{m.listTitle}</h2>
-            <StationList
-              stations={listed}
-              at={response.at}
-              figures={numberMode}
-              selectedId={selectedId}
-              onSelect={select}
-            />
+            <div className="list-head">
+              <h2 className="list-title">{m.listTitle}</h2>
+              {!mapUnavailable && (
+                <label className="list-scope">
+                  <input
+                    type="checkbox"
+                    checked={listFollowsMap}
+                    onChange={(e) => {
+                      setListFollowsMap(e.target.checked);
+                    }}
+                  />
+                  {m.onlyOnMap}
+                </label>
+              )}
+            </div>
+            {listed.length === 0 ? (
+              <div className="panel-status">
+                <p>{m.noneOnMap}</p>
+                <button
+                  type="button"
+                  className="button"
+                  onClick={() => {
+                    setListFollowsMap(false);
+                  }}
+                >
+                  {m.wholeList}
+                </button>
+              </div>
+            ) : (
+              <StationList
+                stations={listed}
+                at={response.at}
+                figures={numberMode}
+                selectedId={selectedId}
+                onSelect={select}
+              />
+            )}
           </>
         )}
       </>
@@ -758,6 +806,7 @@ export function App() {
               onSelect={experimenting ? tapStation : select}
               onStatusChange={setMapStatus}
               onMapReady={setMap}
+              onBoundsChange={setBounds}
             />
           </Suspense>
         </MapBoundary>

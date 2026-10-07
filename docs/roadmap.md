@@ -348,6 +348,19 @@ honesta de lo hecho.
     apilar (son ajustes, no lugares), Atrás y Adelante los devuelven con lo demás, y el cambio
     de idioma ya no los pierde. Pruebas: 181 de la web (ida y vuelta de cada parámetro y una de
     la app que llega con un enlace y lo cambia todo) y el humo comprueba `ocultar` y `buscar`.
+    En `f49bd66`.
+17. **Hecho** en local (7-10-2026, sin commit). «Solo las del mapa», la lista que sigue al mapa
+    (del roadmap «Siguiente»): una casilla junto al título de la lista deja en ella solo las
+    estaciones de la parte del mapa que se ve, al cargar y tras cada movimiento (`moveend`;
+    `features/stations/mapBounds.ts`). El mapa no cambia: es él quien acota. El recuento la
+    sigue; si no queda ninguna a la vista, lo dice y un botón vuelve a toda la lista. Va en la
+    URL (`lista=mapa`, con la cámara en `#mapa`) y Atrás y el idioma la respetan. Si el mapa no
+    está disponible, la casilla no sale; mientras carga, se enseña todo. Pruebas: 183 de la web
+    (parámetro y una de la app con límites simulados del mapa: lista, recuento, URL, vacío y
+    «Ver toda la lista»), humo 20/20 y `e2e/lista-mapa.capture.ts` con el mapa real en escritorio
+    y 375 px (15 de 548 a nivel de calle, cambia al mover el mapa y entran más al alejarse). El
+    navegador integrado de Claude en modo móvil no pinta el mapa: allí la lista sale entera, que
+    es lo previsto mientras el mapa no carga.
 
 ## Siguiente
 

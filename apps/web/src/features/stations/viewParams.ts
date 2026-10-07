@@ -59,3 +59,14 @@ export function numberModeParam(mode: NumberMode): string | null {
 export function searchParam(query: string): string | null {
   return query === '' ? null : query;
 }
+
+/** La lista sigue al mapa: solo las estaciones de la parte que se ve (`lista=mapa`). */
+export const LIST_PARAM = 'lista';
+
+export function listFollowsMapFromParam(value: string | null): boolean {
+  return value === 'mapa';
+}
+
+export function listFollowsMapParam(on: boolean): string | null {
+  return on ? 'mapa' : null;
+}
