@@ -81,7 +81,7 @@ public static partial class BicingArchiveAdapter
         {
             if (!TryInstant(row["last_updated"], out var seenAt))
             {
-                rejected.Add(new(RecordKinds.Station, $"línea {row.Line}", RejectionReasons.MissingField, "last_updated"));
+                rejected.Add(InstantRejection(RecordKinds.Station, $"línea {row.Line}", "last_updated", row["last_updated"]));
                 continue;
             }
 
@@ -96,8 +96,14 @@ public static partial class BicingArchiveAdapter
                 continue;
             }
 
+            if (!TryCount(row["capacity"], out var capacity))
+            {
+                rejected.Add(new(RecordKinds.Station, id, RejectionReasons.InvalidValue, $"capacity={row["capacity"]}"));
+                continue;
+            }
+
             var (district, neighbourhood) = ParseArea(row["cross_street"]);
-            var station = new NormalizedStation(id, name, row["address"], lon, lat, TryInt(row["capacity"]), seenAt,
+            var station = new NormalizedStation(id, name, row["address"], lon, lat, capacity, seenAt,
                 district, neighbourhood);
 
             var changes = byStation.TryGetValue(id, out var list) ? list : byStation[id] = [];
@@ -131,7 +137,7 @@ public static partial class BicingArchiveAdapter
         {
             if (!TryInstant(row["last_updated"], out var snapshot))
             {
-                rejected.Add(new(RecordKinds.Observation, $"línea {row.Line}", RejectionReasons.MissingField, "last_updated"));
+                rejected.Add(InstantRejection(RecordKinds.Observation, $"línea {row.Line}", "last_updated", row["last_updated"]));
                 continue;
             }
 
@@ -149,7 +155,7 @@ public static partial class BicingArchiveAdapter
 
             if (!TryInstant(row["last_reported"], out var observedAt))
             {
-                rejected.Add(new(RecordKinds.Observation, reference, RejectionReasons.MissingField, "last_reported"));
+                rejected.Add(InstantRejection(RecordKinds.Observation, reference, "last_reported", row["last_reported"]));
                 continue;
             }
 
@@ -159,17 +165,41 @@ public static partial class BicingArchiveAdapter
                 continue;
             }
 
-            result.Add(new NormalizedObservation(
+            // Vacío o «NA» es desconocido; un valor que no se entiende («12.0», «sí») no se guarda
+            // como desconocido sin avisar: si un mes cambiara el formato, saldría todo «sin dato».
+            string? invalid = null;
+            int? Count(string column)
+            {
+                if (TryCount(row[column], out var value)) return value;
+                invalid ??= $"{column}={row[column]}";
+                return null;
+            }
+
+            bool? Flag(string column)
+            {
+                if (TryFlag(row[column], out var value)) return value;
+                invalid ??= $"{column}={row[column]}";
+                return null;
+            }
+
+            var observation = new NormalizedObservation(
                 id, observedAt, status,
-                BikesAvailable: TryInt(row["num_bikes_available"]),
-                MechanicalBikesAvailable: TryInt(row["num_bikes_available_types.mechanical"]),
-                EbikesAvailable: TryInt(row["num_bikes_available_types.ebike"]),
-                DocksAvailable: TryInt(row["num_docks_available"]),
+                BikesAvailable: Count("num_bikes_available"),
+                MechanicalBikesAvailable: Count("num_bikes_available_types.mechanical"),
+                EbikesAvailable: Count("num_bikes_available_types.ebike"),
+                DocksAvailable: Count("num_docks_available"),
                 // El histórico no publica elementos deshabilitados: desconocido, no cero.
                 BikesDisabled: null,
                 DocksDisabled: null,
-                IsRenting: TryFlag(row["is_renting"]),
-                IsReturning: TryFlag(row["is_returning"])));
+                IsRenting: Flag("is_renting"),
+                IsReturning: Flag("is_returning"));
+            if (invalid is not null)
+            {
+                rejected.Add(new(RecordKinds.Observation, reference, RejectionReasons.InvalidValue, invalid));
+                continue;
+            }
+
+            result.Add(observation);
         }
 
         return result;
@@ -206,27 +236,54 @@ public static partial class BicingArchiveAdapter
     private static bool SameAttributes(NormalizedStation a, NormalizedStation b) =>
         a with { SeenAt = b.SeenAt } == b;
 
-    /// <summary>Segundos epoch UTC, como publica el archivo.</summary>
-    private static bool TryInstant(string? text, out DateTimeOffset value)
+    /// <summary>
+    /// Segundos epoch UTC, como publica el archivo. Antes de 2018 o después de 2100 no es un
+    /// instante de este histórico: un 0 (1970) estiraba el periodo de la ingesta y un valor en
+    /// milisegundos hacía saltar una excepción que tumbaba el día entero.
+    /// </summary>
+    internal static bool TryInstant(string? text, out DateTimeOffset value)
     {
         value = default;
         if (!long.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var seconds)) return false;
+        if (seconds < EarliestInstant || seconds > LatestInstant) return false;
         value = DateTimeOffset.FromUnixTimeSeconds(seconds);
         return true;
     }
 
+    private static readonly long EarliestInstant = new DateTimeOffset(2018, 1, 1, 0, 0, 0, TimeSpan.Zero).ToUnixTimeSeconds();
+    private static readonly long LatestInstant = new DateTimeOffset(2100, 1, 1, 0, 0, 0, TimeSpan.Zero).ToUnixTimeSeconds();
+
+    /// <summary>Sin el instante, falta; con uno que no se entiende, es un valor no válido.</summary>
+    private static RejectedRecord InstantRejection(string kind, string reference, string column, string? text) =>
+        text is null
+            ? new(kind, reference, RejectionReasons.MissingField, column)
+            : new(kind, reference, RejectionReasons.InvalidValue, $"{column}={text}");
+
     private static bool TryDouble(string? text, out double value) =>
         double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && double.IsFinite(value);
 
-    private static int? TryInt(string? text) =>
-        int.TryParse(text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var value) ? value : null;
-
-    private static bool? TryFlag(string? text) => text switch
+    /// <summary>Un entero; vacío o «NA» (nulo) es desconocido y vale. Otra cosa no se entiende.</summary>
+    internal static bool TryCount(string? text, out int? value)
     {
-        "1" or "TRUE" => true,
-        "0" or "FALSE" => false,
-        _ => null,
-    };
+        value = null;
+        if (text is null) return true;
+        if (!int.TryParse(text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var number)) return false;
+        value = number;
+        return true;
+    }
+
+    /// <summary>1/0 o TRUE/FALSE (en mayúsculas o no); vacío es desconocido y vale.</summary>
+    internal static bool TryFlag(string? text, out bool? value)
+    {
+        value = text?.ToUpperInvariant() switch
+        {
+            null => null,
+            "1" or "TRUE" => true,
+            "0" or "FALSE" => false,
+            _ => null,
+        };
+        return text is null || value is not null;
+    }
 
     private static string Sha256(string path)
     {

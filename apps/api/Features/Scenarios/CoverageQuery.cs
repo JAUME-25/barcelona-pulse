@@ -120,6 +120,15 @@ public static class CoverageQuery
     public const int MaxRadius = 1000;
     public const int MaxAdded = 50;
     public const int MaxMoved = 100;
+    /// <summary>Cada quitada cuesta un círculo y su recorte: sin tope, una petición con toda la red quitada.</summary>
+    public const int MaxRemoved = 100;
+
+    /// <summary>
+    /// Cálculos a la vez. Uno tarda ~0,35 s con la red real y la base de producción tiene 1,5 CPU:
+    /// sin tope, una ráfaga de peticiones (hasta 120 por minuto e IP) la dejaba sin sitio para nada
+    /// más. Los demás esperan su turno.
+    /// </summary>
+    private static readonly SemaphoreSlim Computations = new(2);
 
     /// <summary>Lados de cada círculo: 64 (quad_segs=16). El área sale un 0,16 % por debajo de la del círculo.</summary>
     private const int QuadrantSegments = 16;
@@ -233,6 +242,22 @@ public static class CoverageQuery
     }
 
     public static async Task<CoverageResponse> ComputeAsync(
+        PulseDbContext db, DataSource source, StudyAreaItem area, DateTimeOffset at, InstantBasis basis,
+        int radius, IReadOnlyList<HypotheticalStation> added, IReadOnlyList<MovedStation> moved,
+        IReadOnlyList<long> removed, CancellationToken ct)
+    {
+        await Computations.WaitAsync(ct);
+        try
+        {
+            return await ComputeNowAsync(db, source, area, at, basis, radius, added, moved, removed, ct);
+        }
+        finally
+        {
+            Computations.Release();
+        }
+    }
+
+    private static async Task<CoverageResponse> ComputeNowAsync(
         PulseDbContext db, DataSource source, StudyAreaItem area, DateTimeOffset at, InstantBasis basis,
         int radius, IReadOnlyList<HypotheticalStation> added, IReadOnlyList<MovedStation> moved,
         IReadOnlyList<long> removed, CancellationToken ct)

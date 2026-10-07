@@ -253,6 +253,104 @@ public sealed class IngestionTests(PostgisDatabase database) : IClassFixture<Pos
         Assert.Equal(0, again.StationsRejected);
     }
 
+    /// <summary>Un día importado con su periodo, como hace el histórico: [día, día + 1).</summary>
+    private Task<IngestionRun> IngestDayAsync(SourceDescriptor source, DateTimeOffset day, int capacity, TimeSpan firstPublication) =>
+        IngestAsync(Batch([Station("s1", capacity: capacity, seenAt: day + firstPublication)], source: source) with
+        {
+            Covers = new CoveredPeriod(day, day.AddDays(1)),
+        });
+
+    private async Task<List<(int? Capacity, DateTimeOffset? From, DateTimeOffset? To)>> VersionsAsync(string sourceId)
+    {
+        await using var db = database.CreateContext();
+        var versions = await db.StationVersions.Where(v => v.Station.SourceId == sourceId)
+            .OrderBy(v => v.ValidFrom ?? DateTimeOffset.MinValue)
+            .Select(v => new { v.Capacity, v.ValidFrom, v.ValidTo }).ToListAsync();
+        return [.. versions.Select(v => (v.Capacity, v.ValidFrom, v.ValidTo))];
+    }
+
+    [Theory]
+    [InlineData(60)]
+    [InlineData(0)]
+    public async Task Consecutive_days_imported_out_of_order_keep_the_change_from_midnight(int firstPublicationSeconds)
+    {
+        database.RequireAvailable();
+        var source = Source($"consecutive-{firstPublicationSeconds}");
+        var first = TimeSpan.FromSeconds(firstPublicationSeconds);
+        var day1 = T0;
+        var day10 = T0.AddDays(9);
+        var day11 = T0.AddDays(10);
+        var day12 = T0.AddDays(11);
+        var day20 = T0.AddDays(19);
+        await IngestDayAsync(source, day1, 20, first);
+        await IngestDayAsync(source, day20, 20, first);
+
+        // Los días 10 y 11, uno tras otro y los dos con 25: entre ellos no vuelven los 20 a
+        // medianoche (antes quedaba una franja con 20 y, a las 00:00 en punto, el 11 se rechazaba).
+        await IngestDayAsync(source, day10, 25, first);
+        var run = await IngestDayAsync(source, day11, 25, first);
+
+        Assert.Equal(0, run.StationsRejected);
+        var versions = await VersionsAsync(source.Id);
+        Assert.Equal([20, 25, 20], versions.Select(v => v.Capacity));
+        Assert.Equal((day10 + first, day12), (versions[1].From!.Value, versions[1].To!.Value));
+        Assert.Equal(day12, versions[2].From);
+        Assert.Null(versions[2].To);
+
+        await using var db = database.CreateContext();
+        var dataSource = await db.DataSources.SingleAsync(s => s.Id == source.Id);
+        var atMidnight = Assert.Single(await StationQueries.StatesAtAsync(
+            db, dataSource, day11, bbox: null, stationId: null, limit: 10, TestContext.Current.CancellationToken));
+        Assert.Equal(25, atMidnight.Capacity);
+    }
+
+    [Fact]
+    public async Task An_older_period_that_ends_like_the_known_version_leaves_no_old_attributes_before_it()
+    {
+        database.RequireAvailable();
+        var source = Source("older-continues");
+        var first = TimeSpan.FromMinutes(1);
+        var april1 = T0;
+        var april2 = T0.AddDays(1);
+        var may4 = T0.AddDays(10);
+        await IngestDayAsync(source, may4, 30, first);
+
+        // Abril, en orden: el día 1 con 20 y desde el 2 con 30, lo mismo que se conocía en mayo.
+        await IngestDayAsync(source, april1, 20, first);
+        await IngestDayAsync(source, april2, 30, first);
+        var run = await IngestDayAsync(source, april2.AddDays(1), 30, first);
+
+        Assert.Equal(0, run.StationsRejected);
+        var versions = await VersionsAsync(source.Id);
+        // Antes quedaba el 20 supuesto desde el 3 de abril hasta la primera publicación de mayo.
+        Assert.Equal([20, 30, 30], versions.Select(v => v.Capacity));
+        Assert.Equal(april2 + first, versions[0].To);
+        Assert.Equal((april2 + first, may4 + first), (versions[1].From!.Value, versions[1].To!.Value));
+    }
+
+    [Fact]
+    public async Task A_change_out_of_order_does_not_reach_days_already_imported()
+    {
+        database.RequireAvailable();
+        var source = Source("guarded");
+        var first = TimeSpan.FromMinutes(1);
+        var day1 = T0;
+        var day10 = T0.AddDays(9);
+        var day11 = T0.AddDays(10);
+        var day15 = T0.AddDays(14);
+        await IngestDayAsync(source, day1, 20, first);
+        await IngestDayAsync(source, day11, 20, first);
+        await IngestDayAsync(source, day15, 30, first);
+
+        // El día 10 ya publicaba 30, como el 15; pero el 11, importado, publicó 20 y así se queda.
+        await IngestDayAsync(source, day10, 30, first);
+
+        var versions = await VersionsAsync(source.Id);
+        Assert.Equal([20, 30, 20, 30], versions.Select(v => v.Capacity));
+        Assert.Equal((day10 + first, day11), (versions[1].From!.Value, versions[1].To!.Value));
+        Assert.Equal((day11, day15 + first), (versions[2].From!.Value, versions[2].To!.Value));
+    }
+
     [Fact]
     public async Task A_change_inside_the_current_version_without_a_period_is_rejected_instead_of_applied()
     {

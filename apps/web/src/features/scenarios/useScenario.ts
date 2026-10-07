@@ -7,6 +7,8 @@ import {
   DEFAULT_SCENARIO,
   insideServiceArea,
   MAX_ADDED,
+  MAX_MOVED,
+  MAX_REMOVED,
   nextHypotheticalId,
   resolveLinks,
   scenarioFromParams,
@@ -169,11 +171,19 @@ export function useScenario(
   const moveStation = useCallback(
     (station: number, longitude: number, latitude: number) => {
       if (!insideServiceArea(longitude, latitude)) return;
-      update('move', (s) => ({
-        ...s,
-        moved: [...s.moved.filter((m) => m.station !== station), { station, longitude, latitude }],
-        removed: s.removed.filter((id) => id !== station),
-      }));
+      update('move', (s) =>
+        // Con el máximo, solo se puede volver a mover una que ya lo está (la API no calcula más).
+        s.moved.length >= MAX_MOVED && !s.moved.some((m) => m.station === station)
+          ? s
+          : {
+              ...s,
+              moved: [
+                ...s.moved.filter((m) => m.station !== station),
+                { station, longitude, latitude },
+              ],
+              removed: s.removed.filter((id) => id !== station),
+            },
+      );
     },
     [update],
   );
@@ -181,7 +191,7 @@ export function useScenario(
   const removeStation = useCallback(
     (station: number) => {
       update('remove', (s) =>
-        s.removed.includes(station)
+        s.removed.includes(station) || s.removed.length >= MAX_REMOVED
           ? s
           : {
               ...s,

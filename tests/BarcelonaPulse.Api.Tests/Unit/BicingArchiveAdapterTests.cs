@@ -157,6 +157,43 @@ public sealed class BicingArchiveFormatTests
     }
 
     [Theory]
+    [InlineData("12", true, 12)]
+    [InlineData("0", true, 0)]
+    [InlineData(null, true, null)]
+    [InlineData("12.0", false, null)]
+    [InlineData("doce", false, null)]
+    public void Counts_are_integers_or_unknown_and_anything_else_is_not_guessed(string? text, bool valid, int? expected)
+    {
+        Assert.Equal(valid, BicingArchiveAdapter.TryCount(text, out var value));
+        Assert.Equal(expected, value);
+    }
+
+    [Theory]
+    [InlineData("1", true, true)]
+    [InlineData("TRUE", true, true)]
+    [InlineData("true", true, true)]
+    [InlineData("0", true, false)]
+    [InlineData("FALSE", true, false)]
+    [InlineData(null, true, null)]
+    [InlineData("sí", false, null)]
+    public void Flags_are_read_in_either_case_and_anything_else_is_not_guessed(string? text, bool valid, bool? expected)
+    {
+        Assert.Equal(valid, BicingArchiveAdapter.TryFlag(text, out var value));
+        Assert.Equal(expected, value);
+    }
+
+    [Theory]
+    [InlineData("1787263200", true)] // 20-8-2026
+    [InlineData("0", false)] // 1970: estiraba el periodo de la ingesta
+    [InlineData("1787263200000", false)] // en milisegundos
+    [InlineData("999999999999999", false)] // hacía saltar FromUnixTimeSeconds y tumbaba el día
+    [InlineData("-5", false)]
+    public void Instants_outside_this_archive_are_refused_without_throwing(string text, bool valid)
+    {
+        Assert.Equal(valid, BicingArchiveAdapter.TryInstant(text, out _));
+    }
+
+    [Theory]
     [InlineData(2026, 8, "2026_08_Agost_BicingNou_ESTACIONS.7z")]
     [InlineData(2022, 3, "2022_03_Marc_BicingNou_ESTACIONS.7z")]
     [InlineData(2025, 9, "2025_09_Setembre_BicingNou_ESTACIONS.7z")]

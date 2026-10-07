@@ -26,7 +26,10 @@ export interface Scenario {
 export const RADIUS_MIN = 50;
 export const RADIUS_MAX = 1000;
 export const RADIUS_STEP = 50;
+/** Los topes de la API (`CoverageQuery.MaxAdded`, `MaxMoved`, `MaxRemoved`). */
 export const MAX_ADDED = 50;
+export const MAX_MOVED = 100;
+export const MAX_REMOVED = 100;
 
 /** El rectángulo donde la API acepta estaciones (`IngestionRules.ServiceArea`). */
 export const SERVICE_AREA = { west: 2.0, south: 41.28, east: 2.3, north: 41.5 };
@@ -166,8 +169,10 @@ export function resolveLinks(
   }
   return {
     ...s,
-    moved,
-    removed: [...removed].filter((id) => !moved.some((m) => m.station === id)),
+    moved: moved.slice(0, MAX_MOVED),
+    removed: [...removed]
+      .filter((id) => !moved.some((m) => m.station === id))
+      .slice(0, MAX_REMOVED),
   };
 }
 

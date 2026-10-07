@@ -2,12 +2,16 @@ using BarcelonaPulse.Api.Features.Ingestion;
 using BarcelonaPulse.Api.Features.Stations;
 using BarcelonaPulse.Api.Infrastructure;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace BarcelonaPulse.Api.Features.Scenarios;
 
 public static class ScenariosEndpoints
 {
+    /// <summary>Tamaño máximo de una petición de cobertura: con todos los topes llenos ocupa unos 20 KB.</summary>
+    public const long MaxRequestBytes = 64 * 1024;
+
     public static RouteGroupBuilder MapScenariosEndpoints(this RouteGroupBuilder api)
     {
         api.MapGet("/study-areas", ListStudyAreas)
@@ -23,7 +27,9 @@ public static class ScenariosEndpoints
                 "Círculos del radio elegido alrededor de cada estación, unidos y recortados al área de estudio, " +
                 "medidos en EPSG:25831. Devuelve el modelo, sus supuestos y los parámetros. No se guarda nada " +
                 "y no dice nada de demanda, viajes ni esperas.")
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            // Un escenario dentro de los topes ocupa unos pocos KB: más es otra cosa.
+            .WithMetadata(new RequestSizeLimitAttribute(MaxRequestBytes));
         return api;
     }
 
@@ -75,7 +81,13 @@ public static class ScenariosEndpoints
             errors["moved"] = ["Una estación aparece movida más de una vez."];
         }
 
-        if (removed.Distinct().Count() != removed.Count || removed.Any(id => moved.Any(m => m.Station == id)))
+        // El tamaño, antes que nada: lo que sigue recorre las listas.
+        if (removed.Count > CoverageQuery.MaxRemoved)
+        {
+            errors["removed"] = [$"Como mucho {CoverageQuery.MaxRemoved} estaciones quitadas."];
+        }
+        else if (removed.Distinct().Count() != removed.Count
+            || (moved.Count <= CoverageQuery.MaxMoved && removed.Any(id => moved.Any(m => m.Station == id))))
         {
             errors["removed"] = ["Cada estación se quita una sola vez y no puede estar también movida."];
         }

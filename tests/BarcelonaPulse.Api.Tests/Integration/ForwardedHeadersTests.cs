@@ -52,6 +52,40 @@ public sealed class ForwardedHeadersTests
     }
 
     [Fact]
+    public async Task A_rejected_request_says_when_to_try_again()
+    {
+        await using var factory = Factory("172.16.0.0/12");
+        await GetThroughProxyAsync(factory, "203.0.113.8");
+        await GetThroughProxyAsync(factory, "203.0.113.8");
+
+        var context = await factory.Server.SendAsync(c =>
+        {
+            c.Request.Method = "GET";
+            c.Request.Path = "/api/sources";
+            c.Connection.RemoteIpAddress = IPAddress.Parse(Proxy);
+            c.Request.Headers["X-Forwarded-For"] = "203.0.113.8";
+        }, Ct);
+
+        Assert.Equal(TooManyRequests, context.Response.StatusCode);
+        var retryAfter = int.Parse(context.Response.Headers.RetryAfter.ToString(), System.Globalization.CultureInfo.InvariantCulture);
+        Assert.InRange(retryAfter, 1, 60);
+    }
+
+    [Fact]
+    public async Task Addresses_of_the_same_ipv6_64_share_their_limit()
+    {
+        await using var factory = Factory("172.16.0.0/12");
+
+        await GetThroughProxyAsync(factory, "2001:db8:1:2::10");
+        await GetThroughProxyAsync(factory, "2001:db8:1:2::11");
+        var third = await GetThroughProxyAsync(factory, "2001:db8:1:2:ffff::12");
+        var otherNetwork = await GetThroughProxyAsync(factory, "2001:db8:1:3::10");
+
+        Assert.Equal(TooManyRequests, third);
+        Assert.NotEqual(TooManyRequests, otherNetwork);
+    }
+
+    [Fact]
     public async Task An_untrusted_proxy_cannot_choose_the_client_address()
     {
         // Sin redes de confianza, la cabecera no cuenta: todo es del proxy y comparte límite.

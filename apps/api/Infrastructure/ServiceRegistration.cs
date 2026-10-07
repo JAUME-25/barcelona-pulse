@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Net;
+using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
@@ -75,7 +78,10 @@ public static class ServiceRegistration
         });
     }
 
-    /// <summary>Límite por IP para la API pública. Sin cola: lo que excede recibe 429.</summary>
+    /// <summary>
+    /// Límite por IP para la API pública. Sin cola: lo que excede recibe 429, con Retry-After
+    /// (los segundos que faltan para la ventana siguiente).
+    /// </summary>
     public static IServiceCollection AddPulseRateLimiting(this IServiceCollection services, IConfiguration configuration)
     {
         var permitPerMinute = configuration.GetValue("RateLimiting:PermitPerMinute", 120);
@@ -83,8 +89,18 @@ public static class ServiceRegistration
         return services.AddRateLimiter(o =>
         {
             o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            o.OnRejected = (context, _) =>
+            {
+                if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+                {
+                    context.HttpContext.Response.Headers.RetryAfter =
+                        ((int)Math.Ceiling(retryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
+                }
+
+                return ValueTask.CompletedTask;
+            };
             o.AddPolicy(ApiRateLimitPolicy, http => RateLimitPartition.GetFixedWindowLimiter(
-                http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                RateLimitKey(http.Connection.RemoteIpAddress),
                 _ => new FixedWindowRateLimiterOptions
                 {
                     PermitLimit = permitPerMinute,
@@ -92,5 +108,19 @@ public static class ServiceRegistration
                     QueueLimit = 0,
                 }));
         });
+    }
+
+    /// <summary>
+    /// A quién se cuenta el límite. Una IPv6, por su /64: un cliente suele tener el /64 entero y,
+    /// cambiando de dirección dentro de él, tendría un cupo nuevo en cada petición.
+    /// </summary>
+    internal static string RateLimitKey(IPAddress? address)
+    {
+        if (address is null) return "unknown";
+        if (address.IsIPv4MappedToIPv6) address = address.MapToIPv4();
+        if (address.AddressFamily != AddressFamily.InterNetworkV6) return address.ToString();
+        var bytes = address.GetAddressBytes();
+        Array.Clear(bytes, 8, 8);
+        return $"{new IPAddress(bytes)}/64";
     }
 }

@@ -429,11 +429,27 @@ public sealed class CoverageApiTests(CoverageFixture fixture) : IClassFixture<Co
             at = At,
             added = Enumerable.Range(0, CoverageQuery.MaxAdded + 1).Select(i => new { id = $"h{i}", longitude = Lon, latitude = Lat }),
         });
+        // Quitar tiene tope, como añadir y mover: cada quitada cuesta un círculo y su recorte.
+        var tooManyRemoved = await PostAsync(new
+        {
+            source = "cov-changes",
+            studyArea = "barcelona",
+            radiusMeters = Radius,
+            at = At,
+            removed = Enumerable.Range(1, CoverageQuery.MaxRemoved + 1).Select(i => (long)i),
+        });
         var noSource = await PostAsync(new { source = "no-existe", studyArea = "barcelona", radiusMeters = Radius });
 
         Assert.Equal(HttpStatusCode.BadRequest, outside.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, tooMany.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, tooManyRemoved.StatusCode);
+        using (var tooManyBody = JsonDocument.Parse(await tooManyRemoved.Content.ReadAsStringAsync(Ct)))
+        {
+            var message = tooManyBody.RootElement.GetProperty("errors").GetProperty("removed")[0].GetString();
+            Assert.Equal($"Como mucho {CoverageQuery.MaxRemoved} estaciones quitadas.", message);
+        }
+
         Assert.Equal(HttpStatusCode.NotFound, noSource.StatusCode);
         // El error va en el campo que lo tiene: una quitada que no existe, en «removed».
         using var body = JsonDocument.Parse(await unknown.Content.ReadAsStringAsync(Ct));

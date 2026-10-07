@@ -140,8 +140,10 @@ public static class TimelineQuery
         """;
 
     /// <summary>
-    /// Clave de la caché. Se invalida sola: incluye la última ingesta terminada de la fuente y la
-    /// última purga (ADR 0012), que borra datos sin crear una ingesta.
+    /// Clave de la caché. Se invalida sola: incluye la última ingesta terminada de la fuente, la
+    /// última purga (ADR 0012), que borra datos sin crear una ingesta, y el recuento de
+    /// observaciones, que cambia también con una purga que no marca ninguna ingesta (p. ej., un
+    /// día no importado del que quedaban observaciones de las 23:5x traídas por el siguiente).
     /// </summary>
     public static async Task<string> KeyAsync(
         PulseDbContext db, DataSource source, DateTimeOffset from, DateTimeOffset to, TimeSpan step, CancellationToken ct)
@@ -152,7 +154,7 @@ public static class TimelineQuery
         var lastPurge = await db.IngestionRuns
             .Where(r => r.SourceId == source.Id)
             .MaxAsync(r => r.PurgedAt, ct);
-        return $"timeline:{source.Id}:{from:O}:{to:O}:{step.TotalMinutes}:{lastRun}:{lastPurge?.UtcTicks}";
+        return $"timeline:{source.Id}:{from:O}:{to:O}:{step.TotalMinutes}:{lastRun}:{lastPurge?.UtcTicks}:{source.ObservationCount}";
     }
 
     /// <summary>
