@@ -531,8 +531,9 @@ honesta de lo hecho.
       totales, clave, las dos horas en la URL y Atrás) y `e2e/balance.capture.ts` con el mapa
       real: escritorio a escala de ciudad y de calle, 375 px (mapa, panel y distritos, en los
       tres idiomas) y 320 px. Tipos, lint y formato en verde.
-27. **Hecho** en local (8-10-2026). La altitud de las estaciones, el segundo punto que quedaba
-    de la propuesta:
+27. **Hecho** y en producción desde el 8-10-2026 (`498f3c3`, CI verde; la migración aplicada:
+    la API ya publica `altitude`, a nulo hasta reimportar mayo). La altitud de las estaciones,
+    el segundo punto que quedaba de la propuesta:
     - `station_versions.altitude` (metros, nula si la fuente no la da; migración
       `StationAltitude`). El adaptador del histórico la lee de `altitude`; «NA» o un valor
       ilegible dejan la estación sin ella, no la rechazan. Cuenta como atributo solo cuando la
@@ -557,8 +558,11 @@ honesta de lo hecho.
       Formato de .NET y web, lint y tipos en verde.
     - Pendiente en producción: tras desplegar, reimportar un día de mayo para que las versiones
       tomen la altitud (hasta entonces, sin «Por altitud» ni altitud en la ficha).
-28. **Hecho** en local (8-10-2026). La página del contrato de la API, el tercer punto que
-    quedaba de la propuesta (`docs/design.md`, «Contrato de la API»):
+28. **Hecho** y en producción desde el 8-10-2026 (`7481a17`, con `1c99eae`, CI verde;
+    comprobado desde fuera: Healthy, `/contrato.html` con la CSP de siempre,
+    `/api/openapi/v1.json` con las 9 rutas y `altitude`, y `contrato.capture.ts` contra
+    producción 4 de 4). La página del contrato de la API, el tercer punto que quedaba de la
+    propuesta (`docs/design.md`, «Contrato de la API»):
     - La API publica el OpenAPI bajo `/api/openapi/v1.json` (antes `/openapi/v1.json`, que nginx
       no reenviaba): pasa por nginx tal cual está, sin tocar `pulse.conf` ni la CSP.
     - La web tiene una segunda página, `/contrato.html` (`src/contract/`, entrada aparte en
@@ -579,7 +583,8 @@ honesta de lo hecho.
       `e2e/contrato.capture.ts` (página entera en escritorio; 375 y 320 px en los tres idiomas
       sin desbordes). Tipos, lint y formato en verde. De paso, `movil.capture.ts` admite que a
       320 px el mapa empiece a 302 px: con cuatro modos el selector pasa a dos filas.
-29. **Hecho** en local (8-10-2026). Chrome ofrecía traducir la página «del noruego»: su detector
+29. **Hecho** y en producción desde el 8-10-2026 (`1c99eae`; el bundle servido lleva `lang` y
+    `translate` en los nombres). Chrome ofrecía traducir la página «del noruego»: su detector
     no se fía de `lang="es"` y los 548 nombres catalanes de estación y barrio pesan más que el
     texto en castellano. Los nombres de estación, barrio y distrito (lista, ficha, balance,
     límites y tabla de distritos) llevan `lang="ca"` y `translate="no"`: son nombres propios de
