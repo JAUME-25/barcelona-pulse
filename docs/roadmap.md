@@ -270,7 +270,7 @@ honesta de lo hecho.
       escritorio, 375 y 320 px (`e2e/distritos.capture.ts`, que además filtra por el Eixample
       con el teclado y comprueba lista, leyenda y recuento, y `e2e/limites.capture.ts`). Sin
       comprobar: la tabla en catalán e inglés a 320 px y el móvil con un dedo real.
-12. **Hecho** en local (7-10-2026, sin commit). Un momento representativo al abrir, primero de
+12. **Hecho** y en producción desde el 7-10-2026. Un momento representativo al abrir, primero de
     una revisión de backend y web de ese día con propuestas para hacer la aplicación más útil
     (Jaume: «empieza por lo que creas más oportuno»):
     - Explorar abría en el último dato, un domingo a las 23:55, y Reproducir en el último día a
@@ -287,7 +287,7 @@ honesta de lo hecho.
       y 25 h, el instante con y sin día pedido, y la ida y vuelta con «Cambiar momento»). Usado
       en el navegador con la red real en escritorio, 375 y 320 px, en los tres idiomas y con la
       demo, sin errores en la consola ni desbordes. En `56c26f3`.
-13. **Hecho** en local (7-10-2026, sin commit). Buscar y ordenar como se busca una estación,
+13. **Hecho** y en producción desde el 7-10-2026. Buscar y ordenar como se busca una estación,
     segundo bloque de la misma propuesta:
     - La búsqueda encuentra también por barrio y por distrito («Poblenou», «Gràcia»), que no
       suelen ir en el nombre, y mientras se busca el mapa encuadra los resultados aunque se
@@ -306,7 +306,7 @@ honesta de lo hecho.
       va a Gràcia; «Más bicis» pone primero la de 18; Intro abre la primera y el mapa pasa de
       z12,5 a z14 sobre ella; recuento y «Orden» en una línea a 375 px y en dos a 320 px, sin
       desbordes, en los tres idiomas y sin errores en la consola. En `2c76b73`.
-14. **Hecho** en local (7-10-2026, sin commit). Las eléctricas como dato de primera, tercer
+14. **Hecho** y en producción desde el 7-10-2026. Las eléctricas como dato de primera, tercer
     bloque de la propuesta (`docs/design.md`, «Eléctricas»):
     - API: la línea temporal suma las eléctricas de cada paso (`ebikesAvailable`) y dice en
       cuántas estaciones se contaron (`stationsCountedEbikes`): solo las que publican el
@@ -321,7 +321,7 @@ honesta de lo hecho.
     - Pruebas: 199 de backend (la regla contra el mapa comprueba también las eléctricas y una
       estación sin desglose) y 175 de la web (recuentos con y sin desglose completo, el
       interruptor en la app). Formato de .NET y web, lint y tipos en verde. En `376de78`.
-15. **Hecho** en local (7-10-2026, sin commit). Compartir y Atrás, primera parte del bloque 10
+15. **Hecho** y en producción desde el 7-10-2026. Compartir y Atrás, primera parte del bloque 10
     de la propuesta:
     - Atrás ya no sale de la aplicación: abrir el detalle, abrir «Qué muestra y qué no» y
       cambiar de modo añaden una entrada al historial (`pushParams`, con el motivo en
@@ -340,7 +340,7 @@ honesta de lo hecho.
     - Pruebas: 177 de la web (Atrás cierra detalle, ficha y modo con el título; copiar) y una de
       humo nueva (Atrás y Adelante con el detalle). Usado en el navegador: abrir, Atrás, título
       y el campo de la URL cuando el navegador integrado no deja copiar. En `1bf6062`.
-16. **Hecho** en local (7-10-2026, sin commit). La vista de Explorar en la URL, lo que faltaba
+16. **Hecho** y en producción desde el 7-10-2026. La vista de Explorar en la URL, lo que faltaba
     del bloque 10 (`features/stations/viewParams.ts`): `ocultar=sin-dato,fuera-de-servicio`
     (categorías de la leyenda apagadas), `distrito=Eixample` (vacío, «Sin distrito»),
     `buscar=…` (al dejar de escribir, 400 ms), `orden=bicis|libres|electricas` y
@@ -349,7 +349,7 @@ honesta de lo hecho.
     de idioma ya no los pierde. Pruebas: 181 de la web (ida y vuelta de cada parámetro y una de
     la app que llega con un enlace y lo cambia todo) y el humo comprueba `ocultar` y `buscar`.
     En `f49bd66`.
-17. **Hecho** en local (7-10-2026, sin commit). «Solo las del mapa», la lista que sigue al mapa
+17. **Hecho** y en producción desde el 7-10-2026. «Solo las del mapa», la lista que sigue al mapa
     (del roadmap «Siguiente»): una casilla junto al título de la lista deja en ella solo las
     estaciones de la parte del mapa que se ve, al cargar y tras cada movimiento (`moveend`;
     `features/stations/mapBounds.ts`). El mapa no cambia: es él quien acota. El recuento la
@@ -361,7 +361,7 @@ honesta de lo hecho.
     y 375 px (15 de 548 a nivel de calle, cambia al mover el mapa y entran más al alejarse). El
     navegador integrado de Claude en modo móvil no pinta el mapa: allí la lista sale entera, que
     es lo previsto mientras el mapa no carga. En `ef28ceb`.
-18. **Hecho** en local (7-10-2026, sin commit). La versión de los datos por rango y los
+18. **Hecho** y en producción desde el 7-10-2026. La versión de los datos por rango y los
     validadores HTTP (ADR 0014), la deuda B2 de la propuesta:
     - `DataVersion.ForRangeAsync`: la última ingesta terminada que toca el rango (por el periodo
       cubierto o el de sus observaciones, con la tolerancia hacia atrás) y cuántas purgas ha
@@ -375,8 +375,9 @@ honesta de lo hecho.
     - Pruebas: 4 nuevas contra PostGIS (una ingesta cambia solo los días que toca y una purga
       todos; el archivo de un día que trae observaciones del anterior cambia también el
       anterior; ETag y 304 en estado, línea temporal, fotogramas, detalle y patrón, y que el
-      patrón cambia con otro día mientras el estado del 19 sigue en 304; «ahora» sin ETag).
-19. **Hecho** en local (7-10-2026, sin commit). «Cercanas» y «Cerca de mí», el bloque 5 de la
+      patrón cambia con otro día mientras el estado del 19 sigue en 304; «ahora» sin ETag). En
+      `d0cd1bf`.
+19. **Hecho** y en producción desde el 7-10-2026. «Cercanas» y «Cerca de mí», el bloque 5 de la
     propuesta (`docs/design.md`, «Cercanas y Cerca de mí»):
     - «Cerca de mí» junto al buscador: la ubicación se pide al pulsar y vive solo en memoria. La
       lista se ordena por distancia en línea recta (EPSG:25831 en el navegador,
@@ -396,8 +397,8 @@ honesta de lo hecho.
       cámara, cercanas con eléctricas, fuera de Barcelona, fallos por motivo, aproximada y la
       clave; `shared/url.test.ts`), humo 20/20 y `e2e/cerca.capture.ts` con el mapa real
       (ubicación concedida y denegada) en escritorio y 375 px. Usado en el navegador en los tres
-      idiomas a 1440, 375 y 320 px.
-20. **Hecho** en local (7-10-2026, sin commit). La versión por rango, que no acotaba, y la
+      idiomas a 1440, 375 y 320 px. En `f5fa0b1`.
+20. **Hecho** y en producción desde el 7-10-2026. La versión por rango, que no acotaba, y la
     compilación en el ETag (ADR 0014, «Corrección»):
     - Las 28 ingestas de mayo tenían `period_from` el 12-6-2025 (la estación 366 repite ese
       `last_reported` en cada archivo y el periodo se calculaba con todo el lote): cualquier
@@ -409,8 +410,11 @@ honesta de lo hecho.
       despliegue, el navegador no recibe un 304 con un cuerpo viejo.
     - Pruebas: una nueva contra PostGIS (la observación de 2025 repetida no cambia la versión
       del otro día; el periodo de cada ingesta; reimportar sin nada nuevo) y la compilación en
-      la versión y en el ETag. `ingest` dice «sin observaciones nuevas» cuando no guarda nada.
-21. **Hecho** en local (7-10-2026, sin commit). Topes y observabilidad, el punto 16 de la
+      la versión y en el ETag. `ingest` dice «sin observaciones nuevas» cuando no guarda nada. En
+      `506cd0b`. Pendiente en producción: reimportar los 28 días de mayo para que sus periodos
+      pasen a nulo y la versión por rango acote (hasta entonces, cada importación sigue
+      invalidando todas las semanas).
+21. **Hecho** y en producción desde el 7-10-2026. Topes y observabilidad, el punto 16 de la
     propuesta, lo que conviene tener firme antes del tiempo real:
     - Tope de espera en los cálculos caros (`Infrastructure/ComputationGate.cs`): la línea
       temporal esperaba un hueco sin límite y nginx cortaba a los 30 s; ahora 10 s (el patrón,
@@ -436,7 +440,8 @@ honesta de lo hecho.
     - Descartado por ahora: `healthcheck` de la API en Compose. Sin orquestador no reinicia nada
       (Docker solo marca «unhealthy»), la imagen no tiene shell y arrancar `dotnet` cada 30 s
       cuesta; UptimeRobot ya avisa por `/health/ready`.
-22. **Hecho** en local (7-10-2026, sin commit). Para quien busca bici o sitio, los puntos 3, 4 y
+    - En `a109a20`; la medida del BRIN en producción, en `a4d0b94`.
+22. **Hecho** y en producción desde el 7-10-2026. Para quien busca bici o sitio, los puntos 3, 4 y
     5 de la propuesta, solo web (`docs/design.md`, «Anclajes y atajos», «Momento mostrado» y
     «Cómo suele estar»):
     - «Anclajes» en el interruptor del número: el marcador lleva los anclajes libres, la lista
@@ -454,7 +459,7 @@ honesta de lo hecho.
       humo 20/20 y `e2e/atajos.capture.ts` con el mapa real en escritorio y 375 px (aparcar,
       anclajes delante en la lista, «A esta hora» y la frase). Usado en el navegador en
       castellano, catalán e inglés a 320 px, sin desbordes. En `dce1de9`.
-23. **Hecho** en local (7-10-2026, sin commit). Rigor visible, el punto 12 de la propuesta: lo
+23. **Hecho** y en producción desde el 7-10-2026. Rigor visible, el punto 12 de la propuesta: lo
     que la API ya daba y la web callaba, solo web.
     - La ficha de la estación dice desde cuándo se conoce («Vista por primera vez el 4 de mayo
       de 2026») y, plegados, los cambios de nombre, dirección, sitio (metros, EPSG:25831) y
@@ -469,7 +474,7 @@ honesta de lo hecho.
       traslado; en la app: la ficha con cambios y sin ellos, los tres avisos y que el de la
       estación se va al elegir otra, la última importación en la ficha de límites). En
       `0dc7e4f`; el aviso del enlace, sin borde lateral, en `c211b1f`.
-24. **Hecho** en local (7-10-2026). Móvil con el mapa más arriba, el punto 7 de la propuesta:
+24. **Hecho** y en producción desde el 7-10-2026. Móvil con el mapa más arriba, el punto 7 de la propuesta:
     cabecera plegable, elegida entre tres direcciones con capturas reales (`docs/design.md`,
     «Móvil: cabecera plegable»). Sin lema, el idioma junto al nombre y la procedencia en una
     línea que «Más» despliega; el mapa pasa de empezar a 555 px a unos 200 (266 a 320 px). Se
@@ -477,7 +482,7 @@ honesta de lo hecho.
     Pruebas: 205 de la web (en «móvil», plegado y desplegado) y `e2e/movil.capture.ts` con el
     mapa real a 375 y 320 px, plegada y abierta. Usado en el navegador en los tres idiomas. En
     `89d7d30`.
-25. **Hecho** en local (7-10-2026). Deuda del backlog, el punto 17 de la propuesta:
+25. **Hecho** y en producción desde el 7-10-2026. Deuda del backlog, el punto 17 de la propuesta:
     - `station_versions` no admite dos versiones vigentes a la vez (`EXCLUDE` con `btree_gist`,
       diferida al commit; migración `VersionsNoOverlap`). En local no había ningún solape.
     - Las ingestas que se quedaron «en marcha» por un proceso que murió se cierran como
@@ -488,39 +493,45 @@ honesta de lo hecho.
     - Pendiente del backlog: `purge` sigue borrando por instante, no por ingesta.
     - Pruebas contra PostGIS: el solape se rechaza y dos versiones seguidas pasan en la misma
       transacción; el cierre de ingestas viejas y no de las recientes.
+    - En `4f43b62` (CI verde), desplegado el 7-10-2026 con todo lo anterior y comprobado desde
+      fuera: Healthy, `geolocation=(self)`, ETag con la compilación, cabecera plegable en móvil,
+      guiones `despliegue` y `limites` 12 de 12 y `cerca` 2 de 2. Después, solo pruebas y
+      documentación (`2f8a4fc`, `a4d0b94`).
 
 ## Siguiente
 
-- Propuestas: balance entre dos horas (dónde se acumulan y dónde se vacían; el
-  13-5-2026 de 7 a 10, el tercio de estaciones más cerca del mar ganó 5,2 bicis de media y el
-  intermedio perdió 6,1), estaciones que más tiempo pasan vacías o llenas, «cerca de mí» y una
-  lista que siga al mapa, y en móvil un mapa más arriba (empieza a 475 px de 812).
-- De la revisión del 7-10-2026, con datos que ya llegan: tooltip en el marcador; enlace
-  compartible con título de pestaña por vista y metadatos; mediana de bicis por hora e
-  historial de versiones en la ficha; cada casilla de la rejilla de huecos a su hora; aviso
-  cuando la respuesta viene recortada (`truncated` se ignora) o el enlace trae un día o una
-  estación que ya no existe; agrupación de marcadores a escala de ciudad con los recuentos
-  en texto; en móvil, «Atrás» que cierre el detalle y la ficha. Lo grande: tiempo real con
-  el token de Open Data BCN, que pide una clave de caché de la línea temporal por rango (hoy
-  cualquier ingesta invalida todas las semanas) y `/api/sources` agregado en SQL.
+- Lo que queda de la propuesta del 7-10-2026, en este orden:
+  - Balance entre dos horas: dónde se acumulan y dónde se vacían (el 13-5-2026 de 7 a 10, el
+    tercio de estaciones más cerca del mar ganó 5,2 bicis de media y el intermedio perdió 6,1).
+    Pantalla nueva: se elige entre dos o tres direcciones con capturas.
+  - Altitud de las estaciones: migración y reimportar (en local ya se puede).
+  - Página del contrato OpenAPI.
+  - Nacimiento y retirada de estaciones.
+  - Tabla de resumen por hora: lo que falta para que una semana de la línea temporal baje de
+    los 2,8–3,0 s de producción.
+  - Tiempo real cuando el token de Open Data BCN responda 200 desde el PC de Jaume (el
+    histórico ya se descarga desde casa; sin token, el JSON del tiempo real contesta 302 a
+    `/tokens`). El VPS dio 403 a una sola petición: repetir otro día para saber si es permanente.
+- Pendiente de antes: estaciones que más tiempo pasan vacías o llenas; tooltip en el marcador;
+  cada casilla de la rejilla de huecos a su hora; agrupación de marcadores a escala de ciudad
+  con los recuentos en texto; `/api/sources` agregado en SQL (hoy, varias consultas por fuente).
 
 ## Backlog
 
-- Riesgos vistos en la revisión del 7-10-2026, sin arreglar:
-  - `station_versions` no tiene restricción de solape: si la ingesta fuera de orden dejara dos
-    versiones vigentes, el mapa duplicaría la estación sin aviso. Una `EXCLUDE` con
-    `btree_gist` lo convertiría en ingesta fallida.
-  - El patrón de la estación no tiene caché ni semáforo y crece con los días importados.
+- Riesgos vistos en la revisión del 7-10-2026, sin arreglar (el solape de versiones, la caché del
+  patrón y el CORS con `POST` se cerraron en B5.21 y B5.25):
   - `/health/ready` queda fuera del límite por IP y abre una conexión por petición.
-  - CORS solo admite `GET` y la cobertura es `POST`: con un origen configurado, Experimentar
-    fallaría.
   - `purge` borra por instante, no por ingesta: las observaciones del día que caen fuera de él
     sobreviven y la fuente sigue diciendo que tiene datos.
   - La regla del estado y la precedencia de la leyenda están cuatro veces en SQL y una en la
-    web, con el umbral de «pocas» duplicado; el patrón no tiene prueba cruzada con el mapa.
+    web, con el umbral de «pocas» duplicado; el patrón tiene prueba de su regla, no cruzada con
+    el mapa como la línea temporal.
   - Web: desde la ficha hay más de diez tabulaciones hasta el buscador y no hay «saltar a la
-    lista»; `useScenario` llama a `setState` durante el render; `App.tsx` y `StationMap.tsx`
-    pasan de 600 líneas y mezclan los tres modos.
+    lista»; `useScenario` llama a `setState` durante el render; `App.tsx` (970 líneas) y
+    `StationMap.tsx` (770) mezclan los tres modos.
+- En móvil, el sello sobre el mapa como botón que abra «Qué muestra y qué no».
+- El caso técnico (`docs/caso-tecnico.md`, B5.4) no recoge lo hecho el 7-10-2026.
+- Producción: reimportar los 28 días de mayo para que la versión por rango acote (B5.20).
 
 - Ingesta fuera de orden: un periodo antiguo que acaba con otros atributos que los conocidos
   aún supone los de antes hasta la versión siguiente, incluidos los minutos antes de la primera
@@ -538,7 +549,6 @@ honesta de lo hecho.
   probado el toque para añadir).
 - Tiempo real con el token de Open Data BCN (`Authorization: <token>`; un 302 a `/tokens` es un
   fallo de autenticación): tarea programada y «Última observación» con frescura medida.
-- API: caché HTTP con validación para `/api/stations`.
 - Reproducir: los fotogramas pesan 110 KB por hora con Brotli (2,6 MB un día). Si pesa en
   móvil, formato por columnas (~58 KB) o caché comprimida en el servidor. Medir también la
   reproducción a la velocidad más alta en móvil (arrastrar el mapa ya está medido: 48 fps).
