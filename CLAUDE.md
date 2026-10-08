@@ -24,7 +24,9 @@ procedencia visible de los datos. Estado y siguiente paso: `docs/roadmap.md`.
 - Commits a nombre de Jaume (la identidad git configurada), en español y al estilo
   `feat(B2): …` / `docs: …`, sin líneas `Co-Authored-By` ni menciones a Claude.
 - El repositorio es público: nada de secretos, tokens ni datos personales en código, commits,
-  logs o issues. Un secreto que llegue a un commit se da por expuesto: se revoca.
+  logs o issues. Un secreto que llegue a un commit se da por expuesto: se revoca. Tampoco
+  códigos de seguimiento de peticiones o tickets (con el código se consulta y se valora la
+  petición): se quedan en el correo y en la memoria de la sesión.
 - Un cambio de esquema lleva su migración. Un cambio de contrato HTTP lleva el documento
   OpenAPI regenerado (se hace al compilar) y los tipos del cliente (`npm run gen:api`).
 - SQL espacial y consultas EF se prueban contra PostGIS real, no con un proveedor en memoria.

@@ -80,7 +80,8 @@ token se regenera en la página «Access token» del portal si se expone.
   propio nginx, no del token ni por exceso de peticiones. No se sortea: en producción se
   importan los archivos descargados aparte y subidos al servidor (`docs/despliegue.md`), y para el
   tiempo real se ha pedido al portal que admita la IP del VPS (Atenció en línia, Dades obertes,
-  incidencia, petición WBP1319 del 8-10-2026); si no, quedaría descargar desde casa
+  incidencia, el 8-10-2026; el código de seguimiento, en el correo de acuse de recibo, no aquí);
+  si no, quedaría descargar desde casa
   con el token y entregarlo a la API por un endpoint de ingesta con secreto, que hoy no existe a
   propósito: sería un cambio de diseño por decidir.
 - Cobertura: 87 archivos de estado y 88 de información, de 2019-03 a 2026-08. Faltan 2025-11
