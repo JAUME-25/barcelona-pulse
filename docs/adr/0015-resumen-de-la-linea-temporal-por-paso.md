@@ -1,6 +1,6 @@
 # 0015. Resumen de la línea temporal por paso, mantenido por la ingesta
 
-Fecha: 2026-10-09. Estado: aceptada. Sustituye el cálculo al pedirla de la ADR 0009.
+Fecha: 2026-10-08. Estado: aceptada. Sustituye el cálculo al pedirla de la ADR 0009.
 
 ## Contexto
 
@@ -43,7 +43,7 @@ y un 503 si no había hueco.
 ## Consecuencias
 
 - Leer una semana es leer 2 016 filas y contar versiones: milisegundos, también la primera vez
-  después de arrancar. Medido en local el 9-10-2026 con 42 días: las semanas de la rejilla de
+  después de arrancar. Medido en local el 8-10-2026 con 42 días: las semanas de la rejilla de
   huecos pasan de 1 435–1 650 ms a 5–41 ms; un día a 5 min, 24 ms. La tabla, 288 filas por día
   (12 110 filas y 1,7 MB para esos 42 días). En producción, las cuatro semanas de mayo en 84,
   9, 11 y 10 ms frente a 2 955, 2 911, 2 805 y 2 815 ms antes (`architecture.md`).
@@ -53,5 +53,5 @@ y un 503 si no había hueco.
   cambia la regla, `summarize` la deja bien. Si una fuente de tiempo real importa cada pocos
   minutos, cada ingesta recalcula solo los pasos que toca.
 - El precalentamiento (`TimelineWarmUp`), la caché en memoria, el tope de cálculos y el 503 de
-  la línea temporal ya no tenían qué proteger: se quitaron el mismo 9-10-2026 (B5.32). El
+  la línea temporal ya no tenían qué proteger: se quitaron el mismo 8-10-2026 (B5.32). El
   patrón de una estación conserva su caché y su tope.

@@ -239,7 +239,7 @@ completa en un solo sitio y, junto a cada dato, lo justo para no malinterpretarl
   desde cuándo se conoce y, plegados, sus cambios de nombre, sitio, capacidad o altitud con
   fecha: la API los guardaba por versiones y la web no los enseñaba. Desde el 8-10-2026, la
   altitud publicada («Altitud · 41 m») entre los datos de la estación; sin ella, no se nombra.
-- Altas y bajas (9-10-2026): la API da la primera y la última vez que la fuente publicó cada
+- Altas y bajas (8-10-2026): la API da la primera y la última vez que la fuente publicó cada
   estación y la web solo afirma lo que un día importado anterior o posterior demuestra
   (`features/stations/lifecycle.ts`). En la ficha, entre los datos: «Alta · 12 de mayo de 2026,
   12:25 · el 11 de mayo no estaba en la lista de la fuente» y «Baja · 26 de agosto de 2026 · el

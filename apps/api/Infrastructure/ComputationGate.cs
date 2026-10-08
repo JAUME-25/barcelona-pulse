@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 namespace BarcelonaPulse.Api.Infrastructure;
 
 /// <summary>
-/// Cuántos cálculos caros de un tipo (hoy, el patrón de una estación; hasta el 9-10-2026 también
+/// Cuántos cálculos caros de un tipo (hoy, el patrón de una estación; hasta el 8-10-2026 también
 /// la línea temporal, que ahora lee de un resumen) corren a la vez, y cuánto espera una petición
 /// por un hueco antes de rendirse. Sin tope de espera, una ráfaga de peticiones distintas (cada
 /// una, otra clave de caché) dejaba a las demás colgadas hasta que nginx cortaba a los 30 s.

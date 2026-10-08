@@ -592,7 +592,7 @@ honesta de lo hecho.
     content="notranslate">` (lo decide Jaume en su Chrome con `chrome://translate-internals`).
     Pruebas: 223 de la web (la ficha lleva `lang` y `translate`), humo 24 de 24.
 
-30. **Hecho** y en producción desde el 9-10-2026 (`66d9e09`, con `58ba45f` y `5cbf8b0`; CI run
+30. **Hecho** y en producción desde el 8-10-2026 (`66d9e09`, con `58ba45f` y `5cbf8b0`; CI run
     37741376373 verde; comprobado desde fuera: Healthy, `firstSeenAt`/`lastSeenAt` en el estado y
     los fotogramas con el ETag de la compilación nueva, bundle `main-o7OYUAaY.js`, la ficha de
     Espronceda 298 el 13-5 con «Alta», y «Altas y bajas» con 2 altas y 5 bajas: Tarongers | Av.
@@ -620,7 +620,7 @@ honesta de lo hecho.
     (las capturas y el humo seguidos agotan los 120 por minuto de la API local: el humo se
     repite cuando `/api/sources` vuelve a dar 200).
 
-31. **Hecho** y en producción desde el 9-10-2026 (`322520c`, CI run 37754056868 verde;
+31. **Hecho** y en producción desde el 8-10-2026 (`322520c`, CI run 37754056868 verde;
     comprobado desde fuera: Healthy, ETag con la compilación nueva, el punto de las 10:00 del
     13-5 igual que el mapa (535 con dato, 93 vacías, 50 llenas, 4 864 bicis); en el log del
     precalentamiento, las cuatro semanas de mayo en 84, 9, 11 y 10 ms frente a 2 955, 2 911,
@@ -640,7 +640,7 @@ honesta de lo hecho.
     purga siguen vigilando la regla). La web no cambia. Lo que protegía a la línea temporal lenta
     se quita en B5.32.
 
-32. **Hecho** y en producción desde el 9-10-2026 (`35be920`, CI run 37756289886 verde;
+32. **Hecho** y en producción desde el 8-10-2026 (`35be920`, CI run 37756289886 verde;
     comprobado desde fuera: Healthy, ETag con la compilación nueva, el OpenAPI de la línea
     temporal sin el 503 y el del patrón con él, una semana sin caché en 0,28–0,39 s de ida y
     vuelta y el punto del 13-5 igual que antes). Limpieza tras el resumen (ADR 0015): fuera
@@ -657,7 +657,7 @@ honesta de lo hecho.
 
 - Lo que queda de la propuesta del 7-10-2026 (el balance entre dos horas, la altitud, la página
   del contrato, las altas y bajas y la tabla de resumen con su limpieza se hicieron el 8 y el
-  9-10-2026, B5.26 a B5.32):
+  8-10-2026, B5.26 a B5.32):
   - Tiempo real cuando el token de Open Data BCN responda 200 desde el PC de Jaume (el
     histórico ya se descarga desde casa; sin token, el JSON del tiempo real contesta 302 a
     `/tokens`). El VPS dio 403 a una sola petición: repetir otro día para saber si es permanente.

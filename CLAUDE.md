@@ -106,7 +106,7 @@ Jaume ejecuta los comandos en Forge y pega la salida.
   también pueden agotarlo (sale «Too Many Requests»): espera un minuto.
 - «Qué muestra y qué no» pide una línea temporal por semana importada y la guarda en la página
   (`features/limits/quality.ts`): sin eso, abrirla y cerrarla agotaba el límite. Cada recarga
-  vuelve a pedirlas. Desde el 9-10-2026 la línea temporal se lee de `timeline_summaries` (ADR
+  vuelve a pedirlas. Desde el 8-10-2026 la línea temporal se lee de `timeline_summaries` (ADR
   0015, milisegundos), sin caché en memoria ni precalentamiento (`TimelineWarmUp` se quitó ese
   mismo día).
 - Una estación sin ninguna observación hasta el momento mostrado no «nunca ha informado»: al

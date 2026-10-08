@@ -70,10 +70,10 @@ de fotogramas, comprimidos) y la API los volvía a calcular.
   `W/"stations:<instante>:<fuente>:<ingesta>:<purgas>:<compilación>"`, y la caché de la línea
   temporal (en memoria, del proceso) lo lleva sin que importe.
 
-## Corrección del 9 de octubre de 2026
+## Corrección del 8 de octubre de 2026
 
 - **Las respuestas con atributos de estación llevan la versión de toda la fuente.** El estado
-  (`GET /api/stations`), el detalle y los fotogramas llevan desde el 9-10-2026 la primera y la
+  (`GET /api/stations`), el detalle y los fotogramas llevan desde el 8-10-2026 la primera y la
   última publicación de cada estación (`firstSeenAt`, `lastSeenAt`: las altas y bajas), que
   cualquier ingesta cambia (cada día que lista una estación alarga su `last_seen_at`); el detalle
   lleva además las versiones, que una ingesta de un día anterior parte o adelanta. Con la versión

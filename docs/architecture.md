@@ -52,7 +52,7 @@ tipado; `app` con la composición y el tema visual (`theme.ts`).
    llega una hora se sigue viendo el último paso ya cargado.
 7. «Qué muestra y qué no» pide la línea temporal de cada semana importada cada 15 minutos (con
    mayo, 4 peticiones) para la rejilla de huecos, y la guarda mientras la página siga abierta:
-   cada petición cuenta para el límite de la API. Desde el 9-10-2026 la línea temporal se lee
+   cada petición cuenta para el límite de la API. Desde el 8-10-2026 la línea temporal se lee
    del resumen por paso de 5 minutos que mantienen la ingesta y la purga (`timeline_summaries`,
    ADR 0015): una semana son milisegundos, también la primera vez, sin caché en memoria ni
    precalentamiento.
@@ -119,7 +119,7 @@ Puntos de entrada, por línea de comandos (no hay endpoint HTTP de importación)
   (`Infrastructure/ComputationGate.cs`, 5 s); pasado, la petición responde 503 en `problem+json`
   con `Retry-After` en vez de seguir en cola hasta que nginx corte a los 30 s. Se guarda en la
   caché en memoria con la versión de la fuente en la clave (la misma del ETag). Hasta el
-  9-10-2026 la línea temporal pasaba por lo mismo (dos a la vez, 10 s, caché por rango); desde el
+  8-10-2026 la línea temporal pasaba por lo mismo (dos a la vez, 10 s, caché por rango); desde el
   resumen por paso (ADR 0015) no hace falta. Las consultas de estado, fotogramas y línea temporal
   tienen un tope de 10 s (`StationQueries.QueryTimeoutSeconds`).
 - Registro de peticiones (`Infrastructure/RequestLogging.cs`): solo las que merecen mirarse,
@@ -135,13 +135,13 @@ Puntos de entrada, por línea de comandos (no hay endpoint HTTP de importación)
   `random_page_cost = 1.1` tampoco (plan por el índice único, 2,5 s). Para bajar de ahí hacía
   falta la tabla de resumen, no otro índice.
 - Resumen de la línea temporal por paso de 5 minutos (`timeline_summaries`, ADR 0015, desde el
-  9-10-2026): el mismo SQL de antes corre una vez por ingesta (los pasos que tocan las
+  8-10-2026): el mismo SQL de antes corre una vez por ingesta (los pasos que tocan las
   observaciones nuevas, más la tolerancia) o por purga, en su transacción, y la línea temporal
   lee filas. Medido en local con 42 días (6 semanas, 6 388 595 observaciones): las semanas de la
   rejilla pasan de 1 435–1 650 ms a 5–41 ms; una semana a 15 min no cachead, 170 ms la primera
   petición tras arrancar y menos de 30 ms después; un día a 5 min, 24 ms. La tabla, 12 110 filas
   y 1,7 MB para esos 42 días (288 por día); `migrate` la calculó entera en 12,7 s, con medio
-  segundo por día importado. En producción (despliegue de `322520c`, 9-10-2026, log del
+  segundo por día importado. En producción (despliegue de `322520c`, 8-10-2026, log del
   precalentamiento): las cuatro semanas de mayo en 84, 9, 11 y 10 ms, frente a 2 955, 2 911,
   2 805 y 2 815 ms con el cálculo al pedirla (unas 300 veces menos; la primera lleva el arranque
   en frío). Desde fuera, una semana a 15 min sin caché responde en 0,30–0,34 s de ida y vuelta
@@ -225,7 +225,7 @@ de Playwright añade el retraso de sus comprobaciones: la lista parecía tardar 
   la rejilla sale en 42 ms. Si alguien abre la ficha en esos primeros segundos, aún la calcula
   su petición. En producción (despliegue de `e40ef77`, que ya no precalienta): a la primera,
   las 4 semanas en 173 ms pedidas desde fuera y la rejilla en el navegador en 374 ms en
-  escritorio y 531 ms en móvil. Desde el 9-10-2026, con el resumen por paso (ADR 0015), no hay
+  escritorio y 531 ms en móvil. Desde el 8-10-2026, con el resumen por paso (ADR 0015), no hay
   nada que precalentar: `TimelineWarmUp`, la caché y el tope de cálculos de la línea temporal
   se quitaron.
 - Fluidez del mapa con la red real, arrastrando y acercando hasta ver los edificios en 3D (6 a
@@ -244,7 +244,7 @@ de Playwright añade el retraso de sus comprobaciones: la lista parecía tardar 
 - Ingesta de un día real: ~19 s en total, descargas incluidas. Una semana (17–23 de agosto de
   2026, 925 784 observaciones nuevas): 72 s.
 - Línea temporal con esa semana (1 080 173 observaciones), calculada al pedirla (ADR 0009, hasta
-  el 9-10-2026): un día a 5 min, 0,48 s la primera vez; la semana a 15 min, 1,7 s; repetidas,
+  el 8-10-2026): un día a 5 min, 0,48 s la primera vez; la semana a 15 min, 1,7 s; repetidas,
   5–9 ms desde la caché. Desde el resumen por paso (ADR 0015), milisegundos sin caché.
 - Fotogramas de una hora real: 47–110 ms; 2 MB sin comprimir y 110 KB con Brotli (ADR 0010).
 - Con dos semanas (2,16 millones de observaciones, 406 MB la tabla con índices) los tiempos de

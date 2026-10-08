@@ -78,7 +78,7 @@ public static class TimelineGrid
 
 /// <summary>
 /// Línea temporal de una fuente, leída del resumen por paso de 5 minutos que mantienen la ingesta
-/// y la purga (<see cref="TimelineSummaries"/>, ADR 0015). Hasta el 9-10-2026 se calculaba al
+/// y la purga (<see cref="TimelineSummaries"/>, ADR 0015). Hasta el 8-10-2026 se calculaba al
 /// pedirla sobre las observaciones (ADR 0009): una semana tardaba de 2,8 a 3,0 s en producción.
 /// Las estaciones conocidas en cada paso se cuentan aquí con las versiones de hoy, como antes.
 /// </summary>
@@ -100,7 +100,7 @@ public static class TimelineQuery
 
     /// <summary>
     /// Un punto por paso entre <paramref name="from"/> y <paramref name="to"/>, leídos del resumen.
-    /// Sin caché ni tope de cálculos: hasta el 9-10-2026 cada rango costaba segundos y se guardaba
+    /// Sin caché ni tope de cálculos: hasta el 8-10-2026 cada rango costaba segundos y se guardaba
     /// en memoria tras pasar por un <c>ComputationGate</c>; ahora son milisegundos.
     /// </summary>
     public static async Task<IReadOnlyList<TimelinePoint>> GetAsync(

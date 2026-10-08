@@ -96,7 +96,7 @@ Cada paso en Forge o en Cloudflare se hace mirando la pantalla real (los paneles
 
 5. **Script de despliegue** del sitio: el `git pull` de Forge y después `bash infra/deploy.sh`
    (compila la web, levanta la base de datos y la API, aplica las migraciones y falla si la API
-   no responde en `/health/ready`). Desde el 9-10-2026 la línea temporal se lee de un resumen
+   no responde en `/health/ready`). Desde el 8-10-2026 la línea temporal se lee de un resumen
    por paso (`timeline_summaries`, ADR 0015) que mantienen la ingesta y la purga; la primera vez,
    `migrate` lo calcula entero (un segundo por día importado, aproximadamente) antes de que
    arranque la API, y la rejilla de huecos de «Qué muestra y qué no» sale en milisegundos.
