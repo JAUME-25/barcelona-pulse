@@ -112,7 +112,9 @@ test('altas y bajas: la ficha de un alta y de una baja, y la sección de los lí
       page.getByRole('button', { name: /^C\/ Espronceda, 298\s*Desde el 12 de mayo, 12:25/ }),
     ).toBeVisible();
     await expect(
-      page.getByRole('button', { name: /^C\/ Villena, 1\s*Hasta el 26 de agosto; el 27 de agosto/ }),
+      page.getByRole('button', {
+        name: /^C\/ Villena, 1\s*Hasta el 26 de agosto; el 27 de agosto/,
+      }),
     ).toBeVisible();
     // Las que ya no están, en «Sin dato en este momento», con ese motivo y no «lleva días».
     await expect(
@@ -135,7 +137,11 @@ test('altas y bajas: la ficha en catalán y en inglés', async ({ page }, testIn
   // La fecha y la hora, como las escriba Intl en cada idioma («del 2026, a les», «12 May 2026»).
   for (const [lang, label, text] of [
     ['ca', 'Alta', /12 de maig del? 2026.*12:25 · l’11 de maig no era a la llista de la font/],
-    ['en', 'Added', /(12 May 2026|May 12, 2026).*12:25.*· not in the source’s list on (11 May|May 11)/],
+    [
+      'en',
+      'Added',
+      /(12 May 2026|May 12, 2026).*12:25.*· not in the source’s list on (11 May|May 11)/,
+    ],
   ] as const) {
     await page.goto(`${NEW}&idioma=${lang}`);
     await waitForMap(page);
