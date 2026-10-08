@@ -56,9 +56,15 @@ Pendiente de comprobar con un token válido: formato real, versión GBFS, si tra
   enlace de CKAN redirige (302) a `/resources/bcn/BicingBCN/<archivo>.7z`, que responde 200 sin
   autenticación.
 - El 6-10-2026 esa misma ruta contestó 403 a la descarga desde el VPS de producción (Hetzner) y
-  200 desde una conexión doméstica. Inferencia: el portal bloquea direcciones de centros de
-  datos. No se sortea: en producción se importan los archivos
-  descargados aparte y subidos al servidor (`docs/despliegue.md`).
+  200 desde una conexión doméstica. Confirmado el 7 y el 8-10-2026 con una sola petición por
+  día a la portada del portal, sin token: 403 en 0,2 s, la página de error de nginx de 162 bytes
+  (sin firma de ningún cortafuegos externo), mientras desde casa, con el mismo User-Agent, la
+  portada, la ficha del dataset y el catálogo dan 200. Es un bloqueo del rango de Hetzner en su
+  propio nginx, no del token ni por exceso de peticiones. No se sortea: en producción se
+  importan los archivos descargados aparte y subidos al servidor (`docs/despliegue.md`), y para el
+  tiempo real se pide al portal que admita la IP del VPS; si no, quedaría descargar desde casa
+  con el token y entregarlo a la API por un endpoint de ingesta con secreto, que hoy no existe a
+  propósito: sería un cambio de diseño por decidir.
 - Cobertura: 87 archivos de estado y 88 de información, de 2019-03 a 2026-08. Faltan 2025-11
   (documentado), 2026-07 y 2026-09; 2026-01 existe en la ruta estática pero no en CKAN. El de
   2022-03 «INFORMACIO» en CKAN apunta en realidad al de ESTACIONS.
