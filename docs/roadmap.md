@@ -592,8 +592,14 @@ honesta de lo hecho.
     content="notranslate">` (lo decide Jaume en su Chrome con `chrome://translate-internals`).
     Pruebas: 223 de la web (la ficha lleva `lang` y `translate`), humo 24 de 24.
 
-30. **Hecho** el 9-10-2026 (en local, sin push). Altas y bajas de estaciones, el siguiente punto
-    de la propuesta del 7-10. La base ya guardaba la primera y la última publicación de cada
+30. **Hecho** y en producción desde el 9-10-2026 (`66d9e09`, con `58ba45f` y `5cbf8b0`; CI run
+    37741376373 verde; comprobado desde fuera: Healthy, `firstSeenAt`/`lastSeenAt` en el estado y
+    los fotogramas con el ETag de la compilación nueva, bundle `main-o7OYUAaY.js`, la ficha de
+    Espronceda 298 el 13-5 con «Alta», y «Altas y bajas» con 2 altas y 5 bajas: Tarongers | Av.
+    Miramar hasta el 15-5, Crta. de Ribes 77 hasta el 27-5 y las tres de C/ Bruc hasta el 28-5,
+    que en local, con agosto importado, no son bajas porque la fuente las vuelve a listar: es lo
+    que avisa la nota de la sección). Altas y bajas de estaciones, el siguiente punto de la
+    propuesta del 7-10. La base ya guardaba la primera y la última publicación de cada
     estación (`stations.first_seen_at`, `last_seen_at`) y nadie las enseñaba: van en
     `GET /api/stations`, en el detalle y en los fotogramas (`firstSeenAt`, `lastSeenAt`), y el
     ETag de esas tres respuestas pasa a la versión de toda la fuente (ADR 0014, corrección del
