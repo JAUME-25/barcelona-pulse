@@ -673,12 +673,15 @@ honesta de lo hecho.
 - Lo que queda de la propuesta del 7-10-2026 (el balance entre dos horas, la altitud, la página
   del contrato, las altas y bajas, la tabla de resumen con su limpieza y el adaptador del feed
   se hicieron el 8-10-2026, B5.26 a B5.33):
-  - Tiempo real, el transporte: A, el servidor pide el feed cada 5 min con el token (cuando el
-    portal admita la IP del VPS); B, el PC de Jaume lo pide y lo entrega a la API por un
-    endpoint de ingesta con secreto (funciona hoy; cambio de diseño, con ADR). Por decidir.
-    Después: las ingestas en directo en «Lo que entró cada día» (288 al día: agrupar), la
-    rejilla de huecos sin las horas que aún no han pasado, y «en directo» solo con frescura
-    comprobada. El feed se pide una vez cada 5 min y se para ante 403 o 429.
+  - Tiempo real, el transporte. Decidido el 8-10-2026: la opción A, el servidor pide el feed
+    cada 5 min con el token, y el proyecto queda en pausa hasta que el portal admita la IP del
+    VPS (petición enviada por «Contact us»). La opción B (el PC de Jaume pide el feed y lo
+    entrega a la API por un endpoint con secreto) se descarta de momento: un endpoint de
+    escritura, un script en casa y una frescura que depende de un PC encendido, todo para
+    tirarlo el día que el portal diga que sí. Cuando llegue A: un servicio en la API que pida el
+    feed una vez cada 5 min con el token del `.env` y se pare ante 403 o 429; las ingestas en
+    directo agrupadas en «Lo que entró cada día» (288 al día); la rejilla de huecos sin las
+    horas que aún no han pasado; y «en directo» solo con frescura comprobada.
 - Pendiente de antes: estaciones que más tiempo pasan vacías o llenas; tooltip en el marcador;
   cada casilla de la rejilla de huecos a su hora; agrupación de marcadores a escala de ciudad
   con los recuentos en texto; `/api/sources` agregado en SQL (hoy, varias consultas por fuente).
