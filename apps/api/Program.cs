@@ -22,13 +22,9 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<StationIngestor>();
 builder.Services.AddScoped<ObservationPurger>();
 builder.Services.AddScoped<StudyAreaLoader>();
-// Líneas temporales ya calculadas, hasta la siguiente ingesta de cada fuente.
+// El patrón de cada estación ya calculado, hasta la siguiente ingesta o purga de su fuente.
 builder.Services.AddMemoryCache(o => o.SizeLimit = 200);
-// Y la rejilla de huecos de «Qué muestra y qué no», calculada al arrancar y vigilada cada 5 min.
-// Las pruebas la apagan (Timeline:WarmUp) y la llaman cuando la necesitan.
-builder.Services.AddSingleton<TimelineWarmUp>();
-builder.Services.AddHostedService(sp => sp.GetRequiredService<TimelineWarmUp>());
-// Y las ingestas que se quedaron «en marcha» por un proceso que murió, cerradas como fallidas.
+// Las ingestas que se quedaron «en marcha» por un proceso que murió, cerradas como fallidas.
 builder.Services.AddHostedService<IngestionJanitor>();
 builder.Services.AddHttpClient<BicingArchiveDownloader>(http =>
 {

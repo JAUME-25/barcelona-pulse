@@ -41,29 +41,14 @@ public sealed class TimelineGridTests
     }
 
     [Fact]
-    public void The_gaps_grid_asks_for_whole_weeks_from_monday_also_across_a_time_change()
-    {
-        // Como apps/web/src/features/limits/quality.ts: de las 00:00 del lunes al último paso antes
-        // de las 00:00 del lunes siguiente, en hora de Barcelona. El 29-3-2026 cambia la hora.
-        var weeks = TimelineWarmUp.Weeks([new DateOnly(2026, 3, 30), new DateOnly(2026, 3, 25), new DateOnly(2026, 3, 26)])
-            .ToList();
-
-        Assert.Equal(
-            [
-                (new DateOnly(2026, 3, 23), DateTimeOffset.Parse("2026-03-22T23:00:00Z"), DateTimeOffset.Parse("2026-03-29T21:45:00Z")),
-                (new DateOnly(2026, 3, 30), DateTimeOffset.Parse("2026-03-29T22:00:00Z"), DateTimeOffset.Parse("2026-04-05T21:45:00Z")),
-            ],
-            weeks);
-    }
-
-    [Fact]
     public void The_week_of_the_october_time_change_fits_in_one_request()
     {
-        // El 26-10-2025 tiene 25 h: la semana dura 168 h 45 min y la API la admite entera.
-        var (_, from, to) = Assert.Single(TimelineWarmUp.Weeks([new DateOnly(2025, 10, 22)]));
+        // Como la pide apps/web/src/features/limits/quality.ts: del lunes 20-10-2025 a las 00:00 al
+        // domingo 26 a las 23:45, hora de Barcelona. El domingo tiene 25 h: son 168 h 45 min.
+        var from = DateTimeOffset.Parse("2025-10-19T22:00:00Z");
+        var to = DateTimeOffset.Parse("2025-10-26T22:45:00Z");
 
-        Assert.Equal(DateTimeOffset.Parse("2025-10-19T22:00:00Z"), from);
-        Assert.Equal(DateTimeOffset.Parse("2025-10-26T22:45:00Z"), to);
         Assert.True(to - from <= TimelineGrid.MaxRange);
+        Assert.Equal(6 * 96 + 100, TimelineGrid.Align(from, to, TimeSpan.FromMinutes(15)).Points);
     }
 }

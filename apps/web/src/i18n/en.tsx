@@ -697,7 +697,7 @@ export const en: Messages = {
       'Observed and synthetic data never mix: every response says which source it comes from and what kind it is.',
       'Limit of 120 requests per minute and IP; above it, 429 with `Retry-After`.',
       'State, detail, pattern, timeline and frames carry an `ETag`: with `If-None-Match`, 304 while the data of that range does not change.',
-      'Expensive computations (timeline, pattern) wait a few seconds for a slot; if there is none, 503 with `Retry-After`.',
+      'A station’s pattern waits a few seconds for a slot; if there is none, 503 with `Retry-After`.',
       'Errors come as `application/problem+json`.',
     ],
     index: 'Routes',

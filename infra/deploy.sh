@@ -34,8 +34,5 @@ for attempt in $(seq 1 30); do
   sleep 2
 done
 
-# La rejilla de huecos de «Qué muestra y qué no» la deja calculada la propia API al arrancar
-# (TimelineWarmUp, unos 15 s con mayo): no hace falta pedirla desde aquí.
-
 # Imágenes y capas de compilación que ya no se usan.
 docker image prune -f > /dev/null

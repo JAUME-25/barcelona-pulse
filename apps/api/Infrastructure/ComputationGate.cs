@@ -4,11 +4,12 @@ using Microsoft.AspNetCore.Http.HttpResults;
 namespace BarcelonaPulse.Api.Infrastructure;
 
 /// <summary>
-/// Cuántos cálculos caros de un tipo (línea temporal, patrón de una estación) corren a la vez, y
-/// cuánto espera una petición por un hueco antes de rendirse. Sin tope de espera, una ráfaga de
-/// rangos distintos (cada uno, otra clave de caché) dejaba a las demás peticiones colgadas hasta
-/// que nginx cortaba a los 30 s. Pasado el tope, la petición responde 503 con <c>Retry-After</c>;
-/// lo que ya está en la caché nunca pasa por aquí.
+/// Cuántos cálculos caros de un tipo (hoy, el patrón de una estación; hasta el 9-10-2026 también
+/// la línea temporal, que ahora lee de un resumen) corren a la vez, y cuánto espera una petición
+/// por un hueco antes de rendirse. Sin tope de espera, una ráfaga de peticiones distintas (cada
+/// una, otra clave de caché) dejaba a las demás colgadas hasta que nginx cortaba a los 30 s.
+/// Pasado el tope, la petición responde 503 con <c>Retry-After</c>; lo que ya está en la caché
+/// nunca pasa por aquí.
 /// </summary>
 public sealed class ComputationGate(int concurrency, TimeSpan maxWait)
 {
@@ -19,8 +20,8 @@ public sealed class ComputationGate(int concurrency, TimeSpan maxWait)
 
     /// <summary>
     /// Un hueco, que se devuelve al liberar el resultado. Si no llega en <paramref name="maxWait"/>
-    /// (o en <see cref="MaxWait"/>), <see cref="ComputationBusyException"/>. El precalentamiento
-    /// espera sin tope (<see cref="Timeout.InfiniteTimeSpan"/>): a él no le corre prisa.
+    /// (o en <see cref="MaxWait"/>), <see cref="ComputationBusyException"/>. Con
+    /// <see cref="Timeout.InfiniteTimeSpan"/> espera sin tope, para quien no tenga prisa.
     /// </summary>
     public async Task<IDisposable> EnterAsync(CancellationToken ct, TimeSpan? maxWait = null)
     {

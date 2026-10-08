@@ -2,7 +2,6 @@ using BarcelonaPulse.Api.Features.History;
 using BarcelonaPulse.Api.Features.Ingestion;
 using BarcelonaPulse.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using static BarcelonaPulse.Api.Tests.TestData;
 
@@ -56,9 +55,8 @@ public sealed class TimelineSummaryTests(PostgisDatabase database) : IClassFixtu
         var from = window.StartUtc.AddHours(10);
         await using var db = database.CreateContext();
         var dataSource = await db.DataSources.AsNoTracking().SingleAsync(s => s.Id == source, TestContext.Current.CancellationToken);
-        using var cache = new MemoryCache(new MemoryCacheOptions());
         var points = await TimelineQuery.GetAsync(
-            db, cache, dataSource, from, from.AddMinutes(35), TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
+            db, dataSource, from, from.AddMinutes(35), TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
 
         Assert.Equal([1, 2, 2, 2, 2, 2, 2, 0], points.Select(p => p.StationsWithData));
         Assert.Equal([5, 10, 10, 10, 10, 10, 10, null], points.Select(p => p.BikesAvailable));

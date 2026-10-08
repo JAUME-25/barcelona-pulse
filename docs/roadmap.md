@@ -637,17 +637,24 @@ honesta de lo hecho.
     tabla, 288 filas por día (1,7 MB con 42 días). Pruebas: 216 de backend
     (`TimelineSummaryTests`: una segunda importación del mismo día actualiza sus pasos, y
     recalcular entero da las mismas filas; `Every_step_matches_the_map_at_that_instant` y la
-    purga siguen vigilando la regla). La web no cambia. Queda para un bloque aparte quitar
-    `TimelineWarmUp`, el tope de dos cálculos y el 503 de la línea temporal, que ya no protegen
-    nada; en producción, medir la semana tras el despliegue.
+    purga siguen vigilando la regla). La web no cambia. Lo que protegía a la línea temporal lenta
+    se quita en B5.32.
+
+32. **Hecho** el 9-10-2026 (en local, sin push). Limpieza tras el resumen (ADR 0015): fuera
+    `TimelineWarmUp` (el precalentamiento al arrancar y cada 5 min, con su ajuste
+    `Timeline:WarmUp`), la caché en memoria de la línea temporal (su clave por rango y
+    prioridad), el tope de dos cálculos a la vez y el 503 con `Retry-After` de
+    `GET /api/sources/{id}/timeline` (fuera también del OpenAPI y de `schema.d.ts`). El patrón de
+    una estación conserva su caché y su `ComputationGate`. El comentario de `infra/deploy.sh` y
+    la nota del contrato de la API sobre los cálculos caros, al día; `architecture.md` y
+    `CLAUDE.md` lo cuentan en pasado. Pruebas: la del precalentamiento y las dos de sus semanas
+    se van (la del cambio de hora de octubre queda sobre `TimelineGrid`); el resto, igual.
 
 ## Siguiente
 
-- Lo que queda de la propuesta del 7-10-2026, en este orden (el balance entre dos horas, la
-  altitud, la página del contrato, las altas y bajas y la tabla de resumen se hicieron el 8 y el
-  9-10-2026, B5.26 a B5.31):
-  - Quitar `TimelineWarmUp`, el `ComputationGate` y el 503 de la línea temporal (ADR 0015): ya
-    no tienen qué proteger.
+- Lo que queda de la propuesta del 7-10-2026 (el balance entre dos horas, la altitud, la página
+  del contrato, las altas y bajas y la tabla de resumen con su limpieza se hicieron el 8 y el
+  9-10-2026, B5.26 a B5.32):
   - Tiempo real cuando el token de Open Data BCN responda 200 desde el PC de Jaume (el
     histórico ya se descarga desde casa; sin token, el JSON del tiempo real contesta 302 a
     `/tokens`). El VPS dio 403 a una sola petición: repetir otro día para saber si es permanente.

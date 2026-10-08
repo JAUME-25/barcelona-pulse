@@ -748,7 +748,7 @@ export const es = {
       'Lo observado y lo sintético no se mezclan: cada respuesta dice de qué fuente sale y de qué tipo es.',
       'Límite de 120 peticiones por minuto e IP; por encima, 429 con `Retry-After`.',
       'Estado, detalle, patrón, línea temporal y fotogramas llevan `ETag`: con `If-None-Match`, 304 mientras no cambien los datos de ese rango.',
-      'Los cálculos caros (línea temporal, patrón) esperan un hueco unos segundos; si no lo hay, 503 con `Retry-After`.',
+      'El patrón de una estación espera un hueco unos segundos; si no lo hay, 503 con `Retry-After`.',
       'Los errores van en `application/problem+json`.',
     ],
     index: 'Rutas',

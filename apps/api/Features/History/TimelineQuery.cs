@@ -2,7 +2,6 @@ using BarcelonaPulse.Api.Features.Sources;
 using BarcelonaPulse.Api.Features.Stations;
 using BarcelonaPulse.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -100,55 +99,11 @@ public static class TimelineQuery
         """;
 
     /// <summary>
-    /// Clave de la caché: el rango, el paso y la versión de los datos de ese rango (ADR 0014). Se
-    /// invalida sola, y solo para las semanas que toca una ingesta: antes cualquier ingesta cambiaba
-    /// la clave de todas y el precalentamiento las recalculaba todas. Una purga las cambia todas.
+    /// Un punto por paso entre <paramref name="from"/> y <paramref name="to"/>, leídos del resumen.
+    /// Sin caché ni tope de cálculos: hasta el 9-10-2026 cada rango costaba segundos y se guardaba
+    /// en memoria tras pasar por un <c>ComputationGate</c>; ahora son milisegundos.
     /// </summary>
-    public static async Task<string> KeyAsync(
-        PulseDbContext db, DataSource source, DateTimeOffset from, DateTimeOffset to, TimeSpan step, CancellationToken ct)
-    {
-        var version = await DataVersion.ForRangeAsync(db, source, from, to, ct);
-        return $"timeline:{from:O}:{to:O}:{step.TotalMinutes}:{version}";
-    }
-
-    /// <summary>
-    /// Cálculos sin caché a la vez, y cuánto espera una petición por un hueco. Uno tarda segundos
-    /// con una semana y la base de producción tiene 1,5 CPU: sin tope, una ráfaga de rangos
-    /// distintos (cada uno, otra clave) la dejaba sin sitio para nada más. Lo que ya está en la
-    /// caché no espera. Pasados 10 s sin hueco (nginx corta a los 30), la petición responde 503
-    /// con Retry-After en vez de seguir en cola.
-    /// </summary>
-    internal static readonly ComputationGate Gate = new(2, TimeSpan.FromSeconds(10));
-
-    /// <exception cref="ComputationBusyException">Sin hueco para calcular en <paramref name="maxWait"/>.</exception>
     public static async Task<IReadOnlyList<TimelinePoint>> GetAsync(
-        PulseDbContext db, IMemoryCache cache, DataSource source, DateTimeOffset from, DateTimeOffset to,
-        TimeSpan step, CancellationToken ct, CacheItemPriority priority = CacheItemPriority.Normal,
-        TimeSpan? maxWait = null)
-    {
-        var key = await KeyAsync(db, source, from, to, step, ct);
-        if (cache.TryGetValue(key, out IReadOnlyList<TimelinePoint>? cached) && cached is not null)
-        {
-            return cached;
-        }
-
-        using var lease = await Gate.EnterAsync(ct, maxWait);
-        // Mientras esperaba, otra petición puede haber calculado lo mismo.
-        if (cache.TryGetValue(key, out cached) && cached is not null)
-        {
-            return cached;
-        }
-
-        var points = await ComputeAsync(db, source, from, to, step, ct);
-        // Sin caducidad por tiempo: la clave cambia con cada ingesta o purga y el límite de la
-        // caché (200 entradas, Program.cs) acota la memoria. Así sigue ahí lo que deja calculado
-        // TimelineWarmUp, aunque nadie lo pida en horas; con prioridad alta, lo último que se
-        // desaloja si la caché se llena.
-        cache.Set(key, points, new MemoryCacheEntryOptions { Size = 1, Priority = priority });
-        return points;
-    }
-
-    private static async Task<IReadOnlyList<TimelinePoint>> ComputeAsync(
         PulseDbContext db, DataSource source, DateTimeOffset from, DateTimeOffset to, TimeSpan step, CancellationToken ct)
     {
         var known = await KnownCounter.ForSourceAsync(db, source.Id, ct);

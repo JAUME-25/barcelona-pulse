@@ -84,9 +84,9 @@ Jaume ejecuta los comandos en Forge y pega la salida.
   que `purge`, el resumen descuadra: `summarize` lo arregla. El patrón de la estación (`Features/Stations/StationPattern.cs`) las repite también,
   con el umbral de «pocas» (`FEW_BIKES_MAX`, 3), y necesita el JIT apagado (0,9 s en vez de 28 ms).
   Se guarda en la caché con la versión de la fuente en la clave y pasa por un `ComputationGate`
-  (2 a la vez, 5 s de espera, luego 503 con `Retry-After`), como la línea temporal (10 s). El paso
-  es estático: las pruebas que lo ocupan van en la colección `station-pattern` con las demás que
-  piden patrones.
+  (2 a la vez, 5 s de espera, luego 503 con `Retry-After`); la línea temporal ya no pasa por
+  ninguno (lee del resumen). El paso es estático: las pruebas que lo ocupan van en la colección
+  `station-pattern` con las demás que piden patrones.
 - Las respuestas llevan ETag con la versión de los datos (`Infrastructure/DataVersion.cs`, ADR
   0014): la línea temporal (y su caché) con la de su rango; el estado, el detalle, los fotogramas
   y el patrón con la de toda la fuente, porque llevan atributos de estación (`firstSeenAt`,
@@ -107,9 +107,8 @@ Jaume ejecuta los comandos en Forge y pega la salida.
 - «Qué muestra y qué no» pide una línea temporal por semana importada y la guarda en la página
   (`features/limits/quality.ts`): sin eso, abrirla y cerrarla agotaba el límite. Cada recarga
   vuelve a pedirlas. Desde el 9-10-2026 la línea temporal se lee de `timeline_summaries` (ADR
-  0015, milisegundos); `TimelineWarmUp` (en la API) sigue dejando esas semanas en la caché al
-  arrancar y cada 5 min, apagado en las pruebas (`Timeline:WarmUp=false` en `ApiFactory`), hasta
-  que se quite en un bloque aparte.
+  0015, milisegundos), sin caché en memoria ni precalentamiento (`TimelineWarmUp` se quitó ese
+  mismo día).
 - Una estación sin ninguna observación hasta el momento mostrado no «nunca ha informado»: al
   principio del periodo importado puede no haber empezado aún. Se dice «Ningún dato hasta este
   momento».

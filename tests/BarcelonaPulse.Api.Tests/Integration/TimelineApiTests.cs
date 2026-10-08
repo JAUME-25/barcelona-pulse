@@ -5,8 +5,6 @@ using BarcelonaPulse.Api.Features.History;
 using BarcelonaPulse.Api.Features.Ingestion;
 using BarcelonaPulse.Api.Features.Stations;
 using BarcelonaPulse.Api.Infrastructure;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace BarcelonaPulse.Api.Tests.Integration;
@@ -178,26 +176,5 @@ public sealed class TimelineApiTests(DemoApiFixture fixture) : IClassFixture<Dem
     {
         var response = await Client().GetAsync("/api/sources/no-existe/timeline", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task The_warm_up_leaves_the_gaps_grid_as_the_web_asks_for_it()
-    {
-        var client = Client();
-        var services = fixture.Factory!.Services;
-        var warmUp = services.GetRequiredService<TimelineWarmUp>();
-        var cache = (MemoryCache)services.GetRequiredService<IMemoryCache>();
-        var ct = TestContext.Current.CancellationToken;
-
-        await warmUp.RunOnceAsync(ct);
-        Assert.Equal(0, await warmUp.RunOnceAsync(ct)); // lo que ya está en la caché no se repite
-
-        // La rejilla de la web para el demo (martes 10-3-2026): del lunes 9 a las 00:00 al domingo 15
-        // a las 23:45, hora de Barcelona, cada 15 minutos. Sale de la caché sin calcular nada nuevo.
-        var entries = cache.Count;
-        var response = await client.GetAsync(
-            "/api/sources/demo/timeline?from=2026-03-08T23:00:00.000Z&to=2026-03-15T22:45:00.000Z&step=15", ct);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal(entries, cache.Count);
     }
 }

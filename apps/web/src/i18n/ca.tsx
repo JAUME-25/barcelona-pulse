@@ -723,7 +723,7 @@ export const ca: Messages = {
       'L’observat i el sintètic no es barregen: cada resposta diu de quina font surt i de quin tipus és.',
       'Límit de 120 peticions per minut i IP; per sobre, 429 amb `Retry-After`.',
       'Estat, detall, patró, línia temporal i fotogrames porten `ETag`: amb `If-None-Match`, 304 mentre no canviïn les dades d’aquell rang.',
-      'Els càlculs cars (línia temporal, patró) esperen un forat uns segons; si no n’hi ha, 503 amb `Retry-After`.',
+      'El patró d’una estació espera un forat uns segons; si no n’hi ha, 503 amb `Retry-After`.',
       'Els errors van en `application/problem+json`.',
     ],
     index: 'Rutes',

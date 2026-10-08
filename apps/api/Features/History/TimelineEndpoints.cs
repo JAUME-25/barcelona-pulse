@@ -3,7 +3,6 @@ using BarcelonaPulse.Api.Features.Stations;
 using BarcelonaPulse.Api.Infrastructure;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace BarcelonaPulse.Api.Features.History;
 
@@ -23,8 +22,7 @@ public static class TimelineEndpoints
                 "Máximo 7 días por petición. Lleva ETag: con If-None-Match responde 304 mientras no " +
                 "entren ni salgan datos del rango.")
             .Produces(StatusCodes.Status304NotModified)
-            .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+            .ProducesProblem(StatusCodes.Status404NotFound);
         return api;
     }
 
@@ -33,7 +31,7 @@ public static class TimelineEndpoints
         [Description("Inicio ISO 8601 con zona. Sin from ni to: las últimas 24 h con datos de la fuente.")] string? from,
         [Description("Fin ISO 8601 con zona (incluido).")] string? to,
         [Description("Paso en minutos: 5, 10, 15, 30 o 60. Por defecto, 5.")] int? step,
-        HttpContext http, PulseDbContext db, IMemoryCache cache, TimeProvider clock, CancellationToken ct)
+        HttpContext http, PulseDbContext db, TimeProvider clock, CancellationToken ct)
     {
         var now = clock.GetUtcNow();
         var errors = new Dictionary<string, string[]>();
@@ -99,18 +97,7 @@ public static class TimelineEndpoints
             return HttpValidators.NotModified();
         }
 
-        IReadOnlyList<TimelinePoint> points;
-        try
-        {
-            points = await TimelineQuery.GetAsync(db, cache, source, alignedFrom, alignedTo, stepSpan, ct);
-        }
-        catch (ComputationBusyException busy)
-        {
-            // Demasiados cálculos a la vez y ninguno ha acabado a tiempo: mejor un 503 con cuándo
-            // volver que seguir en cola hasta que nginx corte la petición.
-            return busy.ToProblem(http);
-        }
-
+        var points = await TimelineQuery.GetAsync(db, source, alignedFrom, alignedTo, stepSpan, ct);
         return TypedResults.Ok(new TimelineResponse(
             source.ToRef(), alignedFrom, alignedTo, stepMinutes, (int)source.StalenessTolerance.TotalMinutes, points));
     }

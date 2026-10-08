@@ -37,9 +37,8 @@ y un 503 si no había hueco.
   `summarize [FUENTE]` la recalcula entera, para cuando cambie la regla: un día por consulta,
   porque sobre todo el histórico de golpe ordenaría millones de filas.
 - Lo que no cambia: la prueba que cruza cada paso con `GET /api/stations?at=…` sigue vigilando
-  la regla; el ETag y la caché en memoria de la línea temporal siguen con la versión por rango
-  (ADR 0014), porque las filas de un rango solo cambian con las ingestas que lo tocan o con una
-  purga.
+  la regla, y el ETag de la línea temporal sigue con la versión por rango (ADR 0014), porque las
+  filas de un rango solo cambian con las ingestas que lo tocan o con una purga.
 
 ## Consecuencias
 
@@ -53,5 +52,6 @@ y un 503 si no había hueco.
 - Hay una tabla derivada que mantener. Si se borran observaciones por otra vía que `purge`, o
   cambia la regla, `summarize` la deja bien. Si una fuente de tiempo real importa cada pocos
   minutos, cada ingesta recalcula solo los pasos que toca.
-- El precalentamiento, el tope de cálculos y el 503 de la línea temporal ya no tienen qué
-  proteger; se quitan en un bloque aparte.
+- El precalentamiento (`TimelineWarmUp`), la caché en memoria, el tope de cálculos y el 503 de
+  la línea temporal ya no tenían qué proteger: se quitaron el mismo 9-10-2026 (B5.32). El
+  patrón de una estación conserva su caché y su tope.
