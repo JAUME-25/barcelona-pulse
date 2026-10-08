@@ -94,6 +94,9 @@ sin cambiar lo que se ve ni dónde:
 - En el reproductor, el total «4434 bicis (1925 eléctricas)» se escribía «( 1925»: el hueco del
   flex partía el paréntesis.
 - Cada modo lleva una línea de ayuda (`title`): el nombre solo no dice qué hace «Balance».
+- «Vista 3D», activa desde que se abre el mapa, se pintaba en ámbar y parecía la acción
+  principal: pulsada va como los demás conmutadores (fondo claro, texto oscuro). El ámbar queda
+  para «Cerca de mí».
 
 En móvil, de la misma revisión:
 

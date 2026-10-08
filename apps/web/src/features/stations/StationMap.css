@@ -20,10 +20,12 @@
   cursor: pointer;
 }
 
+/* Pulsado como los demás conmutadores (modo, idioma): el ámbar queda para la acción principal
+   («Cerca de mí»), y este botón está activo desde que se abre el mapa. */
 .station-map__pitch[aria-pressed='true'] {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--accent-ink);
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--panel-solid);
 }
 
 .map-message {
