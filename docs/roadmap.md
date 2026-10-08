@@ -653,8 +653,9 @@ honesta de lo hecho.
     `CLAUDE.md` lo cuentan en pasado. Pruebas: la del precalentamiento y las dos de sus semanas
     se van (la del cambio de hora de octubre queda sobre `TimelineGrid`); el resto, igual.
 
-33. **Hecho** el 8-10-2026 (en local, sin push): el adaptador del feed de tiempo real, sin
-    transporte todavía. El token de Open Data BCN responde 200 desde el PC de Jaume y el formato
+33. **Hecho** y en producción desde el 8-10-2026 (`c8db8bc`, con `c0bfa76`; CI run 37835072619
+    verde; comprobado desde fuera: Healthy, ETag con la compilación nueva, la web sin cambios):
+    el adaptador del feed de tiempo real, sin transporte todavía. El token de Open Data BCN responde 200 desde el PC de Jaume y el formato
     está comprobado (`docs/data-sources.md`): dos JSON al estilo GBFS 1.1, estado e información,
     543 estaciones, misma clave que el histórico (estación y `last_reported`) y el mismo
     `cross_street`. `BicingLiveAdapter` (`Features/Ingestion/BicingLive`) los traduce al contrato
