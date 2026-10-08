@@ -46,7 +46,8 @@ y un 503 si no había hueco.
 - Leer una semana es leer 2 016 filas y contar versiones: milisegundos, también la primera vez
   después de arrancar. Medido en local el 9-10-2026 con 42 días: las semanas de la rejilla de
   huecos pasan de 1 435–1 650 ms a 5–41 ms; un día a 5 min, 24 ms. La tabla, 288 filas por día
-  (12 110 filas y 1,7 MB para esos 42 días). Las cifras de producción, en `architecture.md`.
+  (12 110 filas y 1,7 MB para esos 42 días). En producción, las cuatro semanas de mayo en 84,
+  9, 11 y 10 ms frente a 2 955, 2 911, 2 805 y 2 815 ms antes (`architecture.md`).
 - Cada ingesta de un día tarda algo más (el cálculo de ese día, medio segundo en local).
   `migrate` calculó los 42 días en 12,7 s.
 - Hay una tabla derivada que mantener. Si se borran observaciones por otra vía que `purge`, o

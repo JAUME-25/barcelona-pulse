@@ -142,8 +142,13 @@ Puntos de entrada, por línea de comandos (no hay endpoint HTTP de importación)
   rejilla pasan de 1 435–1 650 ms a 5–41 ms; una semana a 15 min no cachead, 170 ms la primera
   petición tras arrancar y menos de 30 ms después; un día a 5 min, 24 ms. La tabla, 12 110 filas
   y 1,7 MB para esos 42 días (288 por día); `migrate` la calculó entera en 12,7 s, con medio
-  segundo por día importado. La clave de la caché sigue llevando la versión de los datos del
-  rango (ADR 0014): importar un día solo invalida las semanas que lo tocan; una purga, todas.
+  segundo por día importado. En producción (despliegue de `322520c`, 9-10-2026, log del
+  precalentamiento): las cuatro semanas de mayo en 84, 9, 11 y 10 ms, frente a 2 955, 2 911,
+  2 805 y 2 815 ms con el cálculo al pedirla (unas 300 veces menos; la primera lleva el arranque
+  en frío). Desde fuera, una semana a 15 min sin caché responde en 0,30–0,34 s de ida y vuelta
+  desde Windows, igual que una ya cacheada: manda la red. La clave de la caché sigue llevando la versión
+  de los datos del rango (ADR 0014): importar un día solo invalida las semanas que lo tocan; una
+  purga, todas.
   El cálculo de un día en la ingesta va sin JIT, que con la estimación del `generate_series` se
   activaba siempre y añadía un 50 %.
 - Detrás de un proxy, la IP del cliente sale de `X-Forwarded-For` solo si la conexión llega de

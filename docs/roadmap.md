@@ -620,7 +620,12 @@ honesta de lo hecho.
     (las capturas y el humo seguidos agotan los 120 por minuto de la API local: el humo se
     repite cuando `/api/sources` vuelve a dar 200).
 
-31. **Hecho** el 9-10-2026 (en local, sin push). La tabla de resumen de la línea temporal, el
+31. **Hecho** y en producción desde el 9-10-2026 (`322520c`, CI run 37754056868 verde;
+    comprobado desde fuera: Healthy, ETag con la compilación nueva, el punto de las 10:00 del
+    13-5 igual que el mapa (535 con dato, 93 vacías, 50 llenas, 4 864 bicis); en el log del
+    precalentamiento, las cuatro semanas de mayo en 84, 9, 11 y 10 ms frente a 2 955, 2 911,
+    2 805 y 2 815 ms antes, y desde fuera una semana sin caché en 0,30–0,34 s de ida y vuelta,
+    lo mismo que una cacheada: manda la red). La tabla de resumen de la línea temporal, el
     siguiente punto de la propuesta: `timeline_summaries`, la red de cada fuente en cada paso de
     5 minutos (el más fino que sirve la API; 10, 15, 30 y 60 son subconjuntos exactos), mantenida
     por la ingesta y la purga en su transacción con el mismo SQL que antes corría en cada
