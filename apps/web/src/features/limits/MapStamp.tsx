@@ -14,24 +14,28 @@ export function MapStamp({
   from,
   experiment,
   hypothetical,
+  hidden = false,
 }: {
   kind: SourceKind;
   at: string | undefined;
   from?: string | undefined;
   experiment: boolean;
   hypothetical: boolean;
+  /** Mientras el aviso de procedencia sigue a la vista: el sello diría lo mismo dos veces. */
+  hidden?: boolean;
 }) {
   const m = t().stamp;
+  const className = hidden ? 'map-stamp map-stamp--hidden' : 'map-stamp';
   if (kind === 'synthetic') {
     return (
-      <p className="map-stamp map-stamp--demo">
+      <p className={`${className} map-stamp--demo`}>
         <span className="map-stamp__label">{m.demo}</span>
         <span className="map-stamp__value">{m.demoValue}</span>
       </p>
     );
   }
   return (
-    <p className="map-stamp">
+    <p className={className}>
       <span className="map-stamp__label">{experiment ? m.network : m.historical}</span>
       <span className="map-stamp__value">
         {at === undefined

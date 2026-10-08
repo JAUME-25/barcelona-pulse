@@ -210,13 +210,11 @@ export function ContractPage() {
       <header className="contract-head">
         <div className="brand">
           <BrandMark />
-          <div>
-            <p className="brand__name">
-              <a href="/">Barcelona Pulse</a>
-            </p>
-            <p className="brand__tagline">{m.title}</p>
-          </div>
+          <p className="brand__name">
+            <a href="/">Barcelona Pulse</a>
+          </p>
           <LanguageSwitch />
+          <p className="brand__tagline">{m.title}</p>
         </div>
       </header>
 

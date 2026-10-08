@@ -669,6 +669,30 @@ honesta de lo hecho.
     (una repetida, una nueva, una estación desconocida rechazada, la altitud rellenada sin
     versión nueva).
 
+34. **Hecho** y en `main` en local, sin push (8-10-2026, mientras el portal contesta la petición
+    de la IP; lo despliega Jaume cuando quiera). Revisión
+    del diseño de la web con capturas reales en escritorio (1366 × 768, 1440 × 900, 1920 × 1080),
+    375 y 320 px y en los tres idiomas (`e2e/revision.capture.ts`, `captures/revision-medidas.mjs`),
+    solo web (`docs/design.md`, «Cabecera y leyenda en escritorio»):
+    - Escritorio: el idioma junto al nombre, los dos enlaces de la procedencia en una línea y el
+      crédito más pequeño: la cabecera acaba a 479 px en vez de 576 y la lista gana 97 px (a
+      1366 × 768, de 176 a 273). La leyenda con el título sobre las categorías y, al reproducir,
+      sin atajos ni clave del mapa base (de 533 a 378 px). Cada modo con una línea de ayuda.
+    - Arreglos: la línea plegada de móvil decía «dom 30 de agosto, 23:55» al reproducir (el final
+      del periodo, no el paso); el total del reproductor se escribía «( 1925»; el sello del mapa
+      repetía la fecha del aviso justo encima; en `/contrato.html` el nombre se partía a 320 px.
+    - Móvil: «Cerca de mí» también sobre el mapa (abajo a la izquierda), con el aviso del fallo
+      encima del botón; el sello se esconde mientras el aviso de procedencia sigue a la vista;
+      las categorías de la leyenda plegadas bajo su título (cerradas de entrada, recordadas por
+      el navegador), con los atajos y el número a la vista.
+    - La lista enseña 60 filas y «Mostrar las N restantes» trae el resto (la página del teléfono
+      con las 548 medía unos 90 000 px); se vuelve a cerrar al cambiar búsqueda, distrito, orden
+      o acotado por el mapa. `shared/openState.ts` comparte el «recordar si está abierto» de la
+      tabla de distritos y la leyenda.
+    - Pruebas: 232 de la web (sin cambios), humo 24 de 24 con la compilación de producción (en
+      móvil abre antes el pliegue de la leyenda), tipos, lint y formato en verde. Usado con
+      capturas en los tres idiomas a 1440, 375 y 320 px y la página del contrato.
+
 ## Siguiente
 
 - Lo que queda de la propuesta del 7-10-2026 (el balance entre dos horas, la altitud, la página

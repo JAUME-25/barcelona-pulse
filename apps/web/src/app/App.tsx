@@ -54,7 +54,7 @@ import {
 } from '../features/stations/availability';
 import { districtKey, summarizeByDistrict } from '../features/stations/districts';
 import { DistrictSummary } from '../features/stations/DistrictSummary';
-import { BrandMark } from '../features/stations/OctagonGlyph';
+import { BrandMark, LocateGlyph } from '../features/stations/OctagonGlyph';
 import { SourceNotice } from '../features/stations/SourceNotice';
 import { StationDetail } from '../features/stations/StationDetail';
 import { StationList } from '../features/stations/StationList';
@@ -114,6 +114,11 @@ const MODE_IN_URL: Record<Mode, string | null> = {
   balance: 'balance',
 };
 const NO_STATIONS: readonly StationItem[] = [];
+/**
+ * Filas de la lista que se enseñan de entrada; un botón trae el resto. Con las 548 reales, la
+ * página del teléfono medía unos 90 000 px (8-10-2026) y la búsqueda es el camino normal.
+ */
+const LIST_LIMIT = 60;
 
 function modeFromUrl(): Mode {
   const value = readParam(MODE_PARAM);
@@ -385,12 +390,46 @@ export function App() {
     setOrder('distance');
   });
   const { me } = nearMe;
+  // En móvil, si el aviso de procedencia (con el momento) sigue a la vista, el sello del mapa
+  // sobra: se enseña cuando el aviso se ha ido por arriba.
+  const noticeRef = useRef<HTMLDivElement>(null);
+  const [noticeInView, setNoticeInView] = useState(
+    () => mobile && typeof IntersectionObserver !== 'undefined',
+  );
+  const hasNotice = notice !== null;
+  useEffect(() => {
+    const el = noticeRef.current;
+    if (!mobile || !hasNotice || el === null || typeof IntersectionObserver === 'undefined') {
+      setNoticeInView(false);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setNoticeInView(entry !== undefined && entry.intersectionRatio >= 0.5);
+      },
+      { threshold: [0, 0.5, 1] },
+    );
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+    };
+  }, [mobile, hasNotice]);
   const onMap = useMemo(
     () =>
       listFollowsMap && bounds !== null ? filtered.filter((s) => inBounds(s, bounds)) : filtered,
     [filtered, listFollowsMap, bounds],
   );
   const listed = useMemo(() => sortStations(onMap, order, me), [onMap, order, me]);
+  // Un tramo de la lista y «Mostrar las N restantes»; al cambiar la búsqueda, el distrito, el
+  // orden o el acotado por el mapa, se vuelve a cerrar.
+  const listKey = `${query}|${activeDistrict ?? ''}|${order}|${listFollowsMap ? 'mapa' : ''}`;
+  const [expandedFor, setExpandedFor] = useState<string | null>(null);
+  const listExpanded = expandedFor === listKey;
+  const shownList = useMemo(
+    () => (listExpanded || listed.length <= LIST_LIMIT ? listed : listed.slice(0, LIST_LIMIT)),
+    [listed, listExpanded],
+  );
+  const listRest = listed.length - shownList.length;
   // Mientras se busca, el mapa encuadra los resultados, aunque se haya movido antes.
   const searching = normalizeForSearch(query.trim());
   const selected =
@@ -925,14 +964,27 @@ export function App() {
                 </button>
               </div>
             ) : (
-              <StationList
-                stations={listed}
-                at={response.at}
-                figures={numberMode}
-                selectedId={selectedId}
-                onSelect={select}
-                distanceFrom={me}
-              />
+              <>
+                <StationList
+                  stations={shownList}
+                  at={response.at}
+                  figures={numberMode}
+                  selectedId={selectedId}
+                  onSelect={select}
+                  distanceFrom={me}
+                />
+                {listRest > 0 && (
+                  <button
+                    type="button"
+                    className="button list-more"
+                    onClick={() => {
+                      setExpandedFor(listKey);
+                    }}
+                  >
+                    {m.showMore(listRest)}
+                  </button>
+                )}
+              </>
             )}
           </>
         )}
@@ -951,11 +1003,9 @@ export function App() {
       <header className="panel-head">
         <div className="brand">
           <BrandMark />
-          <div>
-            <h1 className="brand__name">Barcelona Pulse</h1>
-            <p className="brand__tagline">{t().brand.tagline}</p>
-          </div>
+          <h1 className="brand__name">Barcelona Pulse</h1>
           <LanguageSwitch />
+          <p className="brand__tagline">{t().brand.tagline}</p>
         </div>
         <ModeSwitch mode={shownMode} onChange={changeMode} />
         {sources.length > 1 && (
@@ -979,75 +1029,103 @@ export function App() {
           </label>
         )}
         {notice !== null && (
-          <SourceNotice
-            response={notice}
-            compact={replaying || experimenting}
-            months={source === undefined ? null : formatMonths(source.days)}
-            onLimits={notice.source.kind === 'observed' ? openSheet : undefined}
-            onChangeMoment={source?.period == null ? undefined : changeMoment}
-            onThisHour={source?.period == null ? undefined : showThisHour}
-            shareWithoutCamera={me !== null}
-            fold={mobile}
-          />
+          <div ref={noticeRef}>
+            <SourceNotice
+              response={notice}
+              compact={replaying || experimenting}
+              summaryTime={!replaying}
+              months={source === undefined ? null : formatMonths(source.days)}
+              onLimits={notice.source.kind === 'observed' ? openSheet : undefined}
+              onChangeMoment={source?.period == null ? undefined : changeMoment}
+              onThisHour={source?.period == null ? undefined : showThisHour}
+              shareWithoutCamera={me !== null}
+              fold={mobile}
+            />
+          </div>
         )}
       </header>
 
       <div className="map-area">
-        <MapBoundary onError={mapCrashed}>
-          <Suspense fallback={<div className="station-map" aria-hidden="true" />}>
-            <StationMap
-              stations={experimenting ? scenarioStations : balancing ? all : filtered}
-              frame={experimenting || balancing ? all : searching === '' ? inDistrict : filtered}
-              frameKey={sourceId ?? ''}
-              // Con otro distrito se encuadra el distrito, solo si no se ha movido el mapa antes;
-              // con una búsqueda, sus resultados, siempre.
-              frameMode={
-                experimenting || balancing
-                  ? shownMode
-                  : `${shownMode}${activeDistrict === null ? '' : `:${activeDistrict}`}${searching === '' ? '' : `?${searching}`}`
-              }
-              frameFollows={!experimenting && searching !== ''}
-              framePadding={
-                replaying ? REPLAY_FRAME : experimenting ? EXPERIMENT_FRAME : EXPLORE_FRAME
-              }
-              selectedId={experimenting ? null : selectedId}
-              zoomOnSelect={selectedByUser}
-              // Mientras llega el momento de partida, el mapa sigue enseñando el estado.
-              variant={
-                experimenting
-                  ? 'network'
-                  : balancing && balance !== null
-                    ? 'balance'
-                    : 'availability'
-              }
-              balance={balance?.deltaById ?? null}
-              label={numberMode}
-              buildings={!experimenting}
-              onSelect={experimenting ? tapStation : select}
-              onStatusChange={setMapStatus}
-              onMapReady={setMap}
-              onBoundsChange={setBounds}
-              me={experimenting ? null : me}
+        {/* El marco del mapa: en móvil, lo que va sobre el mapa (sello, avisos, «Cerca de mí») se
+            coloca respecto a él y no respecto al área entera, que sigue con la leyenda debajo. */}
+        <div className="map-frame">
+          <MapBoundary onError={mapCrashed}>
+            <Suspense fallback={<div className="station-map" aria-hidden="true" />}>
+              <StationMap
+                stations={experimenting ? scenarioStations : balancing ? all : filtered}
+                frame={experimenting || balancing ? all : searching === '' ? inDistrict : filtered}
+                frameKey={sourceId ?? ''}
+                // Con otro distrito se encuadra el distrito, solo si no se ha movido el mapa antes;
+                // con una búsqueda, sus resultados, siempre.
+                frameMode={
+                  experimenting || balancing
+                    ? shownMode
+                    : `${shownMode}${activeDistrict === null ? '' : `:${activeDistrict}`}${searching === '' ? '' : `?${searching}`}`
+                }
+                frameFollows={!experimenting && searching !== ''}
+                framePadding={
+                  replaying ? REPLAY_FRAME : experimenting ? EXPERIMENT_FRAME : EXPLORE_FRAME
+                }
+                selectedId={experimenting ? null : selectedId}
+                zoomOnSelect={selectedByUser}
+                // Mientras llega el momento de partida, el mapa sigue enseñando el estado.
+                variant={
+                  experimenting
+                    ? 'network'
+                    : balancing && balance !== null
+                      ? 'balance'
+                      : 'availability'
+                }
+                balance={balance?.deltaById ?? null}
+                label={numberMode}
+                buildings={!experimenting}
+                onSelect={experimenting ? tapStation : select}
+                onStatusChange={setMapStatus}
+                onMapReady={setMap}
+                onBoundsChange={setBounds}
+                me={experimenting ? null : me}
+              />
+            </Suspense>
+          </MapBoundary>
+          <MapStatusMessage status={mapStatus} />
+          {replaying && response === null && replay.point !== undefined && !mapUnavailable && (
+            <ReplayStationsMessage
+              failed={stationsState.status === 'error'}
+              onRetry={retryStations}
             />
-          </Suspense>
-        </MapBoundary>
-        <MapStatusMessage status={mapStatus} />
-        {replaying && response === null && replay.point !== undefined && !mapUnavailable && (
-          <ReplayStationsMessage
-            failed={stationsState.status === 'error'}
-            onRetry={retryStations}
-          />
-        )}
-        {/* Sello de qué es y de cuándo: solo en móvil (CSS), donde el aviso queda arriba. */}
-        {notice !== null && !mapUnavailable && (
-          <MapStamp
-            kind={notice.source.kind}
-            at={replaying ? replay.point?.at : notice.at}
-            from={balancing ? balanceAt?.from : undefined}
-            experiment={experimenting}
-            hypothetical={hasChanges(scenario.scenario)}
-          />
-        )}
+          )}
+          {/* Sello de qué es y de cuándo: solo en móvil (CSS), donde el aviso queda arriba. Mientras
+            el aviso sigue a la vista con el momento, el sello repetiría lo mismo y se esconde. */}
+          {notice !== null && !mapUnavailable && (
+            <MapStamp
+              kind={notice.source.kind}
+              at={replaying ? replay.point?.at : notice.at}
+              from={balancing ? balanceAt?.from : undefined}
+              experiment={experimenting}
+              hypothetical={hasChanges(scenario.scenario)}
+              hidden={noticeInView && !replaying}
+            />
+          )}
+          {/* En el teléfono, «Cerca de mí» también sobre el mapa: en el panel queda lejos. */}
+          {mobile && !experimenting && !balancing && !mapUnavailable && response !== null && (
+            <div className="map-locate">
+              {nearMe.notice !== null && nearMe.notice.kind !== 'located' && (
+                <p className="map-locate__notice" role="status">
+                  {locationNoticeText(nearMe.notice)}
+                </p>
+              )}
+              <button
+                type="button"
+                className="map-locate__button"
+                onClick={nearMe.locate}
+                disabled={nearMe.locating}
+              >
+                <LocateGlyph size={16} />
+                {nearMe.locating ? m.locating : m.nearMe}
+              </button>
+            </div>
+          )}
+        </div>
         {replaying && <ReplayDeck replay={replay} />}
         {experimenting && (
           <ScenarioLayers
@@ -1075,6 +1153,7 @@ export function App() {
                 onNumberMode={setNumberMode}
                 onPreset={applyPreset}
                 showMe={me !== null}
+                fold={mobile}
               />
             )}
           </div>

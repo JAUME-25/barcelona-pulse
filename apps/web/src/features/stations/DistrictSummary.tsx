@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { t } from '../../i18n';
+import { readOpen, writeOpen } from '../../shared/openState';
 import { totalRow, type DistrictRow } from './districts';
 import { OctagonGlyph } from './OctagonGlyph';
 import './districts.css';
@@ -14,22 +15,6 @@ interface DistrictProps {
 const ALL = '*';
 /** Si la tabla está plegada: una comodidad de cada navegador, no un estado de la aplicación. */
 const OPEN_KEY = 'bp.districts.open';
-
-function readOpen(): boolean {
-  try {
-    return localStorage.getItem(OPEN_KEY) !== 'closed';
-  } catch {
-    return true;
-  }
-}
-
-function writeOpen(open: boolean): void {
-  try {
-    localStorage.setItem(OPEN_KEY, open ? 'open' : 'closed');
-  } catch {
-    // Sin almacenamiento (ventana privada): no se recuerda y ya está.
-  }
-}
 
 /** Una cifra de vacías o llenas; si en el distrito nadie informó, no se dice ni cero. */
 function Figure({ value, known }: { value: number; known: number }) {
@@ -114,7 +99,7 @@ export function DistrictTable({ rows, active, onPick }: DistrictProps) {
  */
 export function DistrictSummary(props: DistrictProps) {
   const m = t().districts;
-  const [open, setOpen] = useState(readOpen);
+  const [open, setOpen] = useState(() => readOpen(OPEN_KEY, true));
   return (
     <details
       className="district-section"
@@ -123,7 +108,7 @@ export function DistrictSummary(props: DistrictProps) {
         const next = e.currentTarget.open;
         if (next === open) return;
         setOpen(next);
-        writeOpen(next);
+        writeOpen(OPEN_KEY, next);
       }}
     >
       <summary className="district-section__summary">

@@ -80,6 +80,12 @@ export const en: Messages = {
     replay: 'Replay',
     experiment: 'Experiment',
     balance: 'Balance',
+    hint: {
+      explore: 'How each station was at one moment',
+      replay: 'See how the network changed over a day',
+      experiment: 'Add, move or remove stations and compare the coverage',
+      balance: 'Where bikes pile up and where they run out between two hours',
+    },
   },
 
   balance: {
@@ -165,6 +171,7 @@ export const en: Messages = {
         : `${String(shown)} of ${String(total)} stations`,
     noMatch: 'No station matches the search and the filters.',
     showAll: 'Show all',
+    showMore: (rest: number) => `Show the remaining ${String(rest)}`,
     order: 'Sort',
     orders: {
       name: 'Name',

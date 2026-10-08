@@ -1,14 +1,7 @@
 /* Límites visibles (B5): la ficha «Qué muestra y qué no», las notas junto a los datos y el
    sello del mapa en móvil. */
 
-.source-notice__limits {
-  margin-top: 8px !important;
-}
-
 /* «Copiar enlace» y su aviso, en la misma línea. */
-.source-notice__share {
-  margin-top: 6px !important;
-}
 .share-link {
   display: inline-flex;
   flex-wrap: wrap;
@@ -476,6 +469,15 @@ button.silent-group__item:hover {
 
 .map-stamp--demo {
   border-color: color-mix(in srgb, var(--demo) 60%, transparent);
+}
+
+/* Mientras el aviso de procedencia sigue a la vista, el sello diría lo mismo: se esconde. */
+.map-stamp--hidden {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.2s,
+    visibility 0.2s;
 }
 
 @media (min-width: 768px) {

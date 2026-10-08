@@ -1,21 +1,46 @@
 /* Cabecera común a la aplicación y a la página del contrato: la marca y el selector de idioma.
    Los ajustes de móvil de la aplicación (cabecera plegable) siguen en App.css. */
 
+/* La marca a la izquierda, el nombre y el idioma en la primera fila y el lema debajo, a lo
+   ancho (8-10-2026; antes el idioma iba en su propia fila y dejaba 40 px vacíos en escritorio).
+   A 320 px el idioma vuelve a su fila: al lado del nombre no cabe (App.css). */
 .brand {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
   align-items: center;
-  gap: 12px;
+  column-gap: 12px;
+  row-gap: 2px;
 }
 
-/* Idioma (opción A, 6-10-2026): ES · CA · EN a la derecha, en su fila bajo el nombre, en los
-   tres idiomas (con «al mapa», más corto que «en el mapa», cabría al lado y cambiaría de sitio).
-   En la misma línea apretaba el nombre: a 320 px partía «Barcelona Pulse». */
+.brand-mark {
+  grid-row: 1 / 3;
+  grid-column: 1;
+  flex: none;
+}
+
+.brand__name {
+  grid-row: 1;
+  grid-column: 2;
+  margin: 0;
+  font-size: 1.625rem;
+  line-height: 1.05;
+}
+
+.brand__tagline {
+  grid-row: 2;
+  grid-column: 2 / -1;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 1rem;
+}
+
 .lang-switch {
   display: inline-flex;
-  grid-column: 1 / -1;
-  justify-self: end;
+  grid-row: 1;
+  grid-column: 3;
   gap: 2px;
+  align-self: center;
   padding: 3px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -41,18 +66,21 @@
   color: var(--panel-solid);
 }
 
-.brand-mark {
-  flex: none;
-}
-
-.brand__name {
-  margin: 0;
-  font-size: 1.625rem;
-  line-height: 1.05;
-}
-
-.brand__tagline {
-  margin: 3px 0 0;
-  color: var(--ink-2);
-  font-size: 1rem;
+/* A 320 px el idioma vuelve a su fila: al lado del nombre partía «Barcelona Pulse». */
+@media (max-width: 359px) {
+  .brand {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+  }
+  .brand-mark {
+    grid-row: 1;
+  }
+  .brand__tagline {
+    grid-row: 2;
+  }
+  .lang-switch {
+    grid-row: 3;
+    grid-column: 1 / -1;
+    justify-self: end;
+  }
 }

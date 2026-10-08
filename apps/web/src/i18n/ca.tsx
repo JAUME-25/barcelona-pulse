@@ -103,6 +103,12 @@ export const ca: Messages = {
     replay: 'Reproduir',
     experiment: 'Experimentar',
     balance: 'Balanç',
+    hint: {
+      explore: 'Com estava cada estació en un moment',
+      replay: 'Veure com va canviar la xarxa al llarg d’un dia',
+      experiment: 'Afegir, moure o treure estacions i comparar la cobertura',
+      balance: 'On s’acumulen i on es buiden les bicis entre dues hores',
+    },
   },
 
   balance: {
@@ -189,6 +195,7 @@ export const ca: Messages = {
         : `${String(shown)} de ${String(total)} estacions`,
     noMatch: 'Cap estació no coincideix amb la cerca i els filtres.',
     showAll: 'Mostrar-les totes',
+    showMore: (rest: number) => `Mostrar les ${String(rest)} restants`,
     order: 'Ordre',
     orders: {
       name: 'Nom',

@@ -83,6 +83,13 @@ export const es = {
     replay: 'Reproducir',
     experiment: 'Experimentar',
     balance: 'Balance',
+    /** Qué hace cada modo, en una línea (el nombre solo no lo dice). */
+    hint: {
+      explore: 'Cómo estaba cada estación en un momento',
+      replay: 'Ver cómo cambió la red a lo largo de un día',
+      experiment: 'Añadir, mover o quitar estaciones y comparar la cobertura',
+      balance: 'Dónde se acumulan y dónde se vacían las bicis entre dos horas',
+    },
   },
 
   balance: {
@@ -174,6 +181,8 @@ export const es = {
         : `${String(shown)} de ${String(total)} estaciones`,
     noMatch: 'Ninguna estación coincide con la búsqueda y los filtros.',
     showAll: 'Mostrar todas',
+    /** La lista enseña un tramo; el botón trae el resto. */
+    showMore: (rest: number) => `Mostrar las ${String(rest)} restantes`,
     order: 'Orden',
     orders: {
       name: 'Nombre',

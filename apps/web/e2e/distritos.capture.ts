@@ -95,6 +95,9 @@ test('distritos: resumen, filtro por el Eixample y reproducir', async ({ page },
     await expect(page.locator('.panel-tools__count')).toHaveText(
       `${String(inEixample)} estaciones`,
     );
+    // La lista enseña un tramo: el botón trae el resto antes de contar las filas.
+    const more = page.getByRole('button', { name: /^Mostrar las \d+ restantes/ });
+    if ((await more.count()) > 0) await more.click();
     await expect(page.locator('.station-list__item')).toHaveCount(inEixample);
     const legendTotal = await page
       .locator('.availability-filter__count')

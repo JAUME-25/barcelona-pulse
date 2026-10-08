@@ -32,6 +32,11 @@
   background: var(--bg);
 }
 
+/* En móvil, el marco mide lo que el mapa: el sello, los avisos y «Cerca de mí» se colocan en él. */
+.map-frame {
+  position: relative;
+}
+
 .map-area .station-map {
   position: relative;
   height: 54dvh;
@@ -88,6 +93,11 @@
     grid-row: 1 / -1;
     grid-column: 1 / -1;
     margin: -16px;
+  }
+
+  /* En escritorio el mapa llena el área entera: el marco no delimita nada. */
+  .map-frame {
+    position: static;
   }
 
   .map-area .station-map {
@@ -197,14 +207,86 @@
   font-weight: 700;
 }
 
-.source-notice__tz,
-.source-notice__credit {
+.source-notice__tz {
   color: var(--ink-2);
   font-size: 0.9375rem;
 }
 
+/* El crédito que pide la licencia, legible pero discreto: no es lo primero que hay que leer. */
 .source-notice__credit {
-  margin-top: 6px !important;
+  margin-top: 8px !important;
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+  line-height: 1.35;
+}
+
+/* «Qué muestra y qué no» y «Copiar enlace» en una línea; el aviso de copiado y el campo con la
+   URL (si el navegador no deja copiar) caen debajo. */
+.source-notice__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  align-items: baseline;
+  margin-top: 10px !important;
+}
+
+/* «Cerca de mí» sobre el mapa, solo en el teléfono (8-10-2026): en el panel quedaba a más de
+   una pantalla del mapa. Abajo a la izquierda, por encima de la atribución del mapa base; el
+   aviso (sin permiso, fuera de Barcelona…) sale encima del botón. */
+.map-locate {
+  position: absolute;
+  bottom: 44px;
+  left: 10px;
+  z-index: 2;
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  max-width: calc(100% - 20px);
+}
+
+.map-locate__button {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 14px 0 12px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+  box-shadow: var(--panel-shadow);
+  cursor: pointer;
+}
+
+.map-locate__button:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.map-locate__notice {
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 0.875rem;
+  line-height: 1.35;
+  box-shadow: var(--panel-shadow);
+}
+
+/* A 320 px la atribución del mapa base ocupa dos líneas: el botón sube para no pisarla. */
+@media (max-width: 359px) {
+  .map-locate {
+    bottom: 64px;
+  }
+}
+
+@media (min-width: 768px) {
+  .map-locate {
+    display: none;
+  }
 }
 
 /* Estados del panel */
@@ -380,7 +462,7 @@
 }
 
 /* Leyenda y filtros */
-.availability-filter {
+.availability-filter__set {
   margin: 0;
   padding: 0;
   border: 0;
@@ -413,8 +495,8 @@
   gap: 10px;
   align-items: center;
   width: 100%;
-  min-height: 40px;
-  padding: 4px 8px;
+  min-height: 38px;
+  padding: 3px 8px;
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -466,6 +548,14 @@
   font-size: 0.875rem;
 }
 
+/* Atajos e interruptor del número, encima de la leyenda: las dos preguntas de siempre y qué
+   cifra llevan marcadores y lista. */
+.map-filters {
+  margin: 0 0 12px;
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--line);
+}
+
 /* Interruptor del número de los marcadores y de la lista: todas las bicis o las eléctricas. */
 .number-mode {
   display: flex;
@@ -473,6 +563,10 @@
   gap: 6px 8px;
   align-items: center;
   margin: 0 0 10px;
+}
+
+.number-mode:last-child {
+  margin-bottom: 0;
 }
 .number-mode__label {
   flex: 1 0 100%;
@@ -502,6 +596,57 @@
   margin: 0;
   color: var(--ink-2);
   font-size: 0.875rem;
+}
+
+/* En el teléfono, las categorías van plegadas bajo su título (8-10-2026): así el buscador queda
+   a un toque del mapa. Los atajos y el número siguen a la vista; el navegador recuerda si se
+   abrió. */
+.legend-fold__summary {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  min-height: 36px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.legend-fold__summary::-webkit-details-marker {
+  display: none;
+}
+
+.legend-fold__summary::before {
+  flex: none;
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+  content: '▶';
+}
+
+.legend-fold[open] > .legend-fold__summary::before {
+  content: '▼';
+}
+
+.legend-fold__title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.legend-fold .availability-filter__legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* «Mostrar las 488 restantes»: la lista enseña un tramo y el botón trae el resto. */
+.list-more {
+  width: 100%;
+  justify-content: center;
+  margin: 12px 0 0;
+  border-color: var(--line);
+  background: var(--panel-2);
+  color: var(--ink);
 }
 
 /* Lo que dibuja el mapa base aparte de las estaciones (no filtra nada). */
@@ -782,8 +927,11 @@
     padding: 10px 16px 8px;
   }
   .brand {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: 8px;
+    grid-template-rows: auto;
+    column-gap: 8px;
+  }
+  .brand-mark {
+    grid-row: 1;
   }
   .brand__tagline {
     display: none;
@@ -791,10 +939,7 @@
   .brand__name {
     font-size: 1.25rem;
   }
-  /* En la tercera columna: con solo la fila fija, la rejilla lo colocaba el primero. */
   .lang-switch {
-    grid-column: 3;
-    grid-row: 1;
     padding: 2px;
   }
   .lang-switch button {
@@ -841,17 +986,5 @@
   }
   .source-notice__fold .source-notice__lead {
     margin-top: 8px;
-  }
-}
-
-@media (max-width: 359px) {
-  /* A 320 px el idioma vuelve a su fila: al lado del nombre no cabe. */
-  .brand {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-  .lang-switch {
-    grid-column: 1 / -1;
-    grid-row: auto;
-    justify-self: end;
   }
 }

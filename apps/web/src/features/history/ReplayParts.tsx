@@ -20,6 +20,8 @@ export function ModeSwitch({ mode, onChange }: { mode: Mode; onChange: (mode: Mo
           key={value}
           type="button"
           aria-pressed={mode === value}
+          // Una línea sobre qué hace cada modo: el nombre solo no lo dice.
+          title={m.hint[value]}
           onClick={() => {
             onChange(value);
           }}

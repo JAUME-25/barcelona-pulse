@@ -150,9 +150,11 @@
   font-size: 0.875rem;
 }
 
-/* Bicis y anclajes sumados: cifras de miles, algo más pequeñas que las de vacías y llenas. */
-.replay-counts__totals {
-  flex-wrap: wrap;
+/* Bicis y anclajes sumados: cifras de miles, algo más pequeñas que las de vacías y llenas. En
+   flujo normal, no en flex: el hueco entre elementos partía «(1925 eléctricas)» en «( 1925». */
+.replay-counts .replay-counts__totals {
+  display: block;
+  flex: 1 0 100%;
 }
 
 .replay-counts__totals strong {
@@ -559,7 +561,12 @@
     max-height: calc(100% - 52px - var(--replay-deck-height, 300px) - 160px);
   }
 
-  .app[data-mode='replay'] .availability-filter__help {
+  /* Al reproducir, la leyenda se compacta para que quepan las categorías encima del reproductor:
+     sin la ayuda, sin los atajos (son para buscar bici o sitio ahora, no para ver un día) y sin
+     la clave del mapa base. */
+  .app[data-mode='replay'] .availability-filter__help,
+  .app[data-mode='replay'] .map-filters__presets,
+  .app[data-mode='replay'] .map-key {
     display: none;
   }
 

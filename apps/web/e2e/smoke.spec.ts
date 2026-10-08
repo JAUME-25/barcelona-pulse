@@ -8,6 +8,16 @@ async function openWithoutBasemap(page: Page, query = '') {
   await page.goto(`/?fuente=demo${query}`);
 }
 
+/** En móvil, las categorías de la leyenda van plegadas bajo su título: se abren antes de tocarlas. */
+async function openLegend(page: Page) {
+  // La leyenda llega con las estaciones: antes no hay pliegue que abrir.
+  await page.locator('.availability-filter').waitFor();
+  const fold = page.locator('.legend-fold');
+  if ((await fold.count()) === 0) return;
+  if (await fold.evaluate((el) => (el as HTMLDetailsElement).open)) return;
+  await fold.locator('summary').click();
+}
+
 test('muestra la demo como datos inventados y con su momento en hora de Barcelona', async ({
   page,
 }) => {
@@ -77,6 +87,7 @@ test('un enlace directo a una estación sin dato reciente explica por qué es de
 
 test('los filtros de la leyenda y la búsqueda acotan la lista', async ({ page }) => {
   await openWithoutBasemap(page);
+  await openLegend(page);
 
   await page.getByRole('button', { name: /^Sin dato reciente/ }).click();
   await expect(page.getByRole('button', { name: /^Sin dato reciente/ })).toHaveAttribute(
@@ -102,6 +113,7 @@ test('con el detalle abierto, la búsqueda y la leyenda siguen visibles', async 
 
   await expect(page.getByRole('heading', { level: 2, name: 'Liceu' })).toBeVisible();
   await expect(page.getByLabel('Buscar estación')).toBeVisible();
+  await openLegend(page);
   await expect(page.getByRole('button', { name: /^Llena/ })).toBeVisible();
 
   await page.getByLabel('Buscar estación').fill('sants');

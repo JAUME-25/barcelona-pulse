@@ -43,6 +43,28 @@ function Moment({
   );
 }
 
+/** «Qué muestra y qué no» y «Copiar enlace», en una línea (se parten si no caben). */
+function Links({
+  onLimits,
+  shareWithoutCamera,
+}: {
+  onLimits: (() => void) | undefined;
+  shareWithoutCamera: boolean;
+}) {
+  return (
+    <p className="source-notice__links">
+      {onLimits !== undefined && (
+        <span className="source-notice__limits">
+          <button type="button" className="limits-link" onClick={onLimits}>
+            {t().source.limits}
+          </button>
+        </span>
+      )}
+      <ShareLink withoutCamera={shareWithoutCamera} />
+    </p>
+  );
+}
+
 /**
  * Procedencia siempre visible: qué fuente es, si los datos son reales y de qué momento.
  * «En directo» no se usa: queda reservado a una integración con frescura comprobada.
@@ -50,6 +72,7 @@ function Moment({
 export function SourceNotice({
   response,
   compact = false,
+  summaryTime = true,
   months = null,
   onLimits,
   onChangeMoment,
@@ -60,6 +83,11 @@ export function SourceNotice({
   response: StationsResponse;
   /** Sin el momento: al reproducir, lo enseña el control de tiempo. */
   compact?: boolean;
+  /**
+   * En móvil, la línea plegada lleva el momento. Al reproducir no: `response.at` sería el final
+   * del periodo, no el paso que se ve (ese lo dicen el reproductor y el sello del mapa).
+   */
+  summaryTime?: boolean;
   /** Meses de los datos importados («mayo de 2026»), para el histórico. */
   months?: string | null;
   /** Abre «Qué muestra y qué no», que lleva también el enlace al conjunto de datos. */
@@ -87,9 +115,7 @@ export function SourceNotice({
           {m.demoLead}
         </p>
         {!compact && <Moment label={m.shownMoment} iso={response.at} />}
-        <p className="source-notice__share">
-          <ShareLink withoutCamera={shareWithoutCamera} />
-        </p>
+        <Links onLimits={undefined} shareWithoutCamera={shareWithoutCamera} />
       </div>
     );
   }
@@ -108,36 +134,33 @@ export function SourceNotice({
         <details className="source-notice__fold">
           <summary>
             <span className="source-notice__badge source-notice__badge--real">{m.realBadge}</span>
-            <time className="source-notice__fold-time" dateTime={response.at}>
-              {formatShortWeekday(localParts(Date.parse(response.at)).date)}{' '}
-              {formatDayMonth(response.at)}, <strong>{formatTime(response.at)}</strong>
-            </time>
+            {summaryTime ? (
+              <time className="source-notice__fold-time" dateTime={response.at}>
+                {formatShortWeekday(localParts(Date.parse(response.at)).date)}{' '}
+                {formatDayMonth(response.at)}, <strong>{formatTime(response.at)}</strong>
+              </time>
+            ) : (
+              months !== null && <span className="source-notice__fold-time">{months}</span>
+            )}
             <span className="source-notice__fold-more" aria-hidden="true">
               <span className="source-notice__fold-open">{m.more}</span>
               <span className="source-notice__fold-close">{m.less}</span>
             </span>
           </summary>
           <p className="source-notice__lead">{months === null ? m.past : m.historical(months)}</p>
-          <Moment
-            label={m.shownMoment}
-            iso={response.at}
-            onChange={onChangeMoment}
-            onThisHour={onThisHour}
-          />
+          {!compact && (
+            <Moment
+              label={m.shownMoment}
+              iso={response.at}
+              onChange={onChangeMoment}
+              onThisHour={onThisHour}
+            />
+          )}
           <p className="source-notice__credit">
             {sourceAttribution(source)}
             {source.license !== null && <> {m.license(source.license)}</>}
           </p>
-          {onLimits !== undefined && (
-            <p className="source-notice__limits">
-              <button type="button" className="limits-link" onClick={onLimits}>
-                {m.limits}
-              </button>
-            </p>
-          )}
-          <p className="source-notice__share">
-            <ShareLink withoutCamera={shareWithoutCamera} />
-          </p>
+          <Links onLimits={onLimits} shareWithoutCamera={shareWithoutCamera} />
         </details>
       </div>
     );
@@ -170,16 +193,7 @@ export function SourceNotice({
           </a>
         )}
       </p>
-      {onLimits !== undefined && (
-        <p className="source-notice__limits">
-          <button type="button" className="limits-link" onClick={onLimits}>
-            {m.limits}
-          </button>
-        </p>
-      )}
-      <p className="source-notice__share">
-        <ShareLink withoutCamera={shareWithoutCamera} />
-      </p>
+      <Links onLimits={onLimits} shareWithoutCamera={shareWithoutCamera} />
     </div>
   );
 }

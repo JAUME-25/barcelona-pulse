@@ -76,6 +76,50 @@ cómoda para el usuario»): la **plegable**.
 - Descartadas: la compacta (302 px, lo mismo sin plegar) y «mapa primero» (51 px, pero mandaba
   los modos debajo de un mapa de dos tercios de pantalla, un gesto más lejos).
 
+## Cabecera y leyenda en escritorio (revisión del 8-10-2026)
+
+Medido con la red real: la cabecera del panel acababa a 576 px y, en un portátil de 1366 × 768,
+la lista de estaciones tenía 176 px; la leyenda (616 px) no cabía y se desplazaba dentro. Retoques,
+sin cambiar lo que se ve ni dónde:
+
+- El idioma junto al nombre (ver «Idiomas»); «Qué muestra y qué no» y «Copiar enlace» en una
+  línea; el crédito de la licencia más pequeño (0,8125 rem), legible pero discreto. La cabecera
+  acaba a 479 px: la lista pasa de 176 a 273 px a 1366 × 768 y de 308 a 405 a 1440 × 900.
+- En la leyenda, «Qué significa cada marcador» va justo sobre las categorías: encima de los
+  atajos no describía lo que tenía debajo. Los atajos y el interruptor del número van arriba,
+  separados por una línea, sin el rótulo «Atajos» (los dos botones ya se explican solos).
+- Al reproducir, la leyenda prescinde de los atajos (son para buscar bici o sitio ahora, no para
+  ver un día), de la ayuda y de la clave del mapa base: de 533 a 378 px, y las seis categorías
+  caben encima del reproductor desde 1080 px de alto.
+- En el reproductor, el total «4434 bicis (1925 eléctricas)» se escribía «( 1925»: el hueco del
+  flex partía el paréntesis.
+- Cada modo lleva una línea de ayuda (`title`): el nombre solo no dice qué hace «Balance».
+
+En móvil, de la misma revisión:
+
+- Al reproducir, la línea plegada decía el final del periodo («dom 30 de agosto, 23:55») en vez
+  del paso que se veía: ahora dice los meses importados, y el momento lo dan el reproductor y el
+  sello del mapa.
+- El sello sobre el mapa se esconde mientras el aviso de procedencia con el momento sigue a la
+  vista (repetía la misma fecha dos veces, una encima de la otra) y aparece al bajar. Al
+  reproducir se queda, porque allí el aviso no lleva el momento.
+- «Cerca de mí» también sobre el mapa, abajo a la izquierda (ver «Cercanas y Cerca de mí»).
+
+De la misma revisión, dos retoques que cambian lo que se ve de entrada (reversibles si no
+convencen):
+
+- **La lista enseña un tramo de 60 filas** y un botón «Mostrar las 488 restantes» trae el resto
+  (`LIST_LIMIT` en `App.tsx`). Con las 548 reales, la página del teléfono medía unos 90 000 px
+  (`revision.capture.ts`, «explorar-pagina»), y quien busca una estación va por el buscador, el
+  orden o «Solo las del mapa», que dejan la lista corta. El tramo se vuelve a cerrar al cambiar la
+  búsqueda, el distrito, el orden o el acotado por el mapa. La demo (46 estaciones) no lo nota.
+- **En el teléfono, las categorías de la leyenda van plegadas** bajo «Qué significa cada
+  marcador», cerradas de entrada y recordadas por el navegador (`bp.legend.open`, como «Por
+  distrito»): la leyenda entera ocupaba unos 560 px entre el mapa y el buscador. Los atajos y el
+  interruptor del número siguen a la vista; las categorías, con sus recuentos, a un toque. En
+  escritorio no cambia nada. Los guiones que pulsan una categoría en móvil abren antes el pliegue
+  (`openLegend` en `smoke.spec.ts`).
+
 ## Cercanas y Cerca de mí
 
 Quien busca una bici está en un sitio concreto y, si la estación que tiene delante no sirve
@@ -94,6 +138,11 @@ ficha, sin pantalla nueva:
   de mí» es un orden más del selector, solo mientras haya ubicación; Atrás no lo quita. La cámara
   va a la persona solo cuando llega una ubicación nueva: al volver de Experimentar se queda donde
   estaba.
+- En el teléfono, el mismo botón también sobre el mapa, abajo a la izquierda (8-10-2026): en el
+  panel quedaba a más de una pantalla del mapa, detrás de la leyenda, y quien abre la aplicación
+  en la calle lo busca ahí. Hace lo mismo que el del buscador; un fallo (sin permiso, fuera de
+  Barcelona…) sale encima del botón. Solo al explorar y al reproducir; no en Balance ni al
+  experimentar, que no ordenan por distancia.
 - «Cercanas», en la ficha, después de los datos de la estación y antes de «Cómo suele estar»: las
   cinco más próximas con su estado y su distancia desde la estación, con la misma cifra que la
   lista (bicis o eléctricas). Cada una abre su ficha.
@@ -257,7 +306,9 @@ completa en un solo sitio y, junto a cada dato, lo justo para no malinterpretarl
     frase.
 - En móvil, un sello sobre el mapa con «Histórico, no es tiempo real» y el momento; en
   Experimentar, de cuándo es la red y si lleva cambios hipotéticos. Al bajar, el aviso de
-  procedencia se queda arriba. En escritorio no hace falta: el panel está al lado.
+  procedencia se queda arriba. Mientras el aviso (con el momento) sigue a la vista, el sello se
+  esconde (8-10-2026): decía la misma fecha dos veces seguidas. En escritorio no hace falta: el
+  panel está al lado.
 - Descartado: una lupa que apagaba en el mapa las estaciones con dato y rotulaba las que no.
   Competía con la leyenda, que ya filtra, y en móvil los rótulos se cortaban en los bordes. Su
   idea, el motivo de cada estación, está en la ficha.
@@ -322,8 +373,9 @@ guardado (`features/stations/names.ts`):
 
 Castellano, catalán e inglés. El selector, elegido el 6 de octubre de 2026 entre tres (en la
 cabecera, una fila «Idioma» como la de la fuente o un botón sobre el mapa): **ES · CA · EN en
-la cabecera**, a la derecha y en su fila bajo el nombre en los tres idiomas. En la misma línea
-que el título partía «Barcelona Pulse» a 320 px.
+la cabecera**, a la derecha. Desde el 8-10-2026 va en la misma fila que el nombre, con el lema
+debajo (en su propia fila dejaba 40 px vacíos en escritorio); solo a 320 px vuelve a su fila,
+porque al lado del nombre partía «Barcelona Pulse». La misma cabecera la usa `/contrato.html`.
 
 Los nombres de estación, barrio y distrito van en catalán, como los publica la fuente, en los
 tres idiomas: llevan `lang="ca"` y `translate="no"` (8-10-2026) para que un traductor automático

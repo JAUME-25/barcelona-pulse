@@ -105,6 +105,22 @@ export function MeGlyph({ size = 16 }: { size?: number }) {
   );
 }
 
+/** Punto de mira: «Cerca de mí» sobre el mapa, en el teléfono. */
+export function LocateGlyph({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+      <circle cx="9" cy="9" r="5.2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="9" cy="9" r="1.6" fill="currentColor" />
+      <path
+        d="M9 1v3.2M9 13.8V17M1 9h3.2M13.8 9H17"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 /** Rayo: bicis eléctricas. En el ámbar de «con bicis», con el contorno oscuro de los marcadores. */
 export function BoltGlyph({ size = 16 }: { size?: number }) {
   return (
