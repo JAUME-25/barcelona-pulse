@@ -16,8 +16,9 @@ public static class FramesEndpoints
             .WithSummary("Fotogramas: el estado de todas las estaciones en 12 pasos seguidos")
             .WithDescription(
                 "Cada paso aplica la misma regla que GET /api/stations?at=…. Con el paso de 5 min, " +
-                "una hora por petición: sirve para reproducir sin una petición por paso. Lleva ETag: con " +
-                "If-None-Match responde 304 mientras no entren ni salgan datos de esa hora.")
+                "una hora por petición: sirve para reproducir sin una petición por paso. Cada estación lleva " +
+                "`firstSeenAt` y `lastSeenAt`, como en GET /api/stations. Lleva ETag: con If-None-Match " +
+                "responde 304 mientras no entren ni salgan datos de la fuente.")
             .Produces(StatusCodes.Status304NotModified)
             .ProducesProblem(StatusCodes.Status404NotFound);
         return api;
@@ -58,10 +59,11 @@ public static class FramesEndpoints
 
         var stepSpan = TimeSpan.FromMinutes(stepMinutes);
         var (alignedFrom, _, _) = TimelineGrid.Align(start, start, stepSpan);
-        // El último paso de la respuesta, incluido: el siguiente ya es de otra hora.
-        var version = await DataVersion.ForRangeAsync(
-            db, source, alignedFrom, alignedFrom + stepSpan * (FramesQuery.FramesPerResponse - 1), ct);
-        if (HttpValidators.ClientHas(http, $"frames:{version}"))
+        // La versión de toda la fuente, no la de la hora: los fotogramas llevan atributos de
+        // estación (la primera y la última publicación, la versión vigente) que cualquier día
+        // importado puede cambiar (ADR 0014).
+        var version = await DataVersion.ForAllAsync(db, source, ct);
+        if (HttpValidators.ClientHas(http, $"frames:{alignedFrom:O}:{stepMinutes}:{version}"))
         {
             return HttpValidators.NotModified();
         }

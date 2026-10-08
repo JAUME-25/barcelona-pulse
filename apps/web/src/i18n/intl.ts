@@ -107,6 +107,18 @@ export function formatLocalDay(date: string): string {
   }).format(noon(date));
 }
 
+/** Un día de Barcelona («2026-08-20») sin el día de la semana: «20 de agosto de 2026». */
+export function formatLocalDate(date: string): string {
+  return dateFormat({ timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric' }).format(
+    noon(date),
+  );
+}
+
+/** Un día de Barcelona («2026-08-20») solo con el mes: «20 de agosto». */
+export function formatLocalDayMonth(date: string): string {
+  return dateFormat({ timeZone: 'UTC', day: 'numeric', month: 'long' }).format(noon(date));
+}
+
 /** «jue», «dj.», «Thu» */
 export function formatShortWeekday(date: string): string {
   return dateFormat({ timeZone: 'UTC', weekday: 'short' }).format(noon(date));

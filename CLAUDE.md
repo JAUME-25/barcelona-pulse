@@ -84,10 +84,12 @@ Jaume ejecuta los comandos en Forge y pega la salida.
   (2 a la vez, 5 s de espera, luego 503 con `Retry-After`), como la línea temporal (10 s). El paso
   es estático: las pruebas que lo ocupan van en la colección `station-pattern` con las demás que
   piden patrones.
-- Las respuestas de estado, detalle, patrón, línea temporal y fotogramas llevan ETag con la
-  versión de los datos de su rango (`Infrastructure/DataVersion.cs`, ADR 0014), y la caché de
-  la línea temporal usa la misma versión. Si una consulta nueva depende de datos de otros días,
-  su versión tiene que cubrirlos, o servirá un 304 (o una caché) viejo. «Ahora» no se valida.
+- Las respuestas llevan ETag con la versión de los datos (`Infrastructure/DataVersion.cs`, ADR
+  0014): la línea temporal (y su caché) con la de su rango; el estado, el detalle, los fotogramas
+  y el patrón con la de toda la fuente, porque llevan atributos de estación (`firstSeenAt`,
+  `lastSeenAt`, versiones) que cualquier día importado cambia. Si una consulta nueva depende de
+  datos de otros días, su versión tiene que cubrirlos, o servirá un 304 (o una caché) viejo.
+  «Ahora» no se valida.
   La versión lleva la compilación (`DataVersion.Build`) y el periodo de una ingesta es el de sus
   filas nuevas: una observación de 2025 repetida en cada archivo no lo estira (si lo hiciera,
   cada ingesta tocaría todos los rangos).
@@ -144,6 +146,11 @@ Jaume ejecuta los comandos en Forge y pega la salida.
 - Los fixtures del histórico (`tests/…/Fixtures/BicingArchive/*.7z`) se regeneran con
   `node scripts/make-bicing-archive-fixtures.mjs` al cambiar una columna; el CSV de información
   va junto al .7z para leerlo sin descomprimir.
+- `stations.last_seen_at` es la primera publicación del último día en que la fuente lista la
+  estación (el adaptador del histórico reduce cada día a sus cambios de atributos): se sabe el
+  día de la baja, no la hora. `purge` no toca `stations`: un día quitado sigue contando como
+  publicación. Si es un alta o una baja lo decide la web con los días importados
+  (`features/stations/lifecycle.ts`): la API solo da las dos fechas.
 
 ## Diseño
 

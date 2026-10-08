@@ -25,6 +25,8 @@ export function frameStation(
     capacity: s.capacity,
     altitude: s.altitude,
     assumedUntil,
+    firstSeenAt: s.firstSeenAt,
+    lastSeenAt: s.lastSeenAt,
   };
 }
 
@@ -42,6 +44,9 @@ export function stationFixture(overrides: StationOverrides = {}): StationItem {
     capacity: 27,
     altitude: null,
     metadataAssumed: false,
+    // Publicada por la fuente todo 2026: ni alta ni baja, sean cuales sean los días importados.
+    firstSeenAt: '2026-01-01T00:00:00+00:00',
+    lastSeenAt: '2026-12-31T00:00:00+00:00',
     ...rest,
     state: {
       freshness: 'current',

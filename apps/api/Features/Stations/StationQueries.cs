@@ -69,7 +69,7 @@ public static class StationQueries
                v.valid_from IS NULL AND v.first_seen_at > @at,
                o.observed_at, o.status, o.bikes_available, o.mechanical_bikes_available, o.ebikes_available,
                o.docks_available, o.bikes_disabled, o.docks_disabled, o.is_renting, o.is_returning, o.quality_flags,
-               v.altitude
+               v.altitude, s.first_seen_at, s.last_seen_at
         FROM station_versions v
         JOIN stations s ON s.id = v.station_id
         LEFT JOIN LATERAL (
@@ -161,7 +161,9 @@ public static class StationQueries
                     Capacity: NullableInt(reader, 8),
                     Altitude: reader.IsDBNull(21) ? null : reader.GetDouble(21),
                     MetadataAssumed: reader.GetBoolean(9),
-                    State: StationStateRules.Evaluate(latest, at, source.StalenessTolerance)));
+                    State: StationStateRules.Evaluate(latest, at, source.StalenessTolerance),
+                    FirstSeenAt: reader.GetFieldValue<DateTimeOffset>(22),
+                    LastSeenAt: reader.GetFieldValue<DateTimeOffset>(23)));
             }
 
             return items;

@@ -4,8 +4,11 @@ import {
   dayRuns,
   daysByMonth,
   durationParts,
+  formatDateTime,
   formatDay,
   formatDayMonth,
+  formatLocalDate,
+  formatLocalDayMonth,
   formatTime,
   joinList,
   monthName,
@@ -407,6 +410,21 @@ export const es = {
     changeAltitude: (from: number, to: number) => `altitud de ${String(from)} a ${String(to)} m`,
     metadataAssumed:
       'El nombre, la ubicación y la capacidad son de una publicación posterior a este momento.',
+    /** Alta y baja: cuándo la fuente empezó o dejó de listar la estación, dentro de lo importado. */
+    added: 'Alta',
+    removed: 'Baja',
+    addedValue: (at: string, absentOn: string, gap: boolean) =>
+      gap
+        ? `${formatDay(at)} · el ${formatLocalDayMonth(absentOn)}, último día importado antes, no estaba en la lista de la fuente`
+        : `${formatDateTime(at)} · el ${formatLocalDayMonth(absentOn)} no estaba en la lista de la fuente`,
+    removedValue: (lastDay: string, absentFrom: string, gap: boolean) =>
+      gap
+        ? `${formatLocalDate(lastDay)} · el ${formatLocalDayMonth(absentFrom)}, siguiente día importado, ya no estaba en la lista de la fuente`
+        : `${formatLocalDate(lastDay)} · el ${formatLocalDayMonth(absentFrom)} ya no estaba en la lista de la fuente`,
+    notYetListed: (at: string) =>
+      `La fuente aún no publicaba esta estación: la listó por primera vez el ${formatDateTime(at)}.`,
+    noLongerListed: (absentFrom: string) =>
+      `La fuente dejó de publicar esta estación: el ${formatLocalDate(absentFrom)} ya no estaba en su lista.`,
   },
 
   replay: {
@@ -596,6 +614,31 @@ export const es = {
     silentNever: 'Ningún dato hasta este momento',
     silentSince: (iso: string, at: string) => `Sin datos desde ${sinceWhen(iso, at)}`,
     silentFor: (iso: string, at: string) => `${duration(iso, at)} sin datos`,
+    /** Entre las estaciones sin dato: la fuente aún no la publicaba, o ya no. */
+    notYetListed: (at: string) =>
+      `Aún no publicada: la fuente la listó por primera vez el ${formatDayMonth(at)}, ${formatTime(at)}`,
+    noLongerListed: (absentFrom: string) =>
+      `Ya no publicada: el ${formatLocalDayMonth(absentFrom)} no estaba en la lista de la fuente`,
+    /** Altas y bajas: estaciones que la fuente empezó o dejó de listar en los días importados. */
+    lifecycleTitle: 'Altas y bajas',
+    lifecycleOneDay:
+      'Con un solo día importado no se puede saber si alguna estación entró o salió de la lista de la fuente.',
+    lifecycleLead: (added: number, removed: number) =>
+      added === 0 && removed === 0
+        ? 'En los días importados, la fuente no empezó ni dejó de publicar ninguna estación.'
+        : `En los días importados, la fuente empezó a publicar ${count(added, 'estación', 'estaciones')} y dejó de publicar ${count(removed, 'estación', 'estaciones')}.`,
+    addedGroup: 'Altas',
+    removedGroup: 'Bajas',
+    addedWhy: (at: string, absentOn: string, gap: boolean) =>
+      gap
+        ? `Desde el ${formatDayMonth(at)}; el ${formatLocalDayMonth(absentOn)}, último día importado antes, no estaba`
+        : `Desde el ${formatDayMonth(at)}, ${formatTime(at)}; el ${formatLocalDayMonth(absentOn)} no estaba`,
+    removedWhy: (lastDay: string, absentFrom: string, gap: boolean) =>
+      gap
+        ? `Hasta el ${formatLocalDayMonth(lastDay)}; el ${formatLocalDayMonth(absentFrom)}, siguiente día importado, ya no estaba`
+        : `Hasta el ${formatLocalDayMonth(lastDay)}; el ${formatLocalDayMonth(absentFrom)} ya no estaba`,
+    lifecycleNote:
+      'Solo con lo importado: una estación que la fuente deja de listar puede volver más adelante, y una que aparece pudo entrar en servicio cualquier día anterior sin importar. Que una estación deje de informar no es una baja: sigue en la lista de la fuente.',
     /**
      * Periodo de unos días locales ordenados: «del 4 al 31 de mayo de 2026» o, con huecos, «del 4
      * al 31 de mayo y del 17 al 30 de agosto de 2026». Sin días, null.

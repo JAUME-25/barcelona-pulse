@@ -170,7 +170,7 @@
           "History"
         ],
         "summary": "Fotogramas: el estado de todas las estaciones en 12 pasos seguidos",
-        "description": "Cada paso aplica la misma regla que GET /api/stations?at=…. Con el paso de 5 min, una hora por petición: sirve para reproducir sin una petición por paso. Lleva ETag: con If-None-Match responde 304 mientras no entren ni salgan datos de esa hora.",
+        "description": "Cada paso aplica la misma regla que GET /api/stations?at=…. Con el paso de 5 min, una hora por petición: sirve para reproducir sin una petición por paso. Cada estación lleva `firstSeenAt` y `lastSeenAt`, como en GET /api/stations. Lleva ETag: con If-None-Match responde 304 mientras no entren ni salgan datos de la fuente.",
         "operationId": "GetFrames",
         "parameters": [
           {
@@ -319,7 +319,7 @@
           "Stations"
         ],
         "summary": "Estaciones de una fuente y su estado en un instante",
-        "description": "Devuelve la versión vigente de cada estación y su última observación anterior o igual a `at`. Fuera de la tolerancia de la fuente el estado es `unknown` y los recuentos son nulos. Con `at` (o una fuente sintética) lleva ETag: con If-None-Match responde 304 mientras no entren ni salgan datos de ese momento.",
+        "description": "Devuelve la versión vigente de cada estación y su última observación anterior o igual a `at`. Fuera de la tolerancia de la fuente el estado es `unknown` y los recuentos son nulos. Cada estación lleva la primera y la última vez que la fuente la publicó en lo importado (`firstSeenAt`, `lastSeenAt`): con días importados antes de la primera o después de la última, la fuente no la listaba en ellos. Con `at` (o una fuente sintética) lleva ETag: con If-None-Match responde 304 mientras no entren ni salgan datos de la fuente (cualquier día puede cambiar `lastSeenAt`).",
         "operationId": "ListStations",
         "parameters": [
           {
@@ -920,7 +920,9 @@
           "latitude",
           "capacity",
           "altitude",
-          "assumedUntil"
+          "assumedUntil",
+          "firstSeenAt",
+          "lastSeenAt"
         ],
         "type": "object",
         "properties": {
@@ -990,6 +992,16 @@
               "string"
             ],
             "description": "Si es la primera versión conocida, cuándo se publicó: en los pasos anteriores sus atributos se\nasumen (lo mismo que `metadataAssumed` en GET /api/stations). Nulo en las demás.",
+            "format": "date-time"
+          },
+          "firstSeenAt": {
+            "type": "string",
+            "description": "Primera vez que la fuente publicó la estación, en lo importado (como en GET /api/stations).",
+            "format": "date-time"
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "description": "Última publicación de la estación en lo importado (como en GET /api/stations).",
             "format": "date-time"
           }
         },
@@ -1638,7 +1650,9 @@
           "capacity",
           "altitude",
           "metadataAssumed",
-          "state"
+          "state",
+          "firstSeenAt",
+          "lastSeenAt"
         ],
         "type": "object",
         "properties": {
@@ -1709,6 +1723,16 @@
           "state": {
             "description": "Estado en el instante consultado.",
             "$ref": "#/components/schemas/StationState"
+          },
+          "firstSeenAt": {
+            "type": "string",
+            "description": "Primera vez que la fuente publicó la estación, en lo importado. Si hay días importados\nanteriores, la fuente no la listaba en ellos: es un alta.",
+            "format": "date-time"
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "description": "Última publicación de la estación en lo importado: la primera del último día importado en\nque la fuente la lista, o su último cambio de atributos (se conoce el día, no la hora). Si hay\ndías importados posteriores, la fuente ya no la listaba en ellos: es una baja.",
+            "format": "date-time"
           }
         },
         "description": "Estación con sus atributos vigentes en el instante consultado."

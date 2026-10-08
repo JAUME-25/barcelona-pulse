@@ -184,12 +184,21 @@ public sealed class DataVersionTests(PostgisDatabase database) : IClassFixture<P
         var from = Uri.EscapeDataString(window.StartUtc.ToString("O"));
         var to = Uri.EscapeDataString(window.StartUtc.AddHours(2).ToString("O"));
 
-        foreach (var url in new[]
-                 {
-                     $"/api/stations?source={source}&at={at}",
-                     $"/api/sources/{source}/timeline?from={from}&to={to}&step=15",
-                     $"/api/sources/{source}/frames?from={from}",
-                 })
+        long stationId;
+        await using (var db = database.CreateContext())
+        {
+            stationId = await db.Stations.Where(s => s.SourceId == source && s.SourceStationId == "s1")
+                .Select(s => s.Id).SingleAsync(ct);
+        }
+
+        var stations = $"/api/stations?source={source}&at={at}";
+        var detail = $"/api/stations/{stationId}?at={at}";
+        var pattern = $"/api/stations/{stationId}/pattern";
+        var timeline = $"/api/sources/{source}/timeline?from={from}&to={to}&step=15";
+        var frames = $"/api/sources/{source}/frames?from={from}";
+        var etags = new Dictionary<string, EntityTagHeaderValue>();
+
+        foreach (var url in new[] { stations, detail, pattern, timeline, frames })
         {
             var first = await client.GetAsync(url, ct);
             Assert.Equal(HttpStatusCode.OK, first.StatusCode);
@@ -198,6 +207,7 @@ public sealed class DataVersionTests(PostgisDatabase database) : IClassFixture<P
             Assert.True(etag.IsWeak);
             Assert.Contains(DataVersion.Build, etag.Tag);
             Assert.True(first.Headers.CacheControl is { Private: true, NoCache: true });
+            etags[url] = etag;
 
             using var again = new HttpRequestMessage(HttpMethod.Get, url);
             again.Headers.IfNoneMatch.Add(etag);
@@ -207,33 +217,24 @@ public sealed class DataVersionTests(PostgisDatabase database) : IClassFixture<P
             Assert.Empty(await second.Content.ReadAsByteArrayAsync(ct));
         }
 
-        // La estación y su patrón también; el patrón cambia con cualquier día de la fuente.
-        long stationId;
-        await using (var db = database.CreateContext())
-        {
-            stationId = await db.Stations.Where(s => s.SourceId == source && s.SourceStationId == "s1")
-                .Select(s => s.Id).SingleAsync(ct);
-        }
-
-        var pattern = await client.GetAsync($"/api/stations/{stationId}/pattern", ct);
-        var patternTag = pattern.Headers.ETag;
-        Assert.NotNull(patternTag);
-        var detail = await client.GetAsync($"/api/stations/{stationId}?at={at}", ct);
-        Assert.NotNull(detail.Headers.ETag);
-
-        // Entra otro día: el estado del 19 vale igual (304), el patrón ya no.
+        // Entra otro día: la línea temporal del 19 vale igual (304), porque solo agrega
+        // observaciones y va por rango. El estado, el detalle y los fotogramas no: llevan atributos
+        // de estación (la primera y la última publicación, las versiones) que cualquier día puede
+        // cambiar. El patrón mira todos los días.
         await IngestDayAsync(source, 21);
-        using (var stations = new HttpRequestMessage(HttpMethod.Get, $"/api/stations?source={source}&at={at}"))
+        foreach (var (url, expected) in new[]
+                 {
+                     (timeline, HttpStatusCode.NotModified),
+                     (frames, HttpStatusCode.OK),
+                     (stations, HttpStatusCode.OK),
+                     (detail, HttpStatusCode.OK),
+                     (pattern, HttpStatusCode.OK),
+                 })
         {
-            stations.Headers.IfNoneMatch.Add(first19(await client.GetAsync($"/api/stations?source={source}&at={at}", ct)));
-            Assert.Equal(HttpStatusCode.NotModified, (await client.SendAsync(stations, ct)).StatusCode);
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.IfNoneMatch.Add(etags[url]);
+            Assert.Equal(expected, (await client.SendAsync(request, ct)).StatusCode);
         }
-
-        using var patternAgain = new HttpRequestMessage(HttpMethod.Get, $"/api/stations/{stationId}/pattern");
-        patternAgain.Headers.IfNoneMatch.Add(patternTag);
-        Assert.Equal(HttpStatusCode.OK, (await client.SendAsync(patternAgain, ct)).StatusCode);
-
-        static EntityTagHeaderValue first19(HttpResponseMessage response) => response.Headers.ETag!;
     }
 
     [Fact]

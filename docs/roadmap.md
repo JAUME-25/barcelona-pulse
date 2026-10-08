@@ -592,11 +592,33 @@ honesta de lo hecho.
     content="notranslate">` (lo decide Jaume en su Chrome con `chrome://translate-internals`).
     Pruebas: 223 de la web (la ficha lleva `lang` y `translate`), humo 24 de 24.
 
+30. **Hecho** el 9-10-2026 (en local, sin push). Altas y bajas de estaciones, el siguiente punto
+    de la propuesta del 7-10. La base ya guardaba la primera y la última publicación de cada
+    estación (`stations.first_seen_at`, `last_seen_at`) y nadie las enseñaba: van en
+    `GET /api/stations`, en el detalle y en los fotogramas (`firstSeenAt`, `lastSeenAt`), y el
+    ETag de esas tres respuestas pasa a la versión de toda la fuente (ADR 0014, corrección del
+    9-10): con la del rango, importar agosto dejaba en 304 un estado de mayo con una baja sin
+    estrenar. La web solo afirma lo que un día importado anterior o posterior demuestra
+    (`features/stations/lifecycle.ts`, `docs/design.md` «Límites visibles»): en la ficha, «Alta»
+    y «Baja» entre los datos y en la explicación del dato que falta; en «Qué muestra y qué no», la
+    sección «Altas y bajas», y en «Sin dato en este momento» el motivo pasa a ser ese. En local
+    (mayo y agosto): 3 altas (C/ Espronceda, 298 el 12-5 a las 12:25; Rambla de Prim, 256 el
+    15-5; C/ Agricultura, 116 entre el 31-5 y el 17-8) y 5 bajas (C/ Villena, 1, listada por
+    última vez el 26-8; Copa América 542 y 543, Gran Via 902 y C/ Garcilaso, 56, entre el 1-6 y el
+    17-8: su última publicación es del 1-6, un día importado y quitado el 7-10, porque `purge` no
+    toca `stations`). Dejar de listar no cierra la versión ni quita la estación del mapa. Pruebas:
+    214 de backend (las fechas de un alta y una baja por la ingesta y por la API; ETag por fuente
+    del estado, el detalle y los fotogramas, y por rango de la línea temporal), 232 de la web
+    (`lifecycle.test.ts`; la ficha y la sección en `App.test.tsx`), humo 24 de 24, capturas
+    `e2e/altas-bajas.capture.ts` en escritorio, 375 y 320 px y la ficha en catalán e inglés
+    (las capturas y el humo seguidos agotan los 120 por minuto de la API local: el humo se
+    repite cuando `/api/sources` vuelve a dar 200).
+
 ## Siguiente
 
 - Lo que queda de la propuesta del 7-10-2026, en este orden (el balance entre dos horas, la
-  altitud y la página del contrato se hicieron el 8-10-2026, B5.26 a B5.28):
-  - Nacimiento y retirada de estaciones.
+  altitud, la página del contrato y las altas y bajas se hicieron el 8 y el 9-10-2026, B5.26 a
+  B5.30):
   - Tabla de resumen por hora: lo que falta para que una semana de la línea temporal baje de
     los 2,8–3,0 s de producción.
   - Tiempo real cuando el token de Open Data BCN responda 200 desde el PC de Jaume (el

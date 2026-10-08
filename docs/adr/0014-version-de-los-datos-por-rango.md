@@ -69,3 +69,16 @@ de fotogramas, comprimidos) y la API los volvía a calcular.
   cambia cuando cambia el código, no al reiniciar. El ETag queda
   `W/"stations:<instante>:<fuente>:<ingesta>:<purgas>:<compilación>"`, y la caché de la línea
   temporal (en memoria, del proceso) lo lleva sin que importe.
+
+## Corrección del 9 de octubre de 2026
+
+- **Las respuestas con atributos de estación llevan la versión de toda la fuente.** El estado
+  (`GET /api/stations`), el detalle y los fotogramas llevan desde el 9-10-2026 la primera y la
+  última publicación de cada estación (`firstSeenAt`, `lastSeenAt`: las altas y bajas), que
+  cualquier ingesta cambia (cada día que lista una estación alarga su `last_seen_at`); el detalle
+  lleva además las versiones, que una ingesta de un día anterior parte o adelanta. Con la versión
+  del rango, importar agosto dejaba en 304 un estado de mayo con una baja sin estrenar. Esas tres
+  respuestas usan ahora `DataVersion.ForAllAsync`, como el patrón: tras cualquier ingesta o purga
+  de la fuente, el navegador las vuelve a descargar (son respuestas de milisegundos). La línea
+  temporal, que solo agrega observaciones, sigue por rango, y su caché también. El ETag de los
+  fotogramas lleva ahora su primer paso y el paso, como el del estado lleva su instante.

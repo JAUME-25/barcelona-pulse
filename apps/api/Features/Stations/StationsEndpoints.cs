@@ -26,8 +26,11 @@ public static class StationsEndpoints
             .WithDescription(
                 "Devuelve la versión vigente de cada estación y su última observación anterior o igual a `at`. " +
                 "Fuera de la tolerancia de la fuente el estado es `unknown` y los recuentos son nulos. " +
+                "Cada estación lleva la primera y la última vez que la fuente la publicó en lo importado " +
+                "(`firstSeenAt`, `lastSeenAt`): con días importados antes de la primera o después de la última, " +
+                "la fuente no la listaba en ellos. " +
                 "Con `at` (o una fuente sintética) lleva ETag: con If-None-Match responde 304 mientras no " +
-                "entren ni salgan datos de ese momento.")
+                "entren ni salgan datos de la fuente (cualquier día puede cambiar `lastSeenAt`).")
             .Produces(StatusCodes.Status304NotModified)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
@@ -84,7 +87,9 @@ public static class StationsEndpoints
 
     /// <summary>
     /// Un estado en un instante pedido (o el final de los datos de una fuente sintética) solo
-    /// depende de los datos: lleva ETag. «Ahora» cambia con el reloj y no se valida.
+    /// depende de los datos: lleva ETag. «Ahora» cambia con el reloj y no se valida. La versión
+    /// es la de toda la fuente, no la del instante: la primera y la última publicación de cada
+    /// estación y, en el detalle, sus versiones cambian con cualquier día que entre (ADR 0014).
     /// </summary>
     private static async Task<bool> ClientHasStateAsync(
         HttpContext http, PulseDbContext db, DataSource source, DateTimeOffset instant, InstantBasis basis,
@@ -95,7 +100,7 @@ public static class StationsEndpoints
             return false;
         }
 
-        var version = await DataVersion.ForRangeAsync(db, source, instant, instant, ct);
+        var version = await DataVersion.ForAllAsync(db, source, ct);
         return HttpValidators.ClientHas(http, $"{what}:{instant:O}:{version}");
     }
 

@@ -22,6 +22,8 @@ namespace BarcelonaPulse.Api.Features.History;
 /// Si es la primera versión conocida, cuándo se publicó: en los pasos anteriores sus atributos se
 /// asumen (lo mismo que <c>metadataAssumed</c> en GET /api/stations). Nulo en las demás.
 /// </param>
+/// <param name="FirstSeenAt">Primera vez que la fuente publicó la estación, en lo importado (como en GET /api/stations).</param>
+/// <param name="LastSeenAt">Última publicación de la estación en lo importado (como en GET /api/stations).</param>
 public sealed record FrameStation(
     long Id,
     string SourceStationId,
@@ -33,7 +35,9 @@ public sealed record FrameStation(
     double Latitude,
     int? Capacity,
     double? Altitude,
-    DateTimeOffset? AssumedUntil);
+    DateTimeOffset? AssumedUntil,
+    DateTimeOffset FirstSeenAt,
+    DateTimeOffset LastSeenAt);
 
 /// <summary>Estado de una estación en un paso.</summary>
 /// <param name="Station">Posición de la estación en <c>stations</c>.</param>
@@ -73,7 +77,7 @@ public static class FramesQuery
     private const string VersionsSql = """
         SELECT v.station_id, s.source_station_id, v.name, v.address, v.district, v.neighbourhood,
                ST_X(v.location), ST_Y(v.location), v.capacity, v.valid_from, v.valid_to, v.first_seen_at,
-               v.altitude
+               v.altitude, s.first_seen_at, s.last_seen_at
         FROM station_versions v
         JOIN stations s ON s.id = v.station_id
         WHERE s.source_id = @source
@@ -180,7 +184,9 @@ public static class FramesQuery
                     Latitude: reader.GetDouble(7),
                     Capacity: reader.IsDBNull(8) ? null : reader.GetInt32(8),
                     Altitude: reader.IsDBNull(12) ? null : reader.GetDouble(12),
-                    AssumedUntil: validFrom is null ? reader.GetFieldValue<DateTimeOffset>(11) : null),
+                    AssumedUntil: validFrom is null ? reader.GetFieldValue<DateTimeOffset>(11) : null,
+                    FirstSeenAt: reader.GetFieldValue<DateTimeOffset>(13),
+                    LastSeenAt: reader.GetFieldValue<DateTimeOffset>(14)),
                 StationId: reader.GetInt64(0),
                 ValidFrom: validFrom,
                 ValidTo: reader.IsDBNull(10) ? null : reader.GetFieldValue<DateTimeOffset>(10)));

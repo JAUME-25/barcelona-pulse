@@ -70,7 +70,7 @@ export interface paths {
     };
     /**
      * Fotogramas: el estado de todas las estaciones en 12 pasos seguidos
-     * @description Cada paso aplica la misma regla que GET /api/stations?at=…. Con el paso de 5 min, una hora por petición: sirve para reproducir sin una petición por paso. Lleva ETag: con If-None-Match responde 304 mientras no entren ni salgan datos de esa hora.
+     * @description Cada paso aplica la misma regla que GET /api/stations?at=…. Con el paso de 5 min, una hora por petición: sirve para reproducir sin una petición por paso. Cada estación lleva `firstSeenAt` y `lastSeenAt`, como en GET /api/stations. Lleva ETag: con If-None-Match responde 304 mientras no entren ni salgan datos de la fuente.
      */
     get: operations['GetFrames'];
     put?: never;
@@ -127,7 +127,7 @@ export interface paths {
     };
     /**
      * Estaciones de una fuente y su estado en un instante
-     * @description Devuelve la versión vigente de cada estación y su última observación anterior o igual a `at`. Fuera de la tolerancia de la fuente el estado es `unknown` y los recuentos son nulos. Con `at` (o una fuente sintética) lleva ETag: con If-None-Match responde 304 mientras no entren ni salgan datos de ese momento.
+     * @description Devuelve la versión vigente de cada estación y su última observación anterior o igual a `at`. Fuera de la tolerancia de la fuente el estado es `unknown` y los recuentos son nulos. Cada estación lleva la primera y la última vez que la fuente la publicó en lo importado (`firstSeenAt`, `lastSeenAt`): con días importados antes de la primera o después de la última, la fuente no la listaba en ellos. Con `at` (o una fuente sintética) lleva ETag: con If-None-Match responde 304 mientras no entren ni salgan datos de la fuente (cualquier día puede cambiar `lastSeenAt`).
      */
     get: operations['ListStations'];
     put?: never;
@@ -382,6 +382,16 @@ export interface components {
        *     asumen (lo mismo que `metadataAssumed` en GET /api/stations). Nulo en las demás.
        */
       assumedUntil: null | string;
+      /**
+       * Format: date-time
+       * @description Primera vez que la fuente publicó la estación, en lo importado (como en GET /api/stations).
+       */
+      firstSeenAt: string;
+      /**
+       * Format: date-time
+       * @description Última publicación de la estación en lo importado (como en GET /api/stations).
+       */
+      lastSeenAt: string;
     };
     /**
      * @description Frescura del dato en el instante consultado.
@@ -692,6 +702,19 @@ export interface components {
       metadataAssumed: boolean;
       /** @description Estado en el instante consultado. */
       state: components['schemas']['StationState'];
+      /**
+       * Format: date-time
+       * @description Primera vez que la fuente publicó la estación, en lo importado. Si hay días importados
+       *     anteriores, la fuente no la listaba en ellos: es un alta.
+       */
+      firstSeenAt: string;
+      /**
+       * Format: date-time
+       * @description Última publicación de la estación en lo importado: la primera del último día importado en
+       *     que la fuente la lista, o su último cambio de atributos (se conoce el día, no la hora). Si hay
+       *     días importados posteriores, la fuente ya no la listaba en ellos: es una baja.
+       */
+      lastSeenAt: string;
     };
     /**
      * @description Cómo estuvo una estación a cada hora en los días importados de su fuente. Es lo que pasó, no

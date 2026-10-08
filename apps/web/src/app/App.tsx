@@ -780,6 +780,7 @@ export function App() {
             all={all}
             onSelect={select}
             figures={numberMode}
+            days={days}
           />
         ) : (
           <BalancePanel
@@ -881,6 +882,7 @@ export function App() {
             all={all}
             onSelect={select}
             figures={numberMode}
+            days={days}
           />
         ) : filtered.length === 0 ? (
           <div className="panel-status">

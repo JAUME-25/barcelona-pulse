@@ -143,6 +143,36 @@ public sealed class IngestionTests(PostgisDatabase database) : IClassFixture<Pos
     }
 
     [Fact]
+    public async Task A_station_the_source_stops_listing_keeps_its_last_publication_and_a_new_one_starts_at_its_first()
+    {
+        database.RequireAvailable();
+        var source = Source("listing");
+        var dayB = T0.AddDays(1);
+        // El día A lista s1 y s2; el B, s2 y s3: s1 es una baja y s3, un alta.
+        await IngestAsync(Batch([Station("s1"), Station("s2")], source: source));
+        await IngestAsync(Batch([Station("s2", seenAt: dayB), Station("s3", seenAt: dayB)], source: source));
+
+        await using var db = database.CreateContext();
+        var stations = await db.Stations.Where(s => s.SourceId == "listing")
+            .OrderBy(s => s.SourceStationId)
+            .Select(s => new { s.SourceStationId, s.FirstSeenAt, s.LastSeenAt })
+            .ToListAsync();
+        Assert.Equal(
+            [("s1", T0, T0), ("s2", T0, dayB), ("s3", dayB, dayB)],
+            stations.Select(s => (s.SourceStationId, s.FirstSeenAt, s.LastSeenAt)));
+        // Una baja no cierra su versión: la estación sigue en el estado, con esas dos fechas.
+        Assert.Equal(3, await db.StationVersions.CountAsync(v => v.Station.SourceId == "listing" && v.ValidTo == null));
+
+        await using var factory = new ApiFactory(database.ConnectionString);
+        var at = Uri.EscapeDataString(dayB.AddHours(1).ToString("O"));
+        var response = await factory.CreateClient().GetFromJsonAsync<StationsResponse>(
+            $"/api/stations?source=listing&at={at}", JsonOptions, TestContext.Current.CancellationToken);
+        Assert.Equal(
+            [("s1", T0, T0), ("s2", T0, dayB), ("s3", dayB, dayB)],
+            response!.Stations.OrderBy(s => s.SourceStationId).Select(s => (s.SourceStationId, s.FirstSeenAt, s.LastSeenAt)));
+    }
+
+    [Fact]
     public async Task Importing_an_older_period_afterwards_fills_in_the_history()
     {
         database.RequireAvailable();

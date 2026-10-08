@@ -5,8 +5,11 @@ import {
   dayRuns,
   daysByMonth,
   durationParts,
+  formatDateTime,
   formatDay,
   formatDayMonth,
+  formatLocalDate,
+  formatLocalDayMonth,
   formatTime,
   joinList,
   monthName,
@@ -393,6 +396,20 @@ export const en: Messages = {
       `altitude from ${String(from)} to ${String(to)} m`,
     metadataAssumed:
       'The name, location and capacity come from a publication later than this moment.',
+    added: 'Added',
+    removed: 'Removed',
+    addedValue: (at, absentOn, gap) =>
+      gap
+        ? `${formatDay(at)} · not in the source’s list on ${formatLocalDayMonth(absentOn)}, the last imported day before`
+        : `${formatDateTime(at)} · not in the source’s list on ${formatLocalDayMonth(absentOn)}`,
+    removedValue: (lastDay, absentFrom, gap) =>
+      gap
+        ? `${formatLocalDate(lastDay)} · no longer in the source’s list on ${formatLocalDayMonth(absentFrom)}, the next imported day`
+        : `${formatLocalDate(lastDay)} · no longer in the source’s list on ${formatLocalDayMonth(absentFrom)}`,
+    notYetListed: (at) =>
+      `The source did not publish this station yet: it first listed it on ${formatDateTime(at)}.`,
+    noLongerListed: (absentFrom) =>
+      `The source stopped publishing this station: on ${formatLocalDate(absentFrom)} it was no longer in its list.`,
   },
 
   replay: {
@@ -556,6 +573,29 @@ export const en: Messages = {
     silentNever: 'No data up to this moment',
     silentSince: (iso, at) => `No data since ${sinceWhen(iso, at)}`,
     silentFor: (iso, at) => `${duration(iso, at)} without data`,
+    notYetListed: (at) =>
+      `Not published yet: the source first listed it on ${formatDayMonth(at)}, ${formatTime(at)}`,
+    noLongerListed: (absentFrom) =>
+      `No longer published: not in the source’s list on ${formatLocalDayMonth(absentFrom)}`,
+    lifecycleTitle: 'Added and removed',
+    lifecycleOneDay:
+      'With a single imported day there is no way to tell whether any station entered or left the source’s list.',
+    lifecycleLead: (added, removed) =>
+      added === 0 && removed === 0
+        ? 'In the imported days, the source neither started nor stopped publishing any station.'
+        : `In the imported days, the source started publishing ${count(added, 'station', 'stations')} and stopped publishing ${count(removed, 'station', 'stations')}.`,
+    addedGroup: 'Added',
+    removedGroup: 'Removed',
+    addedWhy: (at, absentOn, gap) =>
+      gap
+        ? `From ${formatDayMonth(at)}; not listed on ${formatLocalDayMonth(absentOn)}, the last imported day before`
+        : `From ${formatDayMonth(at)}, ${formatTime(at)}; not listed on ${formatLocalDayMonth(absentOn)}`,
+    removedWhy: (lastDay, absentFrom, gap) =>
+      gap
+        ? `Until ${formatLocalDayMonth(lastDay)}; no longer listed on ${formatLocalDayMonth(absentFrom)}, the next imported day`
+        : `Until ${formatLocalDayMonth(lastDay)}; no longer listed on ${formatLocalDayMonth(absentFrom)}`,
+    lifecycleNote:
+      'Only from what was imported: a station the source stops listing may come back later, and one that appears may have entered service on any earlier day not imported. A station that stops reporting is not removed: it stays in the source’s list.',
     periodOf: (days) => {
       const runs = dayRuns(days);
       if (runs.length === 0) return null;

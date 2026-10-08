@@ -72,6 +72,15 @@ public sealed record StationState(
 /// también antes (primera versión conocida).
 /// </param>
 /// <param name="State">Estado en el instante consultado.</param>
+/// <param name="FirstSeenAt">
+/// Primera vez que la fuente publicó la estación, en lo importado. Si hay días importados
+/// anteriores, la fuente no la listaba en ellos: es un alta.
+/// </param>
+/// <param name="LastSeenAt">
+/// Última publicación de la estación en lo importado: la primera del último día importado en
+/// que la fuente la lista, o su último cambio de atributos (se conoce el día, no la hora). Si hay
+/// días importados posteriores, la fuente ya no la listaba en ellos: es una baja.
+/// </param>
 public sealed record StationItem(
     long Id,
     string SourceStationId,
@@ -84,7 +93,9 @@ public sealed record StationItem(
     int? Capacity,
     double? Altitude,
     bool MetadataAssumed,
-    StationState State);
+    StationState State,
+    DateTimeOffset FirstSeenAt,
+    DateTimeOffset LastSeenAt);
 
 public sealed record StationsResponse(
     SourceRef Source,

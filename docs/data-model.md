@@ -8,7 +8,7 @@ Esquema en `apps/api/Infrastructure/Migrations`.
 | Tabla | Qué guarda | Clave natural |
 | --- | --- | --- |
 | `data_sources` | Fuente: `kind` (`observed` o `synthetic`), nombre, atribución, licencia, tolerancia de frescura, recuento de observaciones (lo llevan ingesta y purga) y cuántas purgas ha habido (`purge_generation`, para la versión de los datos de la ADR 0014). | `id` (texto: `demo`, …) |
-| `stations` | Identidad estable de una estación dentro de su fuente. | `(source_id, source_station_id)` |
+| `stations` | Identidad estable de una estación dentro de su fuente, y la primera y la última vez que la fuente la publicó en lo importado (`first_seen_at`, `last_seen_at`: las altas y bajas). | `(source_id, source_station_id)` |
 | `station_versions` | Nombre, dirección, distrito, barrio, ubicación (`geometry(Point,4326)`), capacidad y altitud (metros, si la fuente la publica) durante un intervalo. | una vigente por estación |
 | `station_observations` | Estado publicado en un instante: estado, bicis (total, mecánicas, eléctricas), anclajes libres, deshabilitados, si presta y si admite devoluciones, y marcas de calidad. | `(station_id, observed_at)` |
 | `ingestion_runs` | Cada ingesta: fuente, adaptador y versión, entrada y sha256, periodo de las observaciones nuevas que guardó (`period_from`, `period_to`; nulo si no guardó ninguna: las repetidas no cuentan, ADR 0014) y periodo que dice cubrir (`covered_from`, `covered_to`), recuentos (nuevas, duplicadas, en conflicto, rechazadas), resultado y, si sus días se quitaron, cuándo (`purged_at`). | |
@@ -50,6 +50,17 @@ conocían. Lo que ya estaba observado no cambia. La altitud (desde el 8-10-2026)
 atributo solo cuando la publican las dos partes que se comparan: una versión guardada sin ella
 (importada antes de leerla del archivo) la toma de una publicación con los mismos atributos sin
 abrir otra versión, porque la altitud de un sitio no cambia, solo se conoce más tarde.
+
+**Altas y bajas.** `stations.first_seen_at` y `last_seen_at` son el mínimo y el máximo de las
+publicaciones de la estación que han entrado. El histórico reduce cada día a sus cambios de
+atributos, así que `last_seen_at` es la primera publicación del último día en que la fuente la
+lista, o su último cambio: se conoce el día, no la hora. Una estación que la fuente deja de
+listar no cierra su versión ni desaparece: sigue en el estado, sin dato, con esas dos fechas
+(`firstSeenAt`, `lastSeenAt` en `GET /api/stations`, el detalle y los fotogramas). Quién decide
+si es un alta o una baja es la web (`features/stations/lifecycle.ts`), cruzándolas con los días
+importados: solo cuenta lo que un día importado anterior o posterior demuestra, y con días sin
+importar en medio el alta o la baja queda entre dos fechas. `purge` no toca `stations`: una
+publicación de un día quitado sigue contando.
 
 **Estado en un instante** (ADR 0005). Última observación con `observed_at ≤ T`. Si su antigüedad
 supera la tolerancia de la fuente (30 min en la demo, 15 min en el histórico de Bicing; límite

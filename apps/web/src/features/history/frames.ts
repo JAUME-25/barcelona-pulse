@@ -33,6 +33,8 @@ export function stationsAt(frames: FramesResponse, at: string): StationsResponse
         // Igual que metadataAssumed en la API: atributos publicados después del instante.
         metadataAssumed: s.assumedUntil !== null && t < Date.parse(s.assumedUntil),
         state,
+        firstSeenAt: s.firstSeenAt,
+        lastSeenAt: s.lastSeenAt,
       },
     ];
   });

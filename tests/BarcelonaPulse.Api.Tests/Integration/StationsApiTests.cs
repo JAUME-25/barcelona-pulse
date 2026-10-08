@@ -226,6 +226,20 @@ public sealed class StationsApiTests(DemoApiFixture fixture) : IClassFixture<Dem
     }
 
     [Fact]
+    public async Task Stations_carry_when_the_source_first_and_last_published_them()
+    {
+        // La demo publica todas sus estaciones una sola vez (stationsSeenAt del fixture).
+        var seenAt = new DateTimeOffset(2026, 3, 10, 6, 0, 0, TimeSpan.Zero);
+        var r = await GetStationsAsync("source=demo");
+
+        Assert.All(r.Stations, s =>
+        {
+            Assert.Equal(seenAt, s.FirstSeenAt);
+            Assert.Equal(seenAt, s.LastSeenAt);
+        });
+    }
+
+    [Fact]
     public async Task Health_and_openapi_respond()
     {
         var client = Client();

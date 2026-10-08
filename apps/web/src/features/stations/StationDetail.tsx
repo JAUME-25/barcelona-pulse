@@ -4,6 +4,7 @@ import { t } from '../../i18n';
 import { formatDateTime, formatDay, formatDuration, formatTime } from '../../shared/format';
 import { availabilityLabel, availabilityOf, qualityFlagLabel, statusLabel } from './availability';
 import { distanceLabel, distanceMeters } from './distance';
+import { lifecycleOf, noLongerListed, notYetListed, type Lifecycle } from './lifecycle';
 import { districtName, stationName } from './names';
 import { OctagonGlyph } from './OctagonGlyph';
 import { sourceName } from './sources';
@@ -28,6 +29,8 @@ interface StationDetailProps {
   onSelect?: ((id: number) => void) | undefined;
   /** La cifra que enseñan las cercanas: la misma que la lista (bicis o eléctricas). */
   figures?: ListFigures;
+  /** Días importados de la fuente: con ellos se sabe si la estación es un alta o una baja. */
+  days: readonly string[];
 }
 
 /**
@@ -128,27 +131,40 @@ function StationChanges({ station, at }: { station: StationItem; at: string }) {
 function UnknownExplanation({
   station,
   response,
+  lifecycle,
 }: {
   station: StationItem;
   response: StationsResponse;
+  lifecycle: Lifecycle;
 }) {
   const m = t().detail;
   const last = station.state.lastObservedAt;
+  // Si la fuente aún no la publicaba en ese momento, es eso, no «no ha informado».
+  const notYet = notYetListed(lifecycle, response.at);
+  if (notYet !== null) {
+    return <p className="station-detail__explain">{m.notYetListed(notYet.at)}</p>;
+  }
   if (last === null) {
     return <p className="station-detail__explain">{m.neverReported}</p>;
   }
+  const noLonger = noLongerListed(lifecycle, response.at);
   // «de las 07:45» el mismo día; si no, con la fecha: «del 12 de junio de 2025, 10:54».
   const sameDay = formatDay(last) === formatDay(response.at);
   return (
-    <p className="station-detail__explain">
-      {m.lastObservation({
-        sameDay,
-        when: <time dateTime={last}>{sameDay ? formatTime(last) : formatDateTime(last)}</time>,
-        clock: formatTime(last),
-        duration: formatDuration(last, response.at),
-        tolerance: response.toleranceMinutes,
-      })}
-    </p>
+    <>
+      <p className="station-detail__explain">
+        {m.lastObservation({
+          sameDay,
+          when: <time dateTime={last}>{sameDay ? formatTime(last) : formatDateTime(last)}</time>,
+          clock: formatTime(last),
+          duration: formatDuration(last, response.at),
+          tolerance: response.toleranceMinutes,
+        })}
+      </p>
+      {noLonger !== null && (
+        <p className="station-detail__explain">{m.noLongerListed(noLonger.absentFrom)}</p>
+      )}
+    </>
   );
 }
 
@@ -161,12 +177,14 @@ export function StationDetail({
   all = [],
   onSelect,
   figures = 'bikes',
+  days,
 }: StationDetailProps) {
   const m = t().detail;
   const headingRef = useRef<HTMLHeadingElement>(null);
   const { state } = station;
   const category = availabilityOf(state);
   const current = state.freshness === 'current';
+  const lifecycle = lifecycleOf(station, days);
 
   // Al abrir el detalle, el foco va al nombre para que el lector de pantalla lo anuncie.
   useEffect(() => {
@@ -244,7 +262,7 @@ export function StationDetail({
           </div>
         </dl>
       ) : (
-        <UnknownExplanation station={station} response={response} />
+        <UnknownExplanation station={station} response={response} lifecycle={lifecycle} />
       )}
 
       {category === 'outOfService' && <p className="station-detail__explain">{m.outOfService}</p>}
@@ -281,6 +299,31 @@ export function StationDetail({
           <>
             <dt>{m.altitude}</dt>
             <dd>{m.metres(station.altitude)}</dd>
+          </>
+        )}
+        {/* Alta y baja: solo cuando un día importado anterior o posterior lo demuestra. */}
+        {lifecycle.appeared !== null && (
+          <>
+            <dt>{m.added}</dt>
+            <dd>
+              {m.addedValue(
+                lifecycle.appeared.at,
+                lifecycle.appeared.absentOn,
+                lifecycle.appeared.gap,
+              )}
+            </dd>
+          </>
+        )}
+        {lifecycle.withdrawn !== null && (
+          <>
+            <dt>{m.removed}</dt>
+            <dd>
+              {m.removedValue(
+                lifecycle.withdrawn.lastDay,
+                lifecycle.withdrawn.absentFrom,
+                lifecycle.withdrawn.gap,
+              )}
+            </dd>
           </>
         )}
         <dt>{m.source}</dt>

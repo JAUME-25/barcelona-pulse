@@ -1416,6 +1416,116 @@ describe('App', () => {
     expect(requests.filter((u) => u.pathname.endsWith('/timeline'))).toHaveLength(1);
   });
 
+  it('altas y bajas: la ficha y «Qué muestra y qué no» dicen cuándo la fuente empezó o dejó de listar una estación', async () => {
+    const source = { ...observedSource, days: ['2026-08-19', '2026-08-20', '2026-08-21'] };
+    const real = [
+      // Listada por primera vez el 20 de agosto a las 10:25: el 19 no estaba.
+      stationFixture({
+        id: 31,
+        sourceStationId: '601',
+        name: 'C/ NOVA, 1',
+        firstSeenAt: '2026-08-20T08:25:00+00:00',
+        state: { lastObservedAt: '2026-08-20T21:54:08+00:00' },
+      }),
+      // Listada por última vez el 19 de agosto: el 20 ya no estaba, y desde entonces sin dato.
+      stationFixture({
+        id: 32,
+        sourceStationId: '602',
+        name: 'C/ VELLA, 2',
+        lastSeenAt: '2026-08-18T22:00:00+00:00',
+        state: {
+          freshness: 'stale',
+          status: 'unknown',
+          lastObservedAt: '2026-08-19T10:00:00+00:00',
+          bikesAvailable: null,
+          docksAvailable: null,
+        },
+      }),
+      // Entra el 21 de agosto a las 08:00: en el momento mostrado (el 20) la fuente aún no la lista.
+      stationFixture({
+        id: 33,
+        sourceStationId: '603',
+        name: 'C/ FUTURA, 3',
+        firstSeenAt: '2026-08-21T06:00:00+00:00',
+        metadataAssumed: true,
+        state: {
+          freshness: 'none',
+          status: 'unknown',
+          lastObservedAt: null,
+          bikesAvailable: null,
+          docksAvailable: null,
+        },
+      }),
+    ];
+    mockApi((path, url) => {
+      if (path === '/api/sources') return json([source]);
+      if (path === '/api/stations') return json(observedResponse(real));
+      if (path === '/api/sources/bicing-bcn/timeline') return json(timelineFor(url));
+      if (path === '/api/sources/bicing-bcn/ingestions') return json(ingestionsFor());
+      return json({ title: 'Petición inesperada' }, 500);
+    });
+    const user = userEvent.setup();
+    renderApp();
+
+    await user.click(await screen.findByRole('button', { name: 'Qué muestra y qué no' }));
+    const sheet = screen.getByRole('article');
+    expect(within(sheet).getByRole('heading', { name: 'Altas y bajas' })).toBeTruthy();
+    expect(
+      within(sheet).getByText(
+        'En los días importados, la fuente empezó a publicar 2 estaciones y dejó de publicar 1 estación.',
+      ),
+    ).toBeTruthy();
+    const group = (name: RegExp) =>
+      within(sheet).getByRole('heading', { level: 4, name }).closest('section');
+    const items = (section: Element | null) =>
+      Array.from(section?.querySelectorAll('button.silent-group__item') ?? []).map(
+        (b) => b.textContent,
+      );
+    expect(items(group(/^Altas/))).toEqual([
+      'C/ Nova, 1Desde el 20 de agosto, 10:25; el 19 de agosto no estaba',
+      'C/ Futura, 3Desde el 21 de agosto, 08:00; el 20 de agosto no estaba',
+    ]);
+    expect(items(group(/^Bajas/))).toEqual([
+      'C/ Vella, 2Hasta el 19 de agosto; el 20 de agosto ya no estaba',
+    ]);
+    // Entre las que no tienen dato, el motivo es ese, no «lleva días sin informar».
+    expect(items(group(/^Ningún dato hasta este momento/))).toEqual([
+      'C/ Futura, 3Aún no publicada: la fuente la listó por primera vez el 21 de agosto, 08:00',
+    ]);
+    expect(items(group(/^Lleva días sin informar/))).toEqual([
+      'C/ Vella, 2Ya no publicada: el 20 de agosto no estaba en la lista de la fuente',
+    ]);
+
+    // En la ficha: el alta entre los datos; la baja, entre los datos y en por qué no hay dato.
+    await user.click(within(sheet).getByRole('button', { name: /^C\/ Nova, 1/ }));
+    let detail = screen.getByRole('article');
+    // La hora, con el separador que ponga Intl («, 10:25» o «a las 10:25»).
+    expect(within(detail).getByText('Alta').nextElementSibling?.textContent).toMatch(
+      /^20 de agosto de 2026.*10:25 · el 19 de agosto no estaba en la lista de la fuente$/,
+    );
+    expect(within(detail).queryByText('Baja')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Volver a la lista' }));
+    await user.click(screen.getByRole('button', { name: /^C\/ Vella, 2/ }));
+    detail = screen.getByRole('article');
+    expect(within(detail).getByText('Baja').nextElementSibling?.textContent).toBe(
+      '19 de agosto de 2026 · el 20 de agosto ya no estaba en la lista de la fuente',
+    );
+    expect(detail.textContent).toContain(
+      'La fuente dejó de publicar esta estación: el 20 de agosto de 2026 ya no estaba en su lista.',
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Volver a la lista' }));
+    await user.click(screen.getByRole('button', { name: /^C\/ Futura, 3/ }));
+    detail = screen.getByRole('article');
+    expect(detail.textContent).toMatch(
+      /La fuente aún no publicaba esta estación: la listó por primera vez el 21 de agosto de 2026.*08:00\./,
+    );
+    expect(within(detail).getByText('Alta').nextElementSibling?.textContent).toMatch(
+      /^21 de agosto de 2026.*08:00 · el 20 de agosto no estaba en la lista de la fuente$/,
+    );
+  });
+
   it('la fuente se puede fijar por la URL', async () => {
     mockApi((path) =>
       json(path === '/api/sources' ? [demoSource, observedSource] : stationsResponse(stations)),

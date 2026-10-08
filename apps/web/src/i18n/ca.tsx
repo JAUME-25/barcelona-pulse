@@ -5,8 +5,11 @@ import {
   dayRuns,
   daysByMonth,
   durationParts,
+  formatDateTime,
   formatDay,
   formatDayMonth,
+  formatLocalDate,
+  formatLocalDayMonth,
   formatTime,
   joinList,
   monthName,
@@ -21,6 +24,12 @@ import type { AvailabilityKey, GapInput, NoEffectInput, Origin } from './types';
 
 const list = (items: readonly string[]) => joinList(items, 'i');
 const count = (n: number, one: string, many: string) => `${String(n)} ${n === 1 ? one : many}`;
+
+// L’article del dia: «el 12 de maig», però «l’1 de juny» i «l’11 de maig» (comencen per vocal).
+const apostrophe = (day: string) => /^(1|11) /.test(day);
+const elDia = (day: string) => (apostrophe(day) ? `l’${day}` : `el ${day}`);
+const desDel = (day: string) => (apostrophe(day) ? `Des de l’${day}` : `Des del ${day}`);
+const finsAl = (day: string) => (apostrophe(day) ? `Fins a l’${day}` : `Fins al ${day}`);
 
 /** «la 01:30» però «les 10:54»: la una és singular. */
 const theHour = (clock: string) => (clock.startsWith('01:') ? `la ${clock}` : `les ${clock}`);
@@ -411,6 +420,20 @@ export const ca: Messages = {
     changeAltitude: (from: number, to: number) => `altitud de ${String(from)} a ${String(to)} m`,
     metadataAssumed:
       'El nom, la ubicació i la capacitat són d’una publicació posterior a aquest moment.',
+    added: 'Alta',
+    removed: 'Baixa',
+    addedValue: (at, absentOn, gap) =>
+      gap
+        ? `${formatDay(at)} · ${elDia(formatLocalDayMonth(absentOn))}, darrer dia importat abans, no era a la llista de la font`
+        : `${formatDateTime(at)} · ${elDia(formatLocalDayMonth(absentOn))} no era a la llista de la font`,
+    removedValue: (lastDay, absentFrom, gap) =>
+      gap
+        ? `${formatLocalDate(lastDay)} · ${elDia(formatLocalDayMonth(absentFrom))}, següent dia importat, ja no era a la llista de la font`
+        : `${formatLocalDate(lastDay)} · ${elDia(formatLocalDayMonth(absentFrom))} ja no era a la llista de la font`,
+    notYetListed: (at) =>
+      `La font encara no publicava aquesta estació: la va llistar per primer cop el ${formatDateTime(at)}.`,
+    noLongerListed: (absentFrom) =>
+      `La font va deixar de publicar aquesta estació: ${elDia(formatLocalDate(absentFrom))} ja no era a la seva llista.`,
   },
 
   replay: {
@@ -577,6 +600,29 @@ export const ca: Messages = {
     silentNever: 'Cap dada fins a aquest moment',
     silentSince: (iso, at) => `Sense dades des ${sinceWhen(iso, at)}`,
     silentFor: (iso, at) => `${duration(iso, at)} sense dades`,
+    notYetListed: (at) =>
+      `Encara no publicada: la font la va llistar per primer cop el ${formatDayMonth(at)}, ${formatTime(at)}`,
+    noLongerListed: (absentFrom) =>
+      `Ja no publicada: ${elDia(formatLocalDayMonth(absentFrom))} no era a la llista de la font`,
+    lifecycleTitle: 'Altes i baixes',
+    lifecycleOneDay:
+      'Amb un sol dia importat no es pot saber si cap estació va entrar o sortir de la llista de la font.',
+    lifecycleLead: (added, removed) =>
+      added === 0 && removed === 0
+        ? 'Als dies importats, la font no va començar ni va deixar de publicar cap estació.'
+        : `Als dies importats, la font va començar a publicar ${count(added, 'estació', 'estacions')} i va deixar de publicar ${count(removed, 'estació', 'estacions')}.`,
+    addedGroup: 'Altes',
+    removedGroup: 'Baixes',
+    addedWhy: (at, absentOn, gap) =>
+      gap
+        ? `${desDel(formatDayMonth(at))}; ${elDia(formatLocalDayMonth(absentOn))}, darrer dia importat abans, no hi era`
+        : `${desDel(formatDayMonth(at))}, ${formatTime(at)}; ${elDia(formatLocalDayMonth(absentOn))} no hi era`,
+    removedWhy: (lastDay, absentFrom, gap) =>
+      gap
+        ? `${finsAl(formatLocalDayMonth(lastDay))}; ${elDia(formatLocalDayMonth(absentFrom))}, següent dia importat, ja no hi era`
+        : `${finsAl(formatLocalDayMonth(lastDay))}; ${elDia(formatLocalDayMonth(absentFrom))} ja no hi era`,
+    lifecycleNote:
+      'Només amb el que s’ha importat: una estació que la font deixa de llistar pot tornar més endavant, i una que apareix va poder entrar en servei qualsevol dia anterior sense importar. Que una estació deixi d’informar no és una baixa: segueix a la llista de la font.',
     periodOf: (days) => {
       const runs = dayRuns(days);
       if (runs.length === 0) return null;

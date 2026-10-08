@@ -1,9 +1,10 @@
 import { Fragment, useEffect, useMemo, useRef } from 'react';
-import type { SourceSummary, StationsResponse } from '../../api/client';
+import type { SourceSummary, StationItem, StationsResponse } from '../../api/client';
 import { t } from '../../i18n';
 import { numberFormat } from '../../i18n/intl';
 import { formatDateTime, formatMonths, formatWhole } from '../../shared/format';
 import { dayOfMonth, formatLocalDay, formatShortWeekday, weekStart } from '../history/time';
+import { lifecycleOf, lifecycles, noLongerListed, notYetListed } from '../stations/lifecycle';
 import { stationName } from '../stations/names';
 import {
   byDay,
@@ -22,6 +23,7 @@ import {
   silenceLabel,
   silentStations,
   type Silence,
+  type SilentStation,
 } from './limits';
 import { hourGrid, qualitySummary, QUALITY_STEP_MINUTES, useQuality, type DayRow } from './quality';
 import './limits.css';
@@ -270,13 +272,83 @@ function Holes({ source, onPickDay }: { source: SourceSummary; onPickDay: (day: 
   );
 }
 
+interface GroupItem {
+  station: StationItem;
+  /** Por qué está en el grupo; null si el título ya lo dice todo. */
+  why: string | null;
+}
+
+/** Un grupo de estaciones con su motivo; cada una abre su detalle si se puede. */
+function StationGroup({
+  title,
+  items,
+  onSelectStation,
+}: {
+  title: string;
+  items: readonly GroupItem[];
+  onSelectStation?: ((id: number) => void) | undefined;
+}) {
+  return (
+    <section className="silent-group">
+      <h4 className="silent-group__title">
+        {title} <span className="silent-group__count">{items.length}</span>
+      </h4>
+      <ul className="silent-group__list">
+        {items.map(({ station, why }) => {
+          const content = (
+            <>
+              <span className="silent-group__name" lang="ca" translate="no">
+                {stationName(station)}
+              </span>
+              {why !== null && <span className="silent-group__why">{why}</span>}
+            </>
+          );
+          return (
+            <li key={station.id}>
+              {onSelectStation === undefined ? (
+                <span className="silent-group__item">{content}</span>
+              ) : (
+                <button
+                  type="button"
+                  className="silent-group__item"
+                  onClick={() => {
+                    onSelectStation(station.id);
+                  }}
+                >
+                  {content}
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+/**
+ * Por qué una estación no tiene dato: si la fuente aún no la publicaba (o ya no), eso; si no,
+ * cuánto lleva callada. Sin ningún dato, el título del grupo ya lo dice todo.
+ */
+function silenceWhy(s: SilentStation, at: string, days: readonly string[]): string | null {
+  const m = t().limits;
+  const lifecycle = lifecycleOf(s.station, days);
+  const notYet = notYetListed(lifecycle, at);
+  if (notYet !== null) return m.notYetListed(notYet.at);
+  const noLonger = noLongerListed(lifecycle, at);
+  if (noLonger !== null) return m.noLongerListed(noLonger.absentFrom);
+  return s.silence === 'never' ? null : silenceLabel(s, at);
+}
+
 /** Las estaciones sin dato en el momento mostrado, agrupadas por el motivo. */
 function Silent({
   response,
+  days,
   onSelectStation,
 }: {
   response: StationsResponse;
-  onSelectStation?: (id: number) => void;
+  days: readonly string[];
+  onSelectStation?: ((id: number) => void) | undefined;
 }) {
   const m = t().limits;
   const silent = silentStations(response.stations, response.at);
@@ -297,45 +369,63 @@ function Silent({
         {m.someSilent(formatDateTime(response.at), silent.length, total)}
       </p>
       {groups.map((g) => (
-        <section key={g.silence} className="silent-group">
-          <h4 className="silent-group__title">
-            {m.silenceTitle[g.silence][g.items.length === 1 ? 0 : 1]}{' '}
-            <span className="silent-group__count">{g.items.length}</span>
-          </h4>
-          <ul className="silent-group__list">
-            {g.items.map((s) => {
-              const content = (
-                <>
-                  <span className="silent-group__name" lang="ca" translate="no">
-                    {stationName(s.station)}
-                  </span>
-                  {/* Sin ningún dato, el título del grupo ya lo dice todo. */}
-                  {s.silence !== 'never' && (
-                    <span className="silent-group__why">{silenceLabel(s, response.at)}</span>
-                  )}
-                </>
-              );
-              return (
-                <li key={s.station.id}>
-                  {onSelectStation === undefined ? (
-                    <span className="silent-group__item">{content}</span>
-                  ) : (
-                    <button
-                      type="button"
-                      className="silent-group__item"
-                      onClick={() => {
-                        onSelectStation(s.station.id);
-                      }}
-                    >
-                      {content}
-                    </button>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </section>
+        <StationGroup
+          key={g.silence}
+          title={m.silenceTitle[g.silence][g.items.length === 1 ? 0 : 1]}
+          items={g.items.map((s) => ({
+            station: s.station,
+            why: silenceWhy(s, response.at, days),
+          }))}
+          onSelectStation={onSelectStation}
+        />
       ))}
+    </>
+  );
+}
+
+/**
+ * Altas y bajas: las estaciones que la fuente empezó o dejó de listar en los días importados.
+ * Solo lo que un día importado anterior o posterior demuestra (`lifecycle.ts`).
+ */
+function Lifecycle({
+  response,
+  days,
+  onSelectStation,
+}: {
+  response: StationsResponse;
+  days: readonly string[];
+  onSelectStation?: ((id: number) => void) | undefined;
+}) {
+  const m = t().limits;
+  const { appeared, withdrawn } = useMemo(
+    () => lifecycles(response.stations, days),
+    [response.stations, days],
+  );
+  if (days.length < 2) return <p className="limits-sheet__text">{m.lifecycleOneDay}</p>;
+  return (
+    <>
+      <p className="limits-sheet__text">{m.lifecycleLead(appeared.length, withdrawn.length)}</p>
+      {appeared.length > 0 && (
+        <StationGroup
+          title={m.addedGroup}
+          items={appeared.map((a) => ({
+            station: a.station,
+            why: m.addedWhy(a.appeared.at, a.appeared.absentOn, a.appeared.gap),
+          }))}
+          onSelectStation={onSelectStation}
+        />
+      )}
+      {withdrawn.length > 0 && (
+        <StationGroup
+          title={m.removedGroup}
+          items={withdrawn.map((w) => ({
+            station: w.station,
+            why: m.removedWhy(w.withdrawn.lastDay, w.withdrawn.absentFrom, w.withdrawn.gap),
+          }))}
+          onSelectStation={onSelectStation}
+        />
+      )}
+      <p className="limits-sheet__note">{m.lifecycleNote}</p>
     </>
   );
 }
@@ -429,8 +519,11 @@ export function LimitsSheet({
       <h3 className="limits-sheet__heading">{m.holes}</h3>
       <Holes source={source} onPickDay={onPickDay} />
 
+      <h3 className="limits-sheet__heading">{m.lifecycleTitle}</h3>
+      <Lifecycle response={response} days={source.days} onSelectStation={onSelectStation} />
+
       <h3 className="limits-sheet__heading">{m.silent}</h3>
-      <Silent response={response} onSelectStation={onSelectStation} />
+      <Silent response={response} days={source.days} onSelectStation={onSelectStation} />
 
       <h3 className="limits-sheet__heading">{m.notSaidTitle}</h3>
       <ul className="limits-sheet__list">
