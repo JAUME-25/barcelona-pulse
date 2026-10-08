@@ -580,10 +580,20 @@ export const en: Messages = {
     lifecycleTitle: 'Added and removed',
     lifecycleOneDay:
       'With a single imported day there is no way to tell whether any station entered or left the source’s list.',
-    lifecycleLead: (added, removed) =>
-      added === 0 && removed === 0
-        ? 'In the imported days, the source neither started nor stopped publishing any station.'
-        : `In the imported days, the source started publishing ${count(added, 'station', 'stations')} and stopped publishing ${count(removed, 'station', 'stations')}.`,
+    lifecycleLead: (added, removed) => {
+      if (added === 0 && removed === 0) {
+        return 'In the imported days, the source neither started nor stopped publishing any station.';
+      }
+      const started =
+        added === 0
+          ? 'did not start publishing any station'
+          : `started publishing ${count(added, 'station', 'stations')}`;
+      const stopped =
+        removed === 0
+          ? 'did not stop publishing any'
+          : `stopped publishing ${count(removed, 'station', 'stations')}`;
+      return `In the imported days, the source ${started} and ${stopped}.`;
+    },
     addedGroup: 'Added',
     removedGroup: 'Removed',
     addedWhy: (at, absentOn, gap) =>

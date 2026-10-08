@@ -607,10 +607,20 @@ export const ca: Messages = {
     lifecycleTitle: 'Altes i baixes',
     lifecycleOneDay:
       'Amb un sol dia importat no es pot saber si cap estació va entrar o sortir de la llista de la font.',
-    lifecycleLead: (added, removed) =>
-      added === 0 && removed === 0
-        ? 'Als dies importats, la font no va començar ni va deixar de publicar cap estació.'
-        : `Als dies importats, la font va començar a publicar ${count(added, 'estació', 'estacions')} i va deixar de publicar ${count(removed, 'estació', 'estacions')}.`,
+    lifecycleLead: (added, removed) => {
+      if (added === 0 && removed === 0) {
+        return 'Als dies importats, la font no va començar ni va deixar de publicar cap estació.';
+      }
+      const started =
+        added === 0
+          ? 'no va començar a publicar cap estació'
+          : `va començar a publicar ${count(added, 'estació', 'estacions')}`;
+      const stopped =
+        removed === 0
+          ? 'no va deixar de publicar-ne cap'
+          : `va deixar de publicar ${count(removed, 'estació', 'estacions')}`;
+      return `Als dies importats, la font ${started} i ${stopped}.`;
+    },
     addedGroup: 'Altes',
     removedGroup: 'Baixes',
     addedWhy: (at, absentOn, gap) =>

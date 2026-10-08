@@ -623,10 +623,20 @@ export const es = {
     lifecycleTitle: 'Altas y bajas',
     lifecycleOneDay:
       'Con un solo día importado no se puede saber si alguna estación entró o salió de la lista de la fuente.',
-    lifecycleLead: (added: number, removed: number) =>
-      added === 0 && removed === 0
-        ? 'En los días importados, la fuente no empezó ni dejó de publicar ninguna estación.'
-        : `En los días importados, la fuente empezó a publicar ${count(added, 'estación', 'estaciones')} y dejó de publicar ${count(removed, 'estación', 'estaciones')}.`,
+    lifecycleLead: (added: number, removed: number) => {
+      if (added === 0 && removed === 0) {
+        return 'En los días importados, la fuente no empezó ni dejó de publicar ninguna estación.';
+      }
+      const started =
+        added === 0
+          ? 'no empezó a publicar ninguna estación'
+          : `empezó a publicar ${count(added, 'estación', 'estaciones')}`;
+      const stopped =
+        removed === 0
+          ? 'no dejó de publicar ninguna'
+          : `dejó de publicar ${count(removed, 'estación', 'estaciones')}`;
+      return `En los días importados, la fuente ${started} y ${stopped}.`;
+    },
     addedGroup: 'Altas',
     removedGroup: 'Bajas',
     addedWhy: (at: string, absentOn: string, gap: boolean) =>
