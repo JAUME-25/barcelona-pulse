@@ -96,9 +96,10 @@ Cada paso en Forge o en Cloudflare se hace mirando la pantalla real (los paneles
 
 5. **Script de despliegue** del sitio: el `git pull` de Forge y después `bash infra/deploy.sh`
    (compila la web, levanta la base de datos y la API, aplica las migraciones y falla si la API
-   no responde en `/health/ready`). La rejilla de huecos de «Qué muestra y qué no» la deja
-   calculada la propia API al arrancar, en unos 15 s con mayo, para que la primera visita no
-   espere unos 12 s.
+   no responde en `/health/ready`). Desde el 9-10-2026 la línea temporal se lee de un resumen
+   por paso (`timeline_summaries`, ADR 0015) que mantienen la ingesta y la purga; la primera vez,
+   `migrate` lo calcula entero (un segundo por día importado, aproximadamente) antes de que
+   arranque la API, y la rejilla de huecos de «Qué muestra y qué no» sale en milisegundos.
 6. **Primer despliegue**: «Deploy now».
 7. **Certificado** de Let's Encrypt desde Forge.
 8. **nginx del sitio**, con el certificado ya puesto: en el bloque `server` de HTTPS, quitar el
@@ -165,8 +166,9 @@ tiene que decir `geolocation=(self)`; hasta entonces, «Cerca de mí» falla sie
 
 - Otro periodo: `ingest bicing-archive --from … --to …` como arriba (hasta 31 días por vez y,
   mientras el portal conteste 403 al servidor, con los archivos del mes subidos aparte).
-- Después de importar o quitar días, la API vuelve a calcular la rejilla de huecos sola en
-  menos de 5 minutos (`TimelineWarmUp`); no hace falta nada más.
+- Al importar o quitar días, la ingesta y la purga dejan al día el resumen de la línea
+  temporal (ADR 0015); no hace falta nada más. Si cambia la regla, `summarize bicing-bcn` lo
+  recalcula entero (un segundo por día, aproximadamente).
 - Quitar días: `purge bicing-bcn --from … --to …` dice qué borraría; con `--yes`, lo borra
   (ADR 0012).
 - Copias: no hacen falta para la demo; todo sale de los archivos públicos y se puede volver a

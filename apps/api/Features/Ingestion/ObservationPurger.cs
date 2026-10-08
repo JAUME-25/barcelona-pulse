@@ -1,3 +1,4 @@
+using BarcelonaPulse.Api.Features.History;
 using BarcelonaPulse.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,10 +30,8 @@ public sealed class ObservationPurger(PulseDbContext db, TimeProvider clock, ILo
             throw new ArgumentException("El último día no puede ser anterior al primero.");
         }
 
-        if (!await db.DataSources.AnyAsync(s => s.Id == sourceId, ct))
-        {
-            throw new ArgumentException($"No existe la fuente '{sourceId}'.");
-        }
+        var source = await db.DataSources.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sourceId, ct)
+            ?? throw new ArgumentException($"No existe la fuente '{sourceId}'.");
 
         var start = LocalDay.For(from).StartUtc;
         var end = LocalDay.For(to).EndUtc;
@@ -69,6 +68,9 @@ public sealed class ObservationPurger(PulseDbContext db, TimeProvider clock, ILo
         }
 
         long deleted = await observations.ExecuteDeleteAsync(ct);
+        // El resumen de la línea temporal (ADR 0015): los pasos de esos días, y los primeros
+        // minutos del siguiente, que decidían las observaciones borradas.
+        await TimelineSummaries.RefreshAsync(db, sourceId, source.StalenessTolerance, start, end, ct);
         var now = clock.GetUtcNow();
         var marked = await ingestions.ExecuteUpdateAsync(s => s.SetProperty(r => r.PurgedAt, now), ct);
         // El recuento (ADR 0012) y la generación de purgas (ADR 0014): la versión de los datos de

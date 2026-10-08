@@ -620,13 +620,29 @@ honesta de lo hecho.
     (las capturas y el humo seguidos agotan los 120 por minuto de la API local: el humo se
     repite cuando `/api/sources` vuelve a dar 200).
 
+31. **Hecho** el 9-10-2026 (en local, sin push). La tabla de resumen de la línea temporal, el
+    siguiente punto de la propuesta: `timeline_summaries`, la red de cada fuente en cada paso de
+    5 minutos (el más fino que sirve la API; 10, 15, 30 y 60 son subconjuntos exactos), mantenida
+    por la ingesta y la purga en su transacción con el mismo SQL que antes corría en cada
+    petición (ADR 0015, que sustituye el cálculo al pedirla de la ADR 0009). Las estaciones
+    conocidas no van en la tabla: la lectura las cuenta con las versiones de hoy y una búsqueda
+    binaria por paso. `migrate` la calcula la primera vez (los 42 días locales, 12,7 s) y
+    `summarize [FUENTE]` la recalcula entera si cambia la regla. En local, las semanas de la
+    rejilla de huecos pasan de 1 435–1 650 ms a 5–41 ms, y una semana sin caché a 11–14 ms; la
+    tabla, 288 filas por día (1,7 MB con 42 días). Pruebas: 216 de backend
+    (`TimelineSummaryTests`: una segunda importación del mismo día actualiza sus pasos, y
+    recalcular entero da las mismas filas; `Every_step_matches_the_map_at_that_instant` y la
+    purga siguen vigilando la regla). La web no cambia. Queda para un bloque aparte quitar
+    `TimelineWarmUp`, el tope de dos cálculos y el 503 de la línea temporal, que ya no protegen
+    nada; en producción, medir la semana tras el despliegue.
+
 ## Siguiente
 
 - Lo que queda de la propuesta del 7-10-2026, en este orden (el balance entre dos horas, la
-  altitud, la página del contrato y las altas y bajas se hicieron el 8 y el 9-10-2026, B5.26 a
-  B5.30):
-  - Tabla de resumen por hora: lo que falta para que una semana de la línea temporal baje de
-    los 2,8–3,0 s de producción.
+  altitud, la página del contrato, las altas y bajas y la tabla de resumen se hicieron el 8 y el
+  9-10-2026, B5.26 a B5.31):
+  - Quitar `TimelineWarmUp`, el `ComputationGate` y el 503 de la línea temporal (ADR 0015): ya
+    no tienen qué proteger.
   - Tiempo real cuando el token de Open Data BCN responda 200 desde el PC de Jaume (el
     histórico ya se descarga desde casa; sin token, el JSON del tiempo real contesta 302 a
     `/tokens`). El VPS dio 403 a una sola petición: repetir otro día para saber si es permanente.

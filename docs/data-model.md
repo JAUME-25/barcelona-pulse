@@ -14,6 +14,7 @@ Esquema en `apps/api/Infrastructure/Migrations`.
 | `ingestion_runs` | Cada ingesta: fuente, adaptador y versión, entrada y sha256, periodo de las observaciones nuevas que guardó (`period_from`, `period_to`; nulo si no guardó ninguna: las repetidas no cuentan, ADR 0014) y periodo que dice cubrir (`covered_from`, `covered_to`), recuentos (nuevas, duplicadas, en conflicto, rechazadas), resultado y, si sus días se quitaron, cuándo (`purged_at`). | |
 | `ingestion_rejections` | Registros rechazados con su motivo (hasta 1 000 por ingesta; el total va en `ingestion_runs`). | |
 | `study_areas` | Áreas de estudio de la cobertura en EPSG:25831: los 10 distritos oficiales y Barcelona como su unión, con su superficie, procedencia y sha256 del archivo. | `id` (`barcelona`, `districte-01`…) |
+| `timeline_summaries` | La red de una fuente en cada paso de 5 minutos (ADR 0015): estaciones con dato, contadas, vacías y llenas, y sumas de bicis, anclajes y eléctricas. Solo los pasos con alguna estación con dato. La mantienen la ingesta y la purga; `summarize` la recalcula entera. | `(source_id, at)` |
 
 Los escenarios hipotéticos (B4) no se guardan: se calculan al pedirlos y el escenario viaja en
 la petición (ADR 0013). Ninguna tabla tiene estaciones inventadas.

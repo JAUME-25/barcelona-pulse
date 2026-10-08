@@ -1,3 +1,4 @@
+using BarcelonaPulse.Api.Features.History;
 using BarcelonaPulse.Api.Features.Ingestion;
 using BarcelonaPulse.Api.Features.Scenarios;
 using BarcelonaPulse.Api.Features.Sources;
@@ -15,6 +16,7 @@ public sealed class PulseDbContext(DbContextOptions<PulseDbContext> options) : D
     public DbSet<IngestionRun> IngestionRuns => Set<IngestionRun>();
     public DbSet<IngestionRejection> IngestionRejections => Set<IngestionRejection>();
     public DbSet<StudyArea> StudyAreas => Set<StudyArea>();
+    public DbSet<TimelineSummary> TimelineSummaries => Set<TimelineSummary>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

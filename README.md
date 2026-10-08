@@ -108,6 +108,9 @@ las tres, inglés.
   la misma clave.
 - **Quitar días importados:** `docker compose run --rm api purge bicing-bcn --from 2026-08-24 --to 2026-08-30`
   dice qué borraría; con `--yes` lo borra. Volver a importarlos los recupera (ADR 0012).
+- **Resumen de la línea temporal:** lo mantienen la ingesta y la purga (ADR 0015); si cambia la
+  regla o se tocan las observaciones por otra vía, `docker compose run --rm api summarize bicing-bcn`
+  lo recalcula entero (sin fuente, todas).
 - **Reiniciar la base local:** `docker compose down` y `docker volume rm barcelona-pulse_db-data`.
 
 ## Problemas frecuentes

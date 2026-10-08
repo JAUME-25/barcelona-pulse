@@ -23,7 +23,7 @@ que solo reenvían llamadas.
 | `Features/Sources` | Fuentes de datos (observada o sintética) y `GET /api/sources` con el periodo observado y los días que se pueden reproducir (ADR 0011). |
 | `Features/Stations` | Estaciones, versiones de atributos y observaciones; regla del estado en un instante; `GET /api/stations` y `GET /api/stations/{id}`. |
 | `Features/Ingestion` | Contrato normalizado, validación común, `StationIngestor` (idempotente) y adaptadores: `Demo/DemoFixtureAdapter` y `BicingArchive/BicingArchiveAdapter`. |
-| `Features/History` | Reproducir un periodo: línea temporal `GET /api/sources/{id}/timeline` (ADR 0009) y fotogramas `GET /api/sources/{id}/frames` (ADR 0010). |
+| `Features/History` | Reproducir un periodo: línea temporal `GET /api/sources/{id}/timeline`, leída del resumen por paso `timeline_summaries` que mantienen la ingesta y la purga (ADR 0015; antes calculada al pedirla, ADR 0009), y fotogramas `GET /api/sources/{id}/frames` (ADR 0010). |
 | `Features/Scenarios` | Cobertura (B4): áreas de estudio `GET /api/study-areas` y escenarios `POST /api/scenarios/coverage`, calculados en EPSG:25831 y sin guardar (ADR 0013). |
 | `Infrastructure` | `PulseDbContext`, migraciones, registro de servicios, CLI, utilidades de instantes y geometría. |
 
@@ -52,9 +52,10 @@ tipado; `app` con la composición y el tema visual (`theme.ts`).
    llega una hora se sigue viendo el último paso ya cargado.
 7. «Qué muestra y qué no» pide la línea temporal de cada semana importada cada 15 minutos (con
    mayo, 4 peticiones) para la rejilla de huecos, y la guarda mientras la página siga abierta:
-   cada petición cuenta para el límite de la API. La API ya las tiene calculadas:
-   `TimelineWarmUp` las calcula al arrancar y comprueba cada 5 minutos que sigan en la caché
-   (después de importar o quitar días, la clave cambia y las vuelve a calcular).
+   cada petición cuenta para el límite de la API. Desde el 9-10-2026 la línea temporal se lee
+   del resumen por paso de 5 minutos que mantienen la ingesta y la purga (`timeline_summaries`,
+   ADR 0015): una semana son milisegundos, también la primera vez. `TimelineWarmUp`, que las
+   dejaba calculadas al arrancar, ya no tiene qué proteger y se quita en un bloque aparte.
 
 ## Ingesta
 
@@ -132,13 +133,19 @@ Puntos de entrada, por línea de comandos (no hay endpoint HTTP de importación)
   tras el despliegue del 7-10-2026: las cuatro semanas de mayo en 2 955, 2 911, 2 805 y 2 815 ms,
   frente a los 3 500–4 200 de antes (un 20–30 % menos; el disco del VPS sigue mandando). Subir
   `work_mem` (4 → 64 o 256 MB) no ayuda: cambia el plan a uno sin paralelismo y tarda más;
-  `random_page_cost = 1.1` tampoco (plan por el índice único, 2,5 s). Para bajar de ahí hace
-  falta la tabla de resumen por hora, no otro índice.
-  La clave de la caché lleva la versión de los datos del rango (ADR 0014): importar un día solo
-  invalida las semanas que lo tocan; una purga, todas.
-  Cada cálculo tiene 20 s de tope y va sin JIT, que con la estimación del `generate_series` se
-  activaba siempre y añadía un 50 %. Medido en local el 7-10-2026: 12 semanas distintas a la vez,
-  nunca más de 2 consultas en PostgreSQL y todas servidas en 5,6 s.
+  `random_page_cost = 1.1` tampoco (plan por el índice único, 2,5 s). Para bajar de ahí hacía
+  falta la tabla de resumen, no otro índice.
+- Resumen de la línea temporal por paso de 5 minutos (`timeline_summaries`, ADR 0015, desde el
+  9-10-2026): el mismo SQL de antes corre una vez por ingesta (los pasos que tocan las
+  observaciones nuevas, más la tolerancia) o por purga, en su transacción, y la línea temporal
+  lee filas. Medido en local con 42 días (6 semanas, 6 388 595 observaciones): las semanas de la
+  rejilla pasan de 1 435–1 650 ms a 5–41 ms; una semana a 15 min no cachead, 170 ms la primera
+  petición tras arrancar y menos de 30 ms después; un día a 5 min, 24 ms. La tabla, 12 110 filas
+  y 1,7 MB para esos 42 días (288 por día); `migrate` la calculó entera en 12,7 s, con medio
+  segundo por día importado. La clave de la caché sigue llevando la versión de los datos del
+  rango (ADR 0014): importar un día solo invalida las semanas que lo tocan; una purga, todas.
+  El cálculo de un día en la ingesta va sin JIT, que con la estimación del `generate_series` se
+  activaba siempre y añadía un 50 %.
 - Detrás de un proxy, la IP del cliente sale de `X-Forwarded-For` solo si la conexión llega de
   las redes de `ForwardedHeaders:KnownNetworks` (o de localhost); si no, se ignora y nadie puede
   hacerse pasar por otra IP. En producción, la red de Docker del proyecto (`docs/despliegue.md`).
@@ -230,8 +237,9 @@ de Playwright añade el retraso de sus comprobaciones: la lista parecía tardar 
   comprimida (Brotli o gzip). La primera petición tras arrancar tarda ~1 s (arranque en frío).
 - Ingesta de un día real: ~19 s en total, descargas incluidas. Una semana (17–23 de agosto de
   2026, 925 784 observaciones nuevas): 72 s.
-- Línea temporal con esa semana (1 080 173 observaciones): un día a 5 min, 0,48 s la primera
-  vez; la semana a 15 min, 1,7 s; repetidas, 5–9 ms desde la caché (ADR 0009).
+- Línea temporal con esa semana (1 080 173 observaciones), calculada al pedirla (ADR 0009, hasta
+  el 9-10-2026): un día a 5 min, 0,48 s la primera vez; la semana a 15 min, 1,7 s; repetidas,
+  5–9 ms desde la caché. Desde el resumen por paso (ADR 0015), milisegundos sin caché.
 - Fotogramas de una hora real: 47–110 ms; 2 MB sin comprimir y 110 KB con Brotli (ADR 0010).
 - Con dos semanas (2,16 millones de observaciones, 406 MB la tabla con índices) los tiempos de
   estado, fotogramas y línea temporal no cambian. `GET /api/sources`, que contaba todas las

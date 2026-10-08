@@ -1,4 +1,5 @@
 using System.Globalization;
+using BarcelonaPulse.Api.Features.History;
 using BarcelonaPulse.Api.Features.Ingestion;
 using BarcelonaPulse.Api.Features.Ingestion.BicingArchive;
 using BarcelonaPulse.Api.Features.Ingestion.Demo;
@@ -16,10 +17,11 @@ namespace BarcelonaPulse.Api.Infrastructure;
 ///   ingest bicing-archive --day D   importa un día del histórico de Bicing (idempotente)
 ///   ingest bicing-archive --from A --to B   importa un periodo, un día por ingesta
 ///   purge FUENTE --day D [--yes]    quita días de una fuente (sin --yes, solo cuenta)
+///   summarize [FUENTE]              recalcula entero el resumen de la línea temporal
 /// </summary>
 public static class CommandLine
 {
-    private static readonly string[] Commands = ["migrate", "ingest", "purge"];
+    private static readonly string[] Commands = ["migrate", "ingest", "purge", "summarize"];
 
     /// <summary>Primer mes publicado del histórico de Bicing nuevo.</summary>
     private static readonly DateOnly FirstArchiveDay = new(2019, 3, 1);
@@ -29,7 +31,11 @@ public static class CommandLine
     private const string Usage = """
         Uso:
           migrate
-              Aplica las migraciones pendientes.
+              Aplica las migraciones pendientes y calcula el resumen de la línea temporal de las
+              fuentes que no lo tengan (la primera vez).
+          summarize [FUENTE]
+              Vuelve a calcular entero el resumen de la línea temporal (ADR 0015) de una fuente o
+              de todas: para cuando cambie la regla. La ingesta y la purga lo mantienen al día.
           ingest demo
               Importa los datos sintéticos de demostración. Repetirlo no duplica nada.
           ingest study-areas
@@ -91,6 +97,32 @@ public static class CommandLine
                     Console.WriteLine(pending.Count == 0
                         ? "Base de datos al día: ninguna migración pendiente."
                         : $"Migraciones aplicadas: {string.Join(", ", pending)}");
+                    // La primera vez tras la migración del resumen (ADR 0015), para que la API
+                    // arranque con la línea temporal entera. Después lo mantienen ingesta y purga.
+                    foreach (var rebuilt in await TimelineSummaries.RebuildMissingAsync(db, ct))
+                    {
+                        PrintRebuild(rebuilt);
+                    }
+
+                    return 0;
+                }
+
+            case ["summarize", .. var sources] when sources.Length <= 1:
+                {
+                    var db = sp.GetRequiredService<PulseDbContext>();
+                    var query = db.DataSources.AsNoTracking().OrderBy(s => s.Id);
+                    var chosen = sources.Length == 0 ? await query.ToListAsync(ct) : await query.Where(s => s.Id == sources[0]).ToListAsync(ct);
+                    if (chosen.Count == 0)
+                    {
+                        await Console.Error.WriteLineAsync($"No existe la fuente '{sources[0]}'.");
+                        return 1;
+                    }
+
+                    foreach (var source in chosen)
+                    {
+                        PrintRebuild(await TimelineSummaries.RebuildAsync(db, source, ct));
+                    }
+
                     return 0;
                 }
 
@@ -320,6 +352,10 @@ public static class CommandLine
 
         return result;
     }
+
+    private static void PrintRebuild(TimelineSummaryRebuild rebuilt) => Console.WriteLine(rebuilt.From is { } from
+        ? $"Resumen de la línea temporal de '{rebuilt.SourceId}': del {from:yyyy-MM-dd} al {rebuilt.To:yyyy-MM-dd} (UTC) en {rebuilt.Elapsed.TotalSeconds:0.0} s."
+        : $"Resumen de la línea temporal de '{rebuilt.SourceId}': sin observaciones, nada que calcular.");
 
     private static string FormatPeriod(IngestionRun run) =>
         run.PeriodFrom is { } from && run.PeriodTo is { } to

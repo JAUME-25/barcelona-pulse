@@ -78,72 +78,24 @@ public static class TimelineGrid
 }
 
 /// <summary>
-/// Línea temporal de una fuente, calculada al pedirla con la misma regla del estado en un
-/// instante (ADR 0005). Medido el 5-10-2026 con datos reales: 2 h en 33 ms, un día a 5 min en
-/// ~0,4 s y una semana a 15 min en ~1,7 s; por eso se limita a 7 días y se guarda en memoria
-/// hasta la siguiente ingesta de la fuente. Si hicieran falta periodos largos, se precalcularía
-/// por ingesta.
+/// Línea temporal de una fuente, leída del resumen por paso de 5 minutos que mantienen la ingesta
+/// y la purga (<see cref="TimelineSummaries"/>, ADR 0015). Hasta el 9-10-2026 se calculaba al
+/// pedirla sobre las observaciones (ADR 0009): una semana tardaba de 2,8 a 3,0 s en producción.
+/// Las estaciones conocidas en cada paso se cuentan aquí con las versiones de hoy, como antes.
 /// </summary>
 public static class TimelineQuery
 {
-    // Cada observación cubre los pasos desde su instante hasta el siguiente reporte de la
-    // estación, sin pasar de la tolerancia (límite incluido). Se generan solo esos pasos.
+    // Un punto por paso de la rejilla pedida, haya o no fila en el resumen (sin fila: ceros y
+    // nulos). Los pasos de 10, 15, 30 y 60 minutos caen en la rejilla de 5, alineada en UTC.
     private const string Sql = """
         WITH steps AS (
             SELECT generate_series(@from, @to, @step) AS at
-        ),
-        obs AS (
-            SELECT o.station_id, o.observed_at, o.status, o.bikes_available, o.ebikes_available,
-                   o.docks_available, o.is_renting, o.is_returning,
-                   lead(o.observed_at) OVER (PARTITION BY o.station_id ORDER BY o.observed_at) AS next_at
-            FROM station_observations o
-            JOIN stations s ON s.id = o.station_id
-            WHERE s.source_id = @source
-              AND o.observed_at >= @from - @tolerance
-              AND o.observed_at <= @to
-        ),
-        covered AS (
-            SELECT g.at, obs.bikes_available, obs.ebikes_available, obs.docks_available,
-                   obs.status = 'in_service' AND NOT (obs.is_renting IS FALSE AND obs.is_returning IS FALSE) AS operating
-            FROM obs,
-            LATERAL generate_series(
-                @from + ceil(extract(epoch FROM (greatest(obs.observed_at, @from) - @from)) / extract(epoch FROM @step)) * @step,
-                least(obs.observed_at + @tolerance, coalesce(obs.next_at - interval '1 microsecond', 'infinity'), @to),
-                @step) AS g(at)
-        ),
-        counted AS (
-            SELECT at, operating, bikes_available, ebikes_available, docks_available,
-                   operating AND bikes_available IS NOT NULL AND docks_available IS NOT NULL AS counted
-            FROM covered
-        ),
-        aggregated AS (
-            SELECT at,
-                   count(*) AS with_data,
-                   count(*) FILTER (WHERE counted) AS counted,
-                   count(*) FILTER (WHERE operating AND bikes_available = 0) AS empty,
-                   count(*) FILTER (WHERE operating AND bikes_available > 0 AND docks_available = 0) AS full,
-                   sum(bikes_available) FILTER (WHERE counted) AS bikes,
-                   sum(docks_available) FILTER (WHERE counted) AS docks,
-                   -- Las eléctricas solo de quien publica el desglose: una fuente sin él no suma cero.
-                   count(*) FILTER (WHERE counted AND ebikes_available IS NOT NULL) AS ebikes_counted,
-                   sum(ebikes_available) FILTER (WHERE counted AND ebikes_available IS NOT NULL) AS ebikes
-            FROM counted
-            GROUP BY at
-        ),
-        known AS (
-            SELECT st.at, count(v.id) AS stations_known
-            FROM steps st
-            JOIN station_versions v
-              ON (v.valid_from IS NULL OR v.valid_from <= st.at) AND (v.valid_to IS NULL OR v.valid_to > st.at)
-            JOIN stations s ON s.id = v.station_id AND s.source_id = @source
-            GROUP BY st.at
         )
-        SELECT st.at, coalesce(k.stations_known, 0), coalesce(a.with_data, 0), coalesce(a.counted, 0),
-               coalesce(a.empty, 0), coalesce(a.full, 0), a.bikes, a.docks,
-               coalesce(a.ebikes_counted, 0), a.ebikes
+        SELECT st.at, coalesce(t.stations_with_data, 0), coalesce(t.stations_counted, 0),
+               coalesce(t.stations_empty, 0), coalesce(t.stations_full, 0), t.bikes_available, t.docks_available,
+               coalesce(t.stations_counted_ebikes, 0), t.ebikes_available
         FROM steps st
-        LEFT JOIN known k ON k.at = st.at
-        LEFT JOIN aggregated a ON a.at = st.at
+        LEFT JOIN timeline_summaries t ON t.source_id = @source AND t.at = st.at
         ORDER BY st.at
         """;
 
@@ -199,42 +151,35 @@ public static class TimelineQuery
     private static async Task<IReadOnlyList<TimelinePoint>> ComputeAsync(
         PulseDbContext db, DataSource source, DateTimeOffset from, DateTimeOffset to, TimeSpan step, CancellationToken ct)
     {
+        var known = await KnownCounter.ForSourceAsync(db, source.Id, ct);
         var connection = (NpgsqlConnection)db.Database.GetDbConnection();
         var opened = connection.State != System.Data.ConnectionState.Open;
         if (opened) await connection.OpenAsync(ct);
         try
         {
-            await using var tx = await connection.BeginTransactionAsync(ct);
-            // Como mucho 20 s (nginx corta a los 30), y sin JIT: con la estimación del
-            // generate_series compilaba siempre y la compilación costaba más que la consulta.
-            await using (var settings = new NpgsqlCommand(
-                "SET LOCAL statement_timeout = 20000; SET LOCAL jit = off", connection, tx))
-            {
-                await settings.ExecuteNonQueryAsync(ct);
-            }
-
-            await using var command = new NpgsqlCommand(Sql, connection, tx);
+            await using var command = new NpgsqlCommand(Sql, connection);
+            command.CommandTimeout = StationQueries.QueryTimeoutSeconds;
             command.Parameters.Add(new NpgsqlParameter("from", NpgsqlDbType.TimestampTz) { Value = from.ToUniversalTime() });
             command.Parameters.Add(new NpgsqlParameter("to", NpgsqlDbType.TimestampTz) { Value = to.ToUniversalTime() });
             command.Parameters.Add(new NpgsqlParameter("step", NpgsqlDbType.Interval) { Value = step });
-            command.Parameters.Add(new NpgsqlParameter("tolerance", NpgsqlDbType.Interval) { Value = source.StalenessTolerance });
             command.Parameters.Add(new NpgsqlParameter("source", NpgsqlDbType.Varchar) { Value = source.Id });
 
             var points = new List<TimelinePoint>();
             await using var reader = await command.ExecuteReaderAsync(ct);
             while (await reader.ReadAsync(ct))
             {
+                var at = reader.GetFieldValue<DateTimeOffset>(0);
                 points.Add(new TimelinePoint(
-                    reader.GetFieldValue<DateTimeOffset>(0),
-                    (int)reader.GetInt64(1),
-                    (int)reader.GetInt64(2),
-                    (int)reader.GetInt64(3),
-                    (int)reader.GetInt64(4),
-                    (int)reader.GetInt64(5),
-                    reader.IsDBNull(6) ? null : (int)reader.GetInt64(6),
-                    reader.IsDBNull(7) ? null : (int)reader.GetInt64(7),
-                    (int)reader.GetInt64(8),
-                    reader.IsDBNull(9) ? null : (int)reader.GetInt64(9)));
+                    at,
+                    known.At(at),
+                    reader.GetInt32(1),
+                    reader.GetInt32(2),
+                    reader.GetInt32(3),
+                    reader.GetInt32(4),
+                    reader.IsDBNull(5) ? null : reader.GetInt32(5),
+                    reader.IsDBNull(6) ? null : reader.GetInt32(6),
+                    reader.GetInt32(7),
+                    reader.IsDBNull(8) ? null : reader.GetInt32(8)));
             }
 
             return points;
@@ -242,6 +187,45 @@ public static class TimelineQuery
         finally
         {
             if (opened) await connection.CloseAsync();
+        }
+    }
+
+    /// <summary>
+    /// Estaciones con atributos vigentes en un instante: las versiones que ya han empezado
+    /// (o se asumen desde siempre) menos las que ya han acabado. Dos listas ordenadas y una
+    /// búsqueda binaria por paso, en vez de cruzar en SQL cada paso con todas las versiones.
+    /// </summary>
+    private sealed class KnownCounter(int alwaysKnown, long[] startsTicks, long[] endsTicks)
+    {
+        public static async Task<KnownCounter> ForSourceAsync(PulseDbContext db, string sourceId, CancellationToken ct)
+        {
+            var versions = await db.StationVersions.AsNoTracking()
+                .Where(v => v.Station.SourceId == sourceId)
+                .Select(v => new { v.ValidFrom, v.ValidTo })
+                .ToListAsync(ct);
+            var starts = versions.Where(v => v.ValidFrom is not null).Select(v => v.ValidFrom!.Value.UtcTicks).Order().ToArray();
+            var ends = versions.Where(v => v.ValidTo is not null).Select(v => v.ValidTo!.Value.UtcTicks).Order().ToArray();
+            return new KnownCounter(versions.Count(v => v.ValidFrom is null), starts, ends);
+        }
+
+        /// <summary>Versiones con <c>valid_from ≤ at</c> (o nulo) y <c>valid_to &gt; at</c> (o nulo).</summary>
+        public int At(DateTimeOffset at)
+        {
+            var ticks = at.UtcTicks;
+            return alwaysKnown + CountUpTo(startsTicks, ticks) - CountUpTo(endsTicks, ticks);
+        }
+
+        /// <summary>Cuántos valores ordenados son ≤ <paramref name="ticks"/>.</summary>
+        private static int CountUpTo(long[] sorted, long ticks)
+        {
+            var index = Array.BinarySearch(sorted, ticks);
+            if (index >= 0)
+            {
+                while (index + 1 < sorted.Length && sorted[index + 1] == ticks) index++;
+                return index + 1;
+            }
+
+            return ~index;
         }
     }
 }

@@ -1,4 +1,5 @@
 using System.Data.Common;
+using BarcelonaPulse.Api.Features.History;
 using BarcelonaPulse.Api.Features.Sources;
 using BarcelonaPulse.Api.Features.Stations;
 using BarcelonaPulse.Api.Infrastructure;
@@ -51,6 +52,13 @@ public sealed class StationIngestor(PulseDbContext db, TimeProvider clock, ILogg
             var rejections = new List<RejectedRecord>(batch.Rejected);
             var stations = await UpsertStationsAsync(batch, run, rejections, ct);
             await InsertObservationsAsync(batch, run, stations, rejections, tx, ct);
+            if (run.PeriodFrom is { } periodFrom && run.PeriodTo is { } periodTo)
+            {
+                // El resumen de la línea temporal (ADR 0015), en la misma transacción: los pasos que
+                // tocan las observaciones nuevas. Sin filas nuevas no cambia nada.
+                await TimelineSummaries.RefreshAsync(db, batch.Source.Id, batch.Source.StalenessTolerance, periodFrom, periodTo, ct);
+            }
+
             // El recuento de la fuente se lleva aquí, en la misma transacción (ADR 0012).
             await db.DataSources.Where(s => s.Id == batch.Source.Id).ExecuteUpdateAsync(s => s
                 .SetProperty(x => x.ObservationCount, x => x.ObservationCount + run.ObservationsAccepted), ct);

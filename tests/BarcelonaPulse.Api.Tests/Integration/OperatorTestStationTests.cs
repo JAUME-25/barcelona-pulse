@@ -32,6 +32,13 @@ public sealed class OperatorTestStationTests(PostgisDatabase database) : IClassF
             // Y la altitud de las versiones (migración StationAltitude), por lo mismo.
             await db.Database.ExecuteSqlRawAsync(
                 "ALTER TABLE station_versions ADD COLUMN altitude double precision NULL", ct);
+            // Y el resumen de la línea temporal (migración TimelineSummaries), que la ingesta mantiene.
+            await db.Database.ExecuteSqlRawAsync(
+                "CREATE TABLE timeline_summaries (source_id character varying(64) NOT NULL REFERENCES data_sources(id), " +
+                "at timestamp with time zone NOT NULL, stations_with_data integer NOT NULL, stations_counted integer NOT NULL, " +
+                "stations_empty integer NOT NULL, stations_full integer NOT NULL, bikes_available integer NULL, " +
+                "docks_available integer NULL, stations_counted_ebikes integer NOT NULL, ebikes_available integer NULL, " +
+                "PRIMARY KEY (source_id, at))", ct);
         }
 
         // Como estaba en mayo de 2026: la 536 entre las demás, con sus observaciones.

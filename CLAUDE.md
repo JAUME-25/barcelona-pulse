@@ -38,6 +38,7 @@ docker compose run --rm api ingest demo                            # importar el
 docker compose run --rm api ingest bicing-archive --day 2026-08-20  # un día real del histórico
 docker compose run --rm api purge bicing-bcn --day 2026-08-20      # qué borraría (con --yes, lo borra)
 docker compose run --rm api ingest study-areas                     # áreas de estudio de la cobertura (B4)
+docker compose run --rm api summarize bicing-bcn                   # recalcular el resumen de la línea temporal (ADR 0015)
 docker compose run --rm -e BP_REQUIRE_DB=true sdk dotnet test      # pruebas de backend
 docker compose run --rm --no-deps sdk dotnet format BarcelonaPulse.slnx --verify-no-changes
 npm --prefix apps/web run dev                                      # web en http://localhost:5173
@@ -75,10 +76,12 @@ Jaume ejecuta los comandos en Forge y pega la salida.
 - El recuento de observaciones de cada fuente (`data_sources.observation_count`) lo llevan la
   ingesta y `purge` en su transacción (ADR 0012): si se borran observaciones por otra vía,
   descuadra.
-- La línea temporal (`Features/History/TimelineQuery.cs`, ADR 0009) repite en SQL la regla del
-  estado en un instante y la precedencia de la leyenda (`availability.ts`) para vacías y
-  llenas. Si cambia una, cambian las otras; la prueba `Every_step_matches_the_map_at_that_instant`
-  lo vigila. El patrón de la estación (`Features/Stations/StationPattern.cs`) las repite también,
+- El resumen de la línea temporal (`Features/History/TimelineSummary.cs`, ADR 0015; lo mantienen
+  la ingesta y la purga en su transacción) repite en SQL la regla del estado en un instante y la
+  precedencia de la leyenda (`availability.ts`) para vacías y llenas. Si cambia una, cambian las
+  otras, y tras cambiar el SQL hay que recalcular con `summarize`; la prueba
+  `Every_step_matches_the_map_at_that_instant` lo vigila. Si se borran observaciones por otra vía
+  que `purge`, el resumen descuadra: `summarize` lo arregla. El patrón de la estación (`Features/Stations/StationPattern.cs`) las repite también,
   con el umbral de «pocas» (`FEW_BIKES_MAX`, 3), y necesita el JIT apagado (0,9 s en vez de 28 ms).
   Se guarda en la caché con la versión de la fuente en la clave y pasa por un `ComputationGate`
   (2 a la vez, 5 s de espera, luego 503 con `Retry-After`), como la línea temporal (10 s). El paso
@@ -103,10 +106,10 @@ Jaume ejecuta los comandos en Forge y pega la salida.
   también pueden agotarlo (sale «Too Many Requests»): espera un minuto.
 - «Qué muestra y qué no» pide una línea temporal por semana importada y la guarda en la página
   (`features/limits/quality.ts`): sin eso, abrirla y cerrarla agotaba el límite. Cada recarga
-  vuelve a pedirlas. `TimelineWarmUp` (en la API) deja esas mismas semanas calculadas al
-  arrancar y las vigila cada 5 min: si cambia cómo las pide la web (paso o semanas), cambia
-  también `TimelineWarmUp.Weeks`, o la primera visita vuelve a esperar unos 12 s. En las pruebas
-  va apagado (`Timeline:WarmUp=false` en `ApiFactory`).
+  vuelve a pedirlas. Desde el 9-10-2026 la línea temporal se lee de `timeline_summaries` (ADR
+  0015, milisegundos); `TimelineWarmUp` (en la API) sigue dejando esas semanas en la caché al
+  arrancar y cada 5 min, apagado en las pruebas (`Timeline:WarmUp=false` en `ApiFactory`), hasta
+  que se quite en un bloque aparte.
 - Una estación sin ninguna observación hasta el momento mostrado no «nunca ha informado»: al
   principio del periodo importado puede no haber empezado aún. Se dice «Ningún dato hasta este
   momento».
@@ -141,8 +144,9 @@ Jaume ejecuta los comandos en Forge y pega la salida.
 - Importar un día real descarga ~25 MB del portal de Open Data BCN: no lo metas en pruebas ni
   en CI; para eso están los fixtures.
 - `OperatorTestStationTests` migra la base solo hasta `RemoveOperatorTestStation` y añade a mano
-  las columnas que el modelo de hoy espera (`purge_generation`, `altitude`): una columna nueva
-  en el modelo hay que añadirla ahí, o la prueba falla con «column … does not exist».
+  lo que el modelo de hoy espera (`purge_generation`, `altitude`, la tabla `timeline_summaries`):
+  una columna o tabla nueva en el modelo hay que añadirla ahí, o la prueba falla con «column …
+  does not exist» o «relation … does not exist».
 - Los fixtures del histórico (`tests/…/Fixtures/BicingArchive/*.7z`) se regeneran con
   `node scripts/make-bicing-archive-fixtures.mjs` al cambiar una columna; el CSV de información
   va junto al .7z para leerlo sin descomprimir.
