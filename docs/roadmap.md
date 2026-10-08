@@ -640,7 +640,10 @@ honesta de lo hecho.
     purga siguen vigilando la regla). La web no cambia. Lo que protegía a la línea temporal lenta
     se quita en B5.32.
 
-32. **Hecho** el 9-10-2026 (en local, sin push). Limpieza tras el resumen (ADR 0015): fuera
+32. **Hecho** y en producción desde el 9-10-2026 (`35be920`, CI run 37756289886 verde;
+    comprobado desde fuera: Healthy, ETag con la compilación nueva, el OpenAPI de la línea
+    temporal sin el 503 y el del patrón con él, una semana sin caché en 0,28–0,39 s de ida y
+    vuelta y el punto del 13-5 igual que antes). Limpieza tras el resumen (ADR 0015): fuera
     `TimelineWarmUp` (el precalentamiento al arrancar y cada 5 min, con su ajuste
     `Timeline:WarmUp`), la caché en memoria de la línea temporal (su clave por rango y
     prioridad), el tope de dos cálculos a la vez y el 503 con `Retry-After` de
