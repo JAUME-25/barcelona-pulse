@@ -2,6 +2,7 @@ using System.Globalization;
 using BarcelonaPulse.Api.Features.History;
 using BarcelonaPulse.Api.Features.Ingestion;
 using BarcelonaPulse.Api.Features.Ingestion.BicingArchive;
+using BarcelonaPulse.Api.Features.Ingestion.BicingLive;
 using BarcelonaPulse.Api.Features.Ingestion.Demo;
 using BarcelonaPulse.Api.Features.Scenarios;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +17,7 @@ namespace BarcelonaPulse.Api.Infrastructure;
 ///   ingest demo                     importa el fixture sintético (idempotente)
 ///   ingest bicing-archive --day D   importa un día del histórico de Bicing (idempotente)
 ///   ingest bicing-archive --from A --to B   importa un periodo, un día por ingesta
+///   ingest bicing-live --status-file S --info-file I   importa una instantánea del feed de tiempo real
 ///   purge FUENTE --day D [--yes]    quita días de una fuente (sin --yes, solo cuenta)
 ///   summarize [FUENTE]              recalcula entero el resumen de la línea temporal
 /// </summary>
@@ -46,6 +48,10 @@ public static class CommandLine
               Importa días naturales (hora de Barcelona) del histórico mensual de Bicing del
               Ajuntament, hasta 31 por comando. Sin rutas, descarga los dos .7z de cada mes.
               Repetirlo no duplica nada.
+          ingest bicing-live --status-file RUTA --info-file RUTA
+              Importa una instantánea del feed de tiempo real de Bicing (los dos JSON, estado e
+              información, descargados con el token de Open Data BCN). Misma fuente que el
+              histórico: lo que ya está no se duplica.
           purge FUENTE (--day AAAA-MM-DD | --from AAAA-MM-DD --to AAAA-MM-DD) [--yes]
               Quita días enteros (hora de Barcelona) de una fuente, hasta 31 por comando: sus
               observaciones y la posibilidad de reproducirlos. Sin --yes solo dice qué borraría.
@@ -157,6 +163,20 @@ public static class CommandLine
                             $"{runs.Sum(r => r.ObservationsRejected)} rechazadas.");
                     }
 
+                    return 0;
+                }
+
+            case ["ingest", "bicing-live", .. var options]:
+                {
+                    var parsed = ParseOptions(options);
+                    if (!parsed.TryGetValue("status-file", out var statusFile) || !parsed.TryGetValue("info-file", out var infoFile))
+                    {
+                        throw new ArgumentException("Hacen falta --status-file e --info-file: los dos JSON del feed, descargados con el token.");
+                    }
+
+                    var batch = BicingLiveAdapter.ReadFiles(statusFile, infoFile, ct);
+                    var run = await sp.GetRequiredService<StationIngestor>().IngestAsync(batch, trigger: "cli", ct);
+                    PrintSummary(run);
                     return 0;
                 }
 

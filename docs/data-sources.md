@@ -29,10 +29,27 @@ de Barcelona» e indicar que los datos se han modificado cuando se distribuyen t
 
 - Los recursos JSON responden `302` a `https://opendata-ajuntament.barcelona.cat/tokens?…` sin
   token, y también con una cabecera `Authorization` inventada.
-- Esquema documentado en CKAN (no observado): `last_updated`, `ttl` y `data.stations[]` con
-  `station_id`, `num_bikes_available`, `num_bikes_available_types{mechanical, ebike}`,
-  `num_docks_available`, `is_installed`, `is_renting`, `is_returning`, `last_reported`,
-  `is_charging_station` y `status`. Inferencia: es el GBFS 1.1 del operador.
+- Formato observado el 8-10-2026 con un token válido, desde el PC de Jaume (200): dos recursos
+  JSON al estilo GBFS 1.1, cada uno con `last_updated` (segundos epoch), `ttl: 0` y
+  `data.stations[]`, 543 estaciones.
+  - Estado (`estat-estacions-bicing`, 143 KB): `station_id` (número), `num_bikes_available`,
+    `num_bikes_available_types{mechanical, ebike}`, `num_docks_available`, `last_reported`
+    (segundos epoch, la misma clave que el histórico), `status` (`IN_SERVICE`…), `is_installed`,
+    `is_renting` e `is_returning` como 1/0, `is_charging_station` y `traffic` (nulo). Sin
+    `num_bikes_disabled` ni `num_docks_disabled`: desconocidos, no cero.
+  - Información (`informacio-estacions-bicing`, 236 KB): `station_id`, `external_id`, `name`,
+    `physical_configuration`, `lat`, `lon`, `altitude`, `address`, `cross_street` con el mismo
+    formato que el histórico («09-SantAndreu/63-Navas»), `post_code`, `capacity`,
+    `is_charging_station`, `short_name`, `nearby_distance`, `_ride_code_support` y `rental_uris`.
+    Sin fecha por estación: vale el `last_updated` del documento.
+  - El histórico mensual se construye con estas instantáneas: misma estación, mismo
+    `last_reported`, mismos atributos. Por eso el adaptador `bicing-live-feed`
+    (`Features/Ingestion/BicingLive`) entra en la misma fuente `bicing-bcn`: una instantánea
+    importada en directo es repetida, no duplicada, cuando llega el archivo del mes. Cada
+    instantánea cubre el paso de cinco minutos en que cae su `last_updated`.
+  - Comando: `ingest bicing-live --status-file RUTA --info-file RUTA` con los dos JSON
+    descargados con el token. La descarga desde el servidor no es posible mientras el portal
+    bloquee la IP del VPS (ver arriba); el transporte está por decidir.
 
 **Qué tiene que hacer Jaume para obtener el token** (los nombres son los que salen en pantalla;
 no se ha creado ninguna cuenta):
@@ -47,8 +64,8 @@ no se ha creado ninguna cuenta):
    API lo enviará como cabecera `Authorization: <token>`, sin «Bearer», que es como aparece en
    el ejemplo del portal. Nunca en el código, en los logs ni en el navegador.
 
-Pendiente de comprobar con un token válido: formato real, versión GBFS, si trae campos
-`*_disabled`, caducidad del token y cuota (el portal la menciona sin cifra).
+Pendiente de comprobar: caducidad del token y cuota (el portal la menciona sin cifra). El
+token se regenera en la página «Access token» del portal si se expone.
 
 ### Histórico mensual (público)
 

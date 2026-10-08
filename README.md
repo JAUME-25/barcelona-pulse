@@ -108,6 +108,9 @@ las tres, inglés.
   la misma clave.
 - **Quitar días importados:** `docker compose run --rm api purge bicing-bcn --from 2026-08-24 --to 2026-08-30`
   dice qué borraría; con `--yes` lo borra. Volver a importarlos los recupera (ADR 0012).
+- **Feed de tiempo real:** `docker compose run --rm api ingest bicing-live --status-file a.json --info-file b.json`
+  importa una instantánea (los dos JSON de Open Data BCN, descargados con el token personal;
+  `docs/data-sources.md`). Misma fuente que el histórico: lo repetido no se duplica.
 - **Resumen de la línea temporal:** lo mantienen la ingesta y la purga (ADR 0015); si cambia la
   regla o se tocan las observaciones por otra vía, `docker compose run --rm api summarize bicing-bcn`
   lo recalcula entero (sin fuente, todas).

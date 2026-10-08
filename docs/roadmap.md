@@ -653,14 +653,32 @@ honesta de lo hecho.
     `CLAUDE.md` lo cuentan en pasado. Pruebas: la del precalentamiento y las dos de sus semanas
     se van (la del cambio de hora de octubre queda sobre `TimelineGrid`); el resto, igual.
 
+33. **Hecho** el 8-10-2026 (en local, sin push): el adaptador del feed de tiempo real, sin
+    transporte todavía. El token de Open Data BCN responde 200 desde el PC de Jaume y el formato
+    está comprobado (`docs/data-sources.md`): dos JSON al estilo GBFS 1.1, estado e información,
+    543 estaciones, misma clave que el histórico (estación y `last_reported`) y el mismo
+    `cross_street`. `BicingLiveAdapter` (`Features/Ingestion/BicingLive`) los traduce al contrato
+    normalizado con las mismas reglas que el histórico (estado, prevista sin instalar, nulos sin
+    cero, estación de pruebas fuera) y entra en la misma fuente `bicing-bcn`: una instantánea
+    importada en directo es repetida, no duplicada, cuando llega el archivo del mes; cada una
+    cubre el paso de cinco minutos de su `last_updated`. Comando `ingest bicing-live
+    --status-file --info-file`. Desde el VPS el portal contesta 403 a todo, también a la portada
+    (su nginx bloquea el rango de Hetzner; confirmado el 7 y el 8-10): pedida la admisión de la
+    IP. Pruebas: 5 unitarias del adaptador y una de integración sobre el fixture del histórico
+    (una repetida, una nueva, una estación desconocida rechazada, la altitud rellenada sin
+    versión nueva).
+
 ## Siguiente
 
 - Lo que queda de la propuesta del 7-10-2026 (el balance entre dos horas, la altitud, la página
-  del contrato, las altas y bajas y la tabla de resumen con su limpieza se hicieron el 8 y el
-  8-10-2026, B5.26 a B5.32):
-  - Tiempo real cuando el token de Open Data BCN responda 200 desde el PC de Jaume (el
-    histórico ya se descarga desde casa; sin token, el JSON del tiempo real contesta 302 a
-    `/tokens`). El VPS dio 403 a una sola petición: repetir otro día para saber si es permanente.
+  del contrato, las altas y bajas, la tabla de resumen con su limpieza y el adaptador del feed
+  se hicieron el 8-10-2026, B5.26 a B5.33):
+  - Tiempo real, el transporte: A, el servidor pide el feed cada 5 min con el token (cuando el
+    portal admita la IP del VPS); B, el PC de Jaume lo pide y lo entrega a la API por un
+    endpoint de ingesta con secreto (funciona hoy; cambio de diseño, con ADR). Por decidir.
+    Después: las ingestas en directo en «Lo que entró cada día» (288 al día: agrupar), la
+    rejilla de huecos sin las horas que aún no han pasado, y «en directo» solo con frescura
+    comprobada. El feed se pide una vez cada 5 min y se para ante 403 o 429.
 - Pendiente de antes: estaciones que más tiempo pasan vacías o llenas; tooltip en el marcador;
   cada casilla de la rejilla de huecos a su hora; agrupación de marcadores a escala de ciudad
   con los recuentos en texto; `/api/sources` agregado en SQL (hoy, varias consultas por fuente).

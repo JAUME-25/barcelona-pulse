@@ -36,6 +36,7 @@ procedencia visible de los datos. Estado y siguiente paso: `docs/roadmap.md`.
 docker compose up -d --build api                                   # PostGIS + migraciones + API
 docker compose run --rm api ingest demo                            # importar el demo (idempotente)
 docker compose run --rm api ingest bicing-archive --day 2026-08-20  # un día real del histórico
+docker compose run --rm api ingest bicing-live --status-file a.json --info-file b.json  # una instantánea del feed (token)
 docker compose run --rm api purge bicing-bcn --day 2026-08-20      # qué borraría (con --yes, lo borra)
 docker compose run --rm api ingest study-areas                     # áreas de estudio de la cobertura (B4)
 docker compose run --rm api summarize bicing-bcn                   # recalcular el resumen de la línea temporal (ADR 0015)
