@@ -285,19 +285,6 @@
   }
 }
 
-/* Selector de modo con tres opciones: en móvil ocupa el ancho y se reparte. */
-@media (max-width: 479px) {
-  .mode-switch {
-    display: flex;
-    width: 100%;
-  }
-
-  .mode-switch button {
-    flex: 1 1 auto;
-    padding: 0 8px;
-  }
-}
-
 /* Cursor de la herramienta activa sobre el mapa. */
 .app[data-tool='add'] .maplibregl-canvas-container.maplibregl-interactive {
   cursor: crosshair;

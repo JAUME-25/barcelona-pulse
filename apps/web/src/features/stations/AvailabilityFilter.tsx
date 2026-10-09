@@ -171,6 +171,12 @@ export function AvailabilityFilter({
         >
           <summary className="legend-fold__summary">
             <span className="legend-fold__title">{m.legend}</span>
+            {/* Plegada, una muestra de los seis marcadores: se ve qué hay dentro antes de abrir. */}
+            <span className="legend-fold__glyphs" aria-hidden="true">
+              {AVAILABILITY_ORDER.map((category) => (
+                <OctagonGlyph key={category} category={category} size={14} />
+              ))}
+            </span>
           </summary>
           {legend}
         </details>

@@ -30,12 +30,22 @@ function Moment({
       </time>
       <span className="source-notice__tz">{t().source.timeZone}</span>
       {onChange !== undefined && (
-        <button type="button" className="limits-link" onClick={onChange}>
+        <button
+          type="button"
+          className="limits-link"
+          title={t().source.changeMomentHint}
+          onClick={onChange}
+        >
           {t().source.changeMoment}
         </button>
       )}
       {onThisHour !== undefined && (
-        <button type="button" className="limits-link" onClick={onThisHour}>
+        <button
+          type="button"
+          className="limits-link"
+          title={t().source.thisHourHint}
+          onClick={onThisHour}
+        >
           {t().source.thisHour}
         </button>
       )}

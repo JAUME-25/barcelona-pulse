@@ -4,9 +4,14 @@
  * derecha del panel, y deja sitio a la atribución del mapa base.
  */
 
+/* Los cuatro modos se reparten el ancho del panel (8-10-2026, segunda revisión): como fila
+   suelta, «Explorar · Reproducir · Experimentar · Balance» medía más que el panel de escritorio y
+   el borde asomaba sobre el mapa; en catalán, más. A 320 px van en dos filas de dos. */
 .mode-switch {
-  display: inline-flex;
+  display: flex;
+  flex-wrap: wrap;
   gap: 2px;
+  width: 100%;
   margin-top: 14px;
   padding: 3px;
   border: 1px solid var(--line);
@@ -15,12 +20,15 @@
 }
 
 .mode-switch button {
+  flex: 1 1 auto;
+  min-width: 0;
   min-height: 34px;
-  padding: 0 16px;
+  padding: 0 9px;
   border: 0;
   border-radius: 7px;
   background: transparent;
   color: var(--ink-2);
+  font-size: 0.9375rem;
   font-weight: 600;
   cursor: pointer;
 }
@@ -30,20 +38,18 @@
   color: var(--panel-solid);
 }
 
-/* En móvil, con cuatro modos: a 375 px caben en una fila algo más prietos; a 320, el último
-   pasa a una segunda fila y la llena, en vez de cortarse. */
-@media (max-width: 767px) {
-  .mode-switch {
-    display: flex;
-    flex-wrap: wrap;
-    width: 100%;
-  }
-
+@media (max-width: 359px) {
   .mode-switch button {
-    flex: 1 1 auto;
-    padding: 0 9px;
-    font-size: 0.9375rem;
+    flex-basis: 40%;
   }
+}
+
+/* Qué hace el modo elegido, en una línea bajo el selector. */
+.mode-switch__hint {
+  margin: 6px 0 0;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+  line-height: 1.35;
 }
 
 /* Controles */
@@ -83,16 +89,17 @@
   cursor: default;
 }
 
-.speed-select__label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
+/* «Velocidad» a la vista (8-10-2026): el desplegable solo decía «Normal». */
+.speed-select {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--ink-2);
+  font-size: 0.9375rem;
 }
 
 .speed-select select {
+  color: var(--ink);
   min-height: 34px;
   padding: 0 6px;
   border: 1px solid var(--line);
@@ -562,16 +569,41 @@
   }
 
   /* Al reproducir, la leyenda se compacta para que quepan las categorías encima del reproductor:
-     sin la ayuda, sin los atajos (son para buscar bici o sitio ahora, no para ver un día) y sin
-     la clave del mapa base. */
+     sin la ayuda, sin los atajos (son para buscar bici o sitio ahora, no para ver un día), sin
+     la clave del mapa base, sin el rótulo del número ni los umbrales de cada categoría, y con
+     las filas más bajas: 312 px, que caben desde 880 px de alto (8-10-2026; antes 378, que a
+     1440 × 900 dejaban la última categoría cortada). Más bajo, las categorías van plegadas. */
   .app[data-mode='replay'] .availability-filter__help,
+  .app[data-mode='replay'] .availability-filter__hint,
   .app[data-mode='replay'] .map-filters__presets,
   .app[data-mode='replay'] .map-key {
     display: none;
   }
 
+  .app[data-mode='replay'] .map-legend {
+    padding: 10px 16px;
+  }
+
+  .app[data-mode='replay'] .number-mode__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .app[data-mode='replay'] .map-filters {
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+  }
+
+  .app[data-mode='replay'] .availability-filter__legend {
+    margin-bottom: 2px;
+  }
+
   .app[data-mode='replay'] .availability-filter__item {
-    min-height: 34px;
+    min-height: 30px;
   }
 }
 

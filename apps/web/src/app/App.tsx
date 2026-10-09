@@ -119,6 +119,8 @@ const NO_STATIONS: readonly StationItem[] = [];
  * página del teléfono medía unos 90 000 px (8-10-2026) y la búsqueda es el camino normal.
  */
 const LIST_LIMIT = 60;
+/** Escritorio donde la leyenda compacta de Reproducir (unos 312 px) no cabe sobre el reproductor. */
+const SHORT_DESKTOP_QUERY = '(min-width: 768px) and (max-height: 879px)';
 
 function modeFromUrl(): Mode {
   const value = readParam(MODE_PARAM);
@@ -246,6 +248,9 @@ export function App() {
   const [mode, setMode] = useState<Mode>(modeFromUrl);
   // En móvil, el aviso de procedencia va plegado a una línea: el mapa empieza antes.
   const mobile = useMediaQuery(MOBILE_QUERY);
+  // En un escritorio bajo, al reproducir, las categorías de la leyenda no caben encima del
+  // reproductor (a 1366 × 768 quedaban cortadas sin aviso): van plegadas, como en el teléfono.
+  const shortDesktop = useMediaQuery(SHORT_DESKTOP_QUERY);
   // El momento pedido (?dia=…&hora=…): lo que enseñan Explorar y Experimentar de un histórico y
   // donde empieza Reproducir. Al salir de Reproducir se queda el momento que se estaba viendo.
   const [moment, setMoment] = useState<Moment>(() => ({
@@ -855,6 +860,7 @@ export function App() {
                 className="search__input"
                 type="search"
                 autoComplete="off"
+                placeholder={m.searchPlaceholder}
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
@@ -1153,7 +1159,7 @@ export function App() {
                 onNumberMode={setNumberMode}
                 onPreset={applyPreset}
                 showMe={me !== null}
-                fold={mobile}
+                fold={mobile || (replaying && shortDesktop)}
               />
             )}
           </div>

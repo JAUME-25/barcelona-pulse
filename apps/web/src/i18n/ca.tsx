@@ -189,6 +189,7 @@ export const ca: Messages = {
     stationsError: 'No s’han pogut carregar les estacions.',
     loading: 'Carregant les estacions…',
     search: 'Cercar estació',
+    searchPlaceholder: 'Nom, carrer o barri',
     count: (shown, total) =>
       shown === total
         ? count(total, 'estació', 'estacions')
@@ -244,7 +245,9 @@ export const ca: Messages = {
     demoLead: 'Dades inventades per provar l’aplicació. No és la disponibilitat real de Bicing.',
     shownMoment: 'Moment mostrat',
     changeMoment: 'Canviar el moment',
+    changeMomentHint: 'Triar un altre dia i una altra hora',
     thisHour: 'A aquesta hora',
+    thisHourHint: 'El dia importat més semblant a avui, a l’hora d’ara',
     more: 'Més',
     less: 'Menys',
     realBadge: 'Dades reals',

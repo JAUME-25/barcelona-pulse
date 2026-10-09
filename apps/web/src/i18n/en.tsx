@@ -165,6 +165,7 @@ export const en: Messages = {
     stationsError: 'The stations could not be loaded.',
     loading: 'Loading stations…',
     search: 'Search for a station',
+    searchPlaceholder: 'Name, street or neighbourhood',
     count: (shown, total) =>
       shown === total
         ? count(total, 'station', 'stations')
@@ -220,7 +221,9 @@ export const en: Messages = {
     demoLead: 'Made-up data for trying out the app. Not Bicing’s real availability.',
     shownMoment: 'Moment shown',
     changeMoment: 'Change moment',
+    changeMomentHint: 'Pick another day and time',
     thisHour: 'At this hour',
+    thisHourHint: 'The imported day most like today, at the current time',
     more: 'More',
     less: 'Less',
     realBadge: 'Real data',

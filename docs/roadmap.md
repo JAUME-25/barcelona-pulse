@@ -692,6 +692,22 @@ honesta de lo hecho.
     - Pruebas: 232 de la web (sin cambios), humo 24 de 24 con la compilación de producción (en
       móvil abre antes el pliegue de la leyenda), tipos, lint y formato en verde. Usado con
       capturas en los tres idiomas a 1440, 375 y 320 px y la página del contrato.
+35. **Hecho** y en `main` en local, sin push (8-10-2026, segunda revisión del diseño pensando en
+    quien abre la página por primera vez; `docs/design.md`, «Segunda revisión para quien no
+    conoce la aplicación»; capturas `e2e/revision2.capture.ts`):
+    - Bajo el selector de modos, una línea con lo que hace el elegido; el selector reparte los
+      cuatro modos a lo ancho del panel (como fila suelta desbordaba el panel de escritorio) y a
+      320 px va en dos filas de dos.
+    - Al pasar el ratón por un marcador, un aviso con la estación y su estado (`StationMap.tsx`,
+      solo con ratón); en Balance, el balance; al experimentar, el nombre.
+    - La leyenda al reproducir se compacta hasta 312 px (cabe desde 880 px de alto; antes a
+      1440 × 900 la última categoría quedaba cortada) y en escritorios más bajos va plegada como
+      en el teléfono (`SHORT_DESKTOP_QUERY` en `App.tsx`). El pliegue, en el teléfono y en
+      escritorio, enseña los seis marcadores en miniatura junto al título.
+    - Textos: el buscador dice qué admite («Nombre, calle o barrio»), «Velocidad» a la vista en el
+      reproductor y una línea de ayuda en «Cambiar momento» y «A esta hora».
+    - Pruebas: 232 de la web, tipos, lint y formato en verde; capturas en los tres idiomas a
+      1440 × 900, 1366 × 768, 375 y 320 px.
 
 ## Siguiente
 

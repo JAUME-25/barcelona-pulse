@@ -123,6 +123,32 @@ convencen):
   escritorio no cambia nada. Los guiones que pulsan una categoría en móvil abren antes el pliegue
   (`openLegend` en `smoke.spec.ts`).
 
+## Segunda revisión para quien no conoce la aplicación (8-10-2026)
+
+Mirada con capturas reales, pensando en alguien que abre la página por primera vez. Retoques,
+sin pantallas nuevas:
+
+- **Qué hace cada modo, a la vista.** Bajo el selector, una línea con lo que hace el elegido
+  («Ver cómo cambió la red a lo largo de un día»); el `title` solo no servía en el teléfono. El
+  selector reparte los cuatro modos a lo ancho del panel: como fila suelta, «Explorar ·
+  Reproducir · Experimentar · Balance» medía más que el panel de escritorio y el borde asomaba
+  sobre el mapa (en catalán, más). A 320 px, dos filas de dos en vez de tres y una.
+- **Al pasar el ratón por un marcador**, un aviso con la estación y su estado («Pl. Tetuan · Con
+  bicis · 4 bicis · 15 anclajes libres»; en Balance, «−6 bicis»; al experimentar, solo el
+  nombre): a escala de ciudad no se sabía cuál era cuál sin abrirla. Solo con ratón (`hover:
+  hover`); con el dedo, tocar ya abre la ficha. Encima del cursor, debajo si está arriba del
+  todo, y sin salirse por los lados.
+- **La leyenda al reproducir cabe** desde 880 px de alto: sin el rótulo del número ni los
+  umbrales de cada categoría y con filas de 30 px, 312 px (antes 378: a 1440 × 900 la última
+  categoría quedaba cortada sin aviso). En un escritorio más bajo (1366 × 768) las categorías
+  van plegadas bajo su título, como en el teléfono, con los seis marcadores en miniatura junto
+  al título.
+- **La leyenda plegada del teléfono enseña los seis marcadores en miniatura** a la derecha de
+  «Qué significa cada marcador»: se ve qué hay dentro antes de abrirla.
+- El buscador dice qué admite («Nombre, calle o barrio»); «Velocidad» a la vista junto al
+  desplegable del reproductor (solo decía «Normal»); «Cambiar momento» y «A esta hora» llevan
+  una línea de ayuda en el `title`.
+
 ## Cercanas y Cerca de mí
 
 Quien busca una bici está en un sitio concreto y, si la estación que tiene delante no sirve

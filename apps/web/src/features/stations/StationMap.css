@@ -28,6 +28,46 @@
   color: var(--panel-solid);
 }
 
+/* Aviso al pasar el ratón por un marcador: la estación y su estado, encima del cursor. Solo con
+   ratón: con el dedo no hay «encima», y tocar ya abre la ficha. */
+.map-tip {
+  position: absolute;
+  z-index: 3;
+  width: max-content;
+  max-width: 240px;
+  margin: 0;
+  padding: 6px 10px 7px;
+  transform: translate(-50%, calc(-100% - 14px));
+  border: 1px solid color-mix(in srgb, var(--ink) 38%, transparent);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 0.875rem;
+  line-height: 1.3;
+  box-shadow: var(--panel-shadow);
+  pointer-events: none;
+}
+
+.map-tip--below {
+  transform: translate(-50%, 18px);
+}
+
+.map-tip__name {
+  display: block;
+  font-weight: 600;
+}
+
+.map-tip__state {
+  display: block;
+  color: var(--ink-2);
+}
+
+@media (hover: none) {
+  .map-tip {
+    display: none;
+  }
+}
+
 .map-message {
   position: absolute;
   top: 16px;

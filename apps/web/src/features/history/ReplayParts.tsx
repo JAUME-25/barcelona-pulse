@@ -11,25 +11,31 @@ export type Mode = 'explore' | 'replay' | 'experiment' | 'balance';
 
 const MODES: readonly Mode[] = ['explore', 'replay', 'experiment', 'balance'];
 
+/**
+ * Los cuatro modos y, debajo, una línea con lo que hace el elegido: el nombre solo («Balance»)
+ * no lo dice, y en el teléfono no hay `title` que valga.
+ */
 export function ModeSwitch({ mode, onChange }: { mode: Mode; onChange: (mode: Mode) => void }) {
   const m = t().modes;
   return (
-    <div className="mode-switch" role="group" aria-label={m.label}>
-      {MODES.map((value) => (
-        <button
-          key={value}
-          type="button"
-          aria-pressed={mode === value}
-          // Una línea sobre qué hace cada modo: el nombre solo no lo dice.
-          title={m.hint[value]}
-          onClick={() => {
-            onChange(value);
-          }}
-        >
-          {m[value]}
-        </button>
-      ))}
-    </div>
+    <>
+      <div className="mode-switch" role="group" aria-label={m.label}>
+        {MODES.map((value) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={mode === value}
+            title={m.hint[value]}
+            onClick={() => {
+              onChange(value);
+            }}
+          >
+            {m[value]}
+          </button>
+        ))}
+      </div>
+      <p className="mode-switch__hint">{m.hint[mode]}</p>
+    </>
   );
 }
 
@@ -80,6 +86,7 @@ export function StepButton({ replay, direction }: { replay: Replay; direction: -
 export function SpeedSelect({ replay }: { replay: Replay }) {
   const m = t().replay;
   return (
+    // El rótulo a la vista: un desplegable que solo dice «Normal» no dice de qué.
     <label className="speed-select">
       <span className="speed-select__label">{m.speed}</span>
       <select

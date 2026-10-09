@@ -175,6 +175,8 @@ export const es = {
     stationsError: 'No se han podido cargar las estaciones.',
     loading: 'Cargando estaciones…',
     search: 'Buscar estación',
+    /** Qué se puede escribir: la búsqueda casa con el nombre, la calle, el barrio y el distrito. */
+    searchPlaceholder: 'Nombre, calle o barrio',
     count: (shown: number, total: number) =>
       shown === total
         ? count(total, 'estación', 'estaciones')
@@ -234,7 +236,9 @@ export const es = {
     demoLead: 'Datos inventados para probar la aplicación. No es la disponibilidad real de Bicing.',
     shownMoment: 'Momento mostrado',
     changeMoment: 'Cambiar momento',
+    changeMomentHint: 'Elegir otro día y otra hora',
     thisHour: 'A esta hora',
+    thisHourHint: 'El día importado más parecido a hoy, a la hora de ahora',
     more: 'Más',
     less: 'Menos',
     realBadge: 'Datos reales',

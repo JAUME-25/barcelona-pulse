@@ -17,6 +17,7 @@ import { THEME } from '../../app/theme';
 import { t } from '../../i18n';
 import {
   AVAILABILITY_ORDER,
+  availabilityLabel,
   availabilityOf,
   lacksDocks,
   lacksEbikes,
@@ -25,6 +26,7 @@ import {
 } from './availability';
 import { SERVICE_AREA, type MapBounds } from './mapBounds';
 import { loadNightStyle } from './basemap';
+import { stationName } from './names';
 import {
   BIKE_LANES_LAYER,
   BUILDINGS_LAYER,
@@ -490,6 +492,44 @@ function addLayers(
   });
 }
 
+/** El marcador bajo el ratón y dónde está, en píxeles del mapa, con el ancho del mapa entonces. */
+interface Hover {
+  id: number;
+  x: number;
+  y: number;
+  width: number;
+}
+
+/** Menos tipográfico, como en el balance. */
+const signedText = (n: number) => (n > 0 ? `+${String(n)}` : n < 0 ? `−${String(-n)}` : '0');
+
+/**
+ * La segunda línea del aviso al pasar el ratón: el estado y las cifras («Pocas bicis · 3 bicis ·
+ * 24 anclajes libres»), el balance («+12 bicis») o nada al experimentar (allí solo importa dónde
+ * está).
+ */
+function hoverState(
+  station: StationItem,
+  variant: MarkerVariant,
+  balance: ReadonlyMap<number, number | null> | null,
+): string | null {
+  const m = t();
+  if (variant === 'network') return null;
+  if (variant === 'balance') {
+    const delta = balance?.get(station.id);
+    if (delta === undefined || delta === null) return m.balance.key.nodata;
+    return `${signedText(delta)} ${m.balance.unit}`;
+  }
+  const category = availabilityOf(station.state);
+  const parts = [availabilityLabel(category)];
+  if (category !== 'unknown' && category !== 'outOfService') {
+    const { bikesAvailable: bikes, docksAvailable: docks } = station.state;
+    if (bikes !== null) parts.push(m.list.srBikes(bikes));
+    if (docks !== null) parts.push(m.list.srDocks(docks));
+  }
+  return parts.join(' · ');
+}
+
 /**
  * Mapa MapLibre creado una sola vez por montaje. Los cambios de datos y de selección se
  * aplican con setData/setFilter; React nunca reconstruye el mapa.
@@ -543,6 +583,9 @@ export function StationMap({
   const [generation, setGeneration] = useState(0);
   // La cámara de Fanals empieza inclinada (THEME.camera.pitch).
   const [oblique, setOblique] = useState(true);
+  // Con el ratón sobre un marcador, un aviso con la estación y su estado (8-10-2026): a escala
+  // de ciudad no se sabía cuál era cuál sin abrirla. Con el dedo no hay «ratón encima».
+  const [hover, setHover] = useState<Hover | null>(null);
 
   useEffect(() => {
     onSelectRef.current = onSelect;
@@ -645,14 +688,22 @@ export function StationMap({
       instance.on('mouseenter', MARKERS_LAYER, () => {
         instance.getCanvas().style.cursor = 'pointer';
       });
+      instance.on('mousemove', MARKERS_LAYER, (e: MapLayerMouseEvent) => {
+        const id: unknown = e.features?.[0]?.properties.id;
+        if (typeof id !== 'number') return;
+        const { x, y } = e.point;
+        setHover({ id, x, y, width: instance.getContainer().clientWidth });
+      });
       instance.on('mouseleave', MARKERS_LAYER, () => {
         instance.getCanvas().style.cursor = '';
+        setHover(null);
       });
       instance.on('pitchend', () => {
         setOblique(instance.getPitch() > 5);
       });
       instance.on('movestart', (e) => {
         errorSinceMove = false;
+        setHover(null);
         if (e.originalEvent !== undefined) movedByUserRef.current = true;
       });
       instance.on('error', (e) => {
@@ -862,6 +913,12 @@ export function StationMap({
     });
   };
 
+  // El aviso del marcador bajo el ratón: encima del cursor (debajo, si está arriba del todo) y
+  // sin salirse por los lados.
+  const hovered = hover === null ? undefined : stations.find((s) => s.id === hover.id);
+  const tipX = hover === null ? 0 : Math.min(Math.max(hover.x, 120), hover.width - 120);
+  const tipState = hovered === undefined ? null : hoverState(hovered, variant, balance);
+
   return (
     <div className="station-map">
       <div
@@ -878,6 +935,18 @@ export function StationMap({
       >
         {t().map.pitch}
       </button>
+      {hover !== null && hovered !== undefined && (
+        <p
+          className={hover.y < 72 ? 'map-tip map-tip--below' : 'map-tip'}
+          style={{ left: tipX, top: hover.y }}
+          aria-hidden="true"
+        >
+          <span className="map-tip__name" lang="ca" translate="no">
+            {stationName(hovered)}
+          </span>
+          {tipState !== null && <span className="map-tip__state">{tipState}</span>}
+        </p>
+      )}
     </div>
   );
 }

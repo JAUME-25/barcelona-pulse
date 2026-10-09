@@ -603,7 +603,8 @@
    abrió. */
 .legend-fold__summary {
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 2px 8px;
   align-items: baseline;
   min-height: 36px;
   list-style: none;
@@ -628,6 +629,20 @@
 .legend-fold__title {
   font-size: 1rem;
   font-weight: 600;
+}
+
+/* Plegada, los seis marcadores en miniatura a la derecha del título (en una leyenda estrecha, en
+   su propia línea); abierta, sobran. */
+.legend-fold__glyphs {
+  display: inline-flex;
+  flex: none;
+  gap: 3px;
+  align-self: center;
+  margin-left: auto;
+}
+
+.legend-fold[open] > .legend-fold__summary .legend-fold__glyphs {
+  display: none;
 }
 
 .legend-fold .availability-filter__legend {
